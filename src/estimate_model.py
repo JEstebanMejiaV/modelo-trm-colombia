@@ -81,11 +81,11 @@ EXPANDED_FACTOR_SPECS = {
     },
     "Balanza comercial cambiaria": {
         "grupo": "Sector externo Colombia",
-        "terminos": [("asinh_balanza_comercial", 1)],
+        "terminos": [("D.asinh_balanza_comercial", 1)],
     },
     "Flujos netos de capital": {
         "grupo": "Sector externo Colombia",
-        "terminos": [("asinh_flujos_capital", 1)],
+        "terminos": [("D.asinh_flujos_capital", 1)],
     },
     "Diferencial de inflación": {
         "grupo": "Política doméstica",
@@ -107,12 +107,12 @@ DIFFERENCED_COMPONENTS = [
     "ln_vix",
     "spread_tes_ust_10y_pp",
     "ln_reservas_netas_sin_flar",
+    "asinh_balanza_comercial",
+    "asinh_flujos_capital",
 ]
 
 
 LEVEL_COMPONENTS = [
-    "asinh_balanza_comercial",
-    "asinh_flujos_capital",
     "diferencial_inflacion_pp",
     "factor_monedas_regionales",
 ]
@@ -876,6 +876,8 @@ def main() -> None:
         "dln_vix",
         "spread_tes_ust_10y_pp",
         "ln_reservas_netas_sin_flar",
+        "asinh_balanza_comercial",
+        "asinh_flujos_capital",
         *LEVEL_COMPONENTS,
         "dummy_pandemia_2020",
     ]
@@ -943,7 +945,7 @@ def main() -> None:
                 "acierto_direccion_pct": float(
                     base_validation_row["acierto_direccion_pct"]
                 ),
-                "r2_fuera_muestra_vs_caminata": out_of_sample_r2(predictions),
+                "r2_validacion_condicional_vs_caminata": out_of_sample_r2(predictions),
             },
             {
                 "modelo": "Ampliado historico",
@@ -956,7 +958,7 @@ def main() -> None:
                 "acierto_direccion_pct": float(
                     expanded_validation_row["acierto_direccion_pct"]
                 ),
-                "r2_fuera_muestra_vs_caminata": out_of_sample_r2(
+                "r2_validacion_condicional_vs_caminata": out_of_sample_r2(
                     predictions_expanded
                 ),
             },
@@ -982,6 +984,8 @@ def main() -> None:
             "ln_vix",
             "spread_tes_ust_10y_pp",
             "ln_reservas_netas_sin_flar",
+            "asinh_balanza_comercial",
+            "asinh_flujos_capital",
             "diferencial_inflacion_pp",
         ],
     )

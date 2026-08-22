@@ -29,24 +29,26 @@ El R² ajustado es 48,6%. En una validación expansiva de 48 meses, el modelo co
 
 La segunda especificación conserva el modelo base e integra seis bloques: spread TES–Treasury a 10 años, reservas internacionales netas sin FLAR, balanza comercial cambiaria, movimientos netos de capital, diferencial de inflación y un factor de monedas regionales. Base y ampliado usan exactamente los mismos 240 meses efectivos.
 
-El R² ajustado sube de 48,6% a 55,3%. En la misma validación condicional de 48 meses, el MAPE baja de 2,03% a 1,65%; el acierto de dirección pasa de 72,9% a 70,8%. El modelo ampliado es una **contabilidad histórica/nowcast** porque incorpora dentro del mes las variables financieras globales, el spread TES–Treasury y el factor regional. No es un pronóstico ex ante ni una identificación causal.
+El R² ajustado sube de 48,6% a 57,2%. En la misma validación condicional de 48 meses, el MAPE baja de 2,03% a 1,77% y el acierto de dirección se mantiene en 72,9%. El modelo ampliado es una **contabilidad histórica/nowcast** porque incorpora dentro del mes las variables financieras globales, el spread TES–Treasury y el factor regional. No es un pronóstico ex ante ni una identificación causal.
+
+Los diagnósticos no detectan autocorrelación ni inestabilidad de parámetros, pero ARCH-LM y Jarque–Bera rechazan ausencia de volatilidad condicional y normalidad. Los errores HAC fortalecen la inferencia de la ecuación de media; no modelan la volatilidad ni las colas extremas.
 
 El peso se calcula mediante una descomposición Shapley/LMG exacta del R². Esta estima los 4.096 subconjuntos posibles de los 12 factores y reparte entre ellos la información compartida. Los porcentajes siguientes suman 100% de la fracción explicada incremental por los factores; el bloque base —intercepto, dinámica de TRM y pandemia— se mantiene aparte.
 
 | Factor | Peso Shapley entre factores | Aporte al R² |
 |---|---:|---:|
-| Monedas regionales | 29,1% | 16,29 p.p. |
-| Dólar amplio | 26,1% | 14,59 p.p. |
-| Spread TES–Treasury a 10 años | 15,1% | 8,43 p.p. |
-| Petróleo Brent | 10,9% | 6,10 p.p. |
-| VIX | 10,0% | 5,59 p.p. |
-| Reservas internacionales | 3,5% | 1,94 p.p. |
-| Balanza comercial cambiaria | 1,5% | 0,83 p.p. |
-| Flujos netos de capital | 1,2% | 0,65 p.p. |
-| Remesas | 1,1% | 0,62 p.p. |
-| Diferencial de inflación | 0,9% | 0,52 p.p. |
-| Diferencial de tasas | 0,5% | 0,26 p.p. |
-| Déficit fiscal | 0,1% | 0,08 p.p. |
+| Monedas regionales | 26,6% | 15,36 p.p. |
+| Dólar amplio | 23,7% | 13,66 p.p. |
+| Spread TES–Treasury a 10 años | 13,7% | 7,88 p.p. |
+| Petróleo Brent | 9,6% | 5,52 p.p. |
+| VIX | 9,2% | 5,33 p.p. |
+| Balanza comercial cambiaria | 7,6% | 4,40 p.p. |
+| Flujos netos de capital | 4,4% | 2,55 p.p. |
+| Reservas internacionales | 2,4% | 1,39 p.p. |
+| Remesas | 1,1% | 0,61 p.p. |
+| Diferencial de inflación | 0,8% | 0,48 p.p. |
+| Diferencial de tasas | 0,8% | 0,48 p.p. |
+| Déficit fiscal | 0,1% | 0,07 p.p. |
 
 Estos pesos miden ajuste estadístico dentro de esta muestra. No miden causalidad, importancia estructural ni cuánto cambiaría la TRM ante una intervención. Cuando dos factores son correlacionados, Shapley distribuye su señal compartida promediando todos los órdenes de entrada.
 
@@ -56,7 +58,31 @@ Se estimó también un ARDL–ECM. La prueba bounds produjo F = 3,414 y p-valor 
 
 Los resultados describen asociaciones dinámicas, no efectos causales. Para hacer afirmaciones causales se necesitarían shocks identificados, como sorpresas monetarias, cambios fiscales inesperados o shocks petroleros externos.
 
-## Construcción de variables
+## Qué representa cada variable
+
+La TRM está expresada como COP por USD: un aumento significa depreciación del peso colombiano. En la columna “signo esperado”, `+` indica una asociación esperada con una TRM mayor y `−` con una TRM menor.
+
+| Variable | Qué mide y fuente | Entrada al modelo | Signo esperado | Interpretación y cautela |
+|---|---|---|:---:|---|
+| TRM | Precio promedio mensual del dólar en pesos; Banco de la República, serie 1 | `Δln(TRM)`, variable dependiente | — | El cambio logarítmico aproxima la variación porcentual mensual. |
+| Petróleo Brent | Ingreso externo asociado al principal producto de exportación; EIA/FRED DCOILBRENTEU agregado a mes, comparable con RBRTE | `Δln`, mes actual | − | Un petróleo más caro suele aumentar la oferta de divisas. También afecta actividad, inversión y cuentas fiscales. |
+| Índice amplio del dólar | Fortaleza general del USD frente a monedas de socios comerciales; FRED, DTWEXBGS | `Δln`, mes actual | + | Separa un movimiento global del dólar de un choque exclusivamente colombiano. |
+| VIX | Incertidumbre y aversión global al riesgo; Cboe, distribuido en la base por FRED como VIXCLS | `Δln`, mes actual | + | En episodios de aversión al riesgo suele salir capital de mercados emergentes. |
+| Remesas | Dólares enviados a Colombia; Banco de la República, serie 15363 | `Δln` del acumulado 12 meses, rezago 1 | − | El signo estimado es positivo; puede reflejar que los hogares reciben más remesas cuando el peso ya se ha depreciado. |
+| Diferencial de tasas | Tasa de política de Colombia menos federal funds | Cambio en puntos porcentuales, rezago 1 | − | Un mayor retorno relativo puede apoyar al COP, pero las tasas también responden a inflación y TRM. |
+| Déficit fiscal | Negativo del balance de caja del GNC acumulado 12 meses como porcentaje del PIB; MinHacienda | Cambio en puntos porcentuales, rezago 1 | + | Mayor necesidad de financiación puede elevar la prima de riesgo. Su coeficiente no es preciso al 5%. |
+| Spread TES–Treasury 10 años | TES COP cero cupón de BanRep 15274 menos Treasury DGS10 | Cambio en puntos porcentuales, mes actual | + | Es un proxy amplio de prima local; incluye inflación, devaluación esperada, duración y liquidez. No es EMBI ni CDS. |
+| Reservas internacionales | Activos externos netos sin FLAR; Banco de la República, serie 15053 | `Δln`, rezago 1 | − | Más reservas pueden reforzar la capacidad de intervención, pero también reaccionan a la propia TRM. |
+| Balanza comercial cambiaria | Exportaciones menos importaciones canalizadas por el mercado cambiario; BanRep 16702 | `Δasinh(flujo/1.000)`, rezago 1 | − | Se diferencia porque el nivel transformado no es estacionario. Su coeficiente estimado es positivo, contrario al signo esperado; puede reflejar simultaneidad, composición o endogeneidad y no debe leerse causalmente. |
+| Flujos netos de capital | Entradas menos salidas netas de capital; BanRep 16706 | `Δasinh(flujo/1.000)`, rezago 1 | − | Se diferencia porque el nivel transformado no es estacionario. La serie 16706 es el total, no solo sector real y Gobierno. |
+| Diferencial de inflación | Inflación interanual Colombia menos EE. UU.; BanRep 15000 y FRED CPIAUCNS | Nivel en puntos porcentuales, rezago 1 | + | Es inflación realizada, no expectativa. Octubre de 2025 de EE. UU. se interpola y queda marcado. |
+| Monedas regionales | Movimiento común de BRL, CLP y MXN por USD; OECD/FRED | Promedio igual de `z(Δln)`, mes actual | + | Un valor positivo significa depreciación regional. Los parámetros se calibran con 2006–2019. |
+| Pandemia 2020 | Control para marzo–mayo de 2020 | Indicador 0/1 | — | Evita atribuir completamente un episodio extremo a los factores económicos; no tiene interpretación estructural. |
+| Términos de intercambio | Poder de compra de las exportaciones; BanRep 15360 | Alternativa `Δln`, fuera del modelo ampliado | − | Se usa como sustituto de Brent en robustez, no simultáneamente en el núcleo. |
+
+Notación: `Δ` es cambio mensual, `ln` es logaritmo natural, `rezago 1` usa la observación del mes anterior y `asinh` conserva el signo de flujos positivos y negativos reduciendo la influencia de valores extremos.
+
+## Construcción y temporización
 
 - TRM, tasa de política, Brent, índice amplio del dólar y VIX: promedio mensual de datos diarios.
 - Remesas: flujo mensual en dólares; el modelo usa el acumulado móvil de 12 meses en logaritmos.
@@ -64,12 +90,15 @@ Los resultados describen asociaciones dinámicas, no efectos causales. Para hace
 - Déficit fiscal: negativo del balance de caja mensual del Gobierno Nacional Central; se acumula durante 12 meses y se divide por el PIB nominal anual implícito en las tablas de MinHacienda.
 - Riesgo local: promedio mensual de la tasa TES COP cero cupón a 10 años menos el Treasury estadounidense a 10 años. Es un proxy amplio de prima local, no un EMBI ni un CDS.
 - Reservas: cambio del logaritmo de las reservas internacionales netas sin FLAR, rezagado un mes.
-- Balanza comercial y capitales: `asinh(flujo/1.000)` para admitir valores positivos, negativos y cero; ambas variables entran con un rezago.
+- Balanza comercial y capitales: primero se aplica `asinh(flujo/1.000)` para admitir valores positivos, negativos y cero; luego se toma el cambio mensual y se usa con un rezago. Las pruebas de integración rechazan usar sus niveles transformados como estacionarios.
 - Diferencial de inflación: inflación interanual observada de Colombia menos la de EE. UU., rezagada un mes. La única ausencia interna de CPIAUCNS, octubre de 2025, se interpola linealmente y queda marcada en los datos.
 - Factor regional: promedio de los cambios logarítmicos estandarizados de BRL, CLP y MXN por USD. Media y volatilidad se calibran en 2006–2019; un valor positivo representa depreciación regional.
 - Variables globales contemporáneas: Brent, dólar amplio y VIX.
 - Variables domésticas de publicación lenta rezagadas un mes: remesas, diferencial de tasas, déficit fiscal, reservas, balanza, capitales e inflación.
+- El denominador fiscal usa la mediana del PIB implícito de todos los meses del año; puede incorporar información posterior dentro del mismo año y es otra razón para tratar la validación como condicional.
 - Términos de intercambio se conserva como alternativa de robustez que sustituye a Brent; no se incluye a la vez para evitar duplicar el canal petrolero.
+
+El diccionario completo de columnas, unidades, códigos de fuente y cautelas está en [`data/README.md`](data/README.md).
 
 ## Archivos principales
 
@@ -80,6 +109,13 @@ Los resultados describen asociaciones dinámicas, no efectos causales. Para hace
 - `results/pesos_explicativos_modelo_ampliado.csv`: descomposición Shapley exacta.
 - `results/comparacion_modelos.csv`: comparación base–ampliado sobre la misma muestra.
 - `results/`: coeficientes, diagnósticos, pruebas, contribuciones y validación.
+
+## Documentación por carpeta
+
+- [`data/README.md`](data/README.md): fuentes, columnas, unidades, transformaciones, rezagos y calidad de los datos.
+- [`src/README.md`](src/README.md): flujo de estimación, funciones principales y reproducción técnica.
+- [`results/README.md`](results/README.md): significado y uso de cada resultado CSV y de `metadata.json`.
+- [`deliverables/README.md`](deliverables/README.md): contenido y ruta de auditoría de las 11 hojas del archivo Excel.
 
 ## Reproducir la estimación
 
