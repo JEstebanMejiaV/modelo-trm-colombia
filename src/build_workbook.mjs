@@ -3,11 +3,15 @@ import path from "node:path";
 import { SpreadsheetFile, Workbook } from "@oai/artifact-tool";
 
 const ROOT = path.resolve(".");
-const OUTPUT_DIR = path.join(ROOT, "outputs", "01a02b58-9c08-7db2-9c7a-783427ec09df");
+const OUTPUT_DIR = process.env.MODEL_OUTPUT_DIR
+  ? path.resolve(process.env.MODEL_OUTPUT_DIR)
+  : path.join(ROOT, "outputs", "modelo_trm_colombia");
 const PREVIEW_DIR = path.join(OUTPUT_DIR, "previews");
 const OUTPUT_XLSX = path.join(OUTPUT_DIR, "modelo_trm_colombia.xlsx");
+const DELIVERABLE_XLSX = path.join(ROOT, "deliverables", "modelo_trm_colombia.xlsx");
 
 await fs.mkdir(PREVIEW_DIR, { recursive: true });
+await fs.mkdir(path.dirname(DELIVERABLE_XLSX), { recursive: true });
 
 function parseCsv(text) {
   text = text.replace(/^\uFEFF/, "");
@@ -82,8 +86,12 @@ function pct(value, digits = 1) {
   return `${(Number(value) * 100).toFixed(digits)}%`;
 }
 
+const metadata = JSON.parse(await fs.readFile(path.join(ROOT, "results/metadata.json"), "utf8"));
+const sampleStart = new Date(`${metadata.muestra_inicio}T00:00:00Z`);
+sampleStart.setUTCMonth(sampleStart.getUTCMonth() - 1);
+const sourceStart = sampleStart.toISOString().slice(0, 10);
 const raw = (await readCsv("data/modelo_trm_datos_mensuales.csv"))
-  .filter((r) => r.fecha >= "2005-12-01" && r.fecha <= "2026-04-01");
+  .filter((r) => r.fecha >= sourceStart && r.fecha <= metadata.muestra_fin);
 const coefs = await readCsv("results/coeficientes_modelo_principal.csv");
 const diagnostics = await readCsv("results/diagnosticos_modelo_principal.csv");
 const validationMetrics = await readCsv("results/validacion_metricas.csv");
@@ -103,7 +111,6 @@ const expandedValidationMetrics = await readCsv("results/validacion_metricas_mod
 const expandedValidationPredictions = await readCsv("results/validacion_predicciones_modelo_ampliado.csv");
 const explanatoryWeights = await readCsv("results/pesos_explicativos_modelo_ampliado.csv");
 const modelComparison = await readCsv("results/comparacion_modelos.csv");
-const metadata = JSON.parse(await fs.readFile(path.join(ROOT, "results/metadata.json"), "utf8"));
 
 const coefByTerm = Object.fromEntries(coefs.map((r) => [r.termino, n(r.coeficiente)]));
 const coefRecordByTerm = Object.fromEntries(coefs.map((r) => [r.termino, r]));
@@ -124,8 +131,8 @@ const TERM_LABELS = {
   "D.deficit_fiscal_12m_pct_pib.L1": "Δ déficit fiscal 12m/PIB (t−1)",
   "D.spread_tes_ust_10y_pp.L0": "Δ spread TES–UST 10 años (t)",
   "D.ln_reservas_netas_sin_flar.L1": "Δ ln reservas netas sin FLAR (t−1)",
-  "asinh_balanza_comercial.L1": "asinh balanza comercial cambiaria (t−1)",
-  "asinh_flujos_capital.L1": "asinh flujo neto de capital (t−1)",
+  "D.asinh_balanza_comercial.L1": "Δ asinh balanza comercial cambiaria (t−1)",
+  "D.asinh_flujos_capital.L1": "Δ asinh flujo neto de capital (t−1)",
   "diferencial_inflacion_pp.L1": "Diferencial de inflación interanual (t−1)",
   "factor_monedas_regionales.L0": "Factor de monedas regionales (t)",
   factor_monedas_regionales: "Factor de monedas regionales (t)",
@@ -305,14 +312,14 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
   s.getRange("A27:F27").format = { fill: COLORS.green, font: { bold: true, color: COLORS.dark }, wrapText: true };
 
   section(s, "A29:F29", "Alcance y cautelas");
-  s.getRange("A30:F37").values = [
+  s.getRange("A30:B37").values = [
     ["1", "La regresión identifica asociaciones dinámicas; no demuestra causalidad."],
     ["2", "La validación es condicional: usa realizaciones contemporáneas de Brent, dólar amplio y VIX; no equivale a un pronóstico en tiempo real."],
     ["3", "Los residuos presentan colas no normales; para inferencia se reportan errores HAC."],
     ["4", "El resultado positivo de remesas puede reflejar respuesta de los hogares a depreciaciones u otros shocks simultáneos."],
     ["5", "La prueba bounds no confirma cointegración al 5%; el ECM se muestra solo como contraste exploratorio."],
     ["6", "El déficit fiscal tiene el signo esperado, pero su p-valor de 0,189 no permite afirmar un efecto distinto de cero al 5%."],
-    ["7", "En el modelo ampliado, ARCH-LM tiene p≈0,001: persiste volatilidad condicional no explicada."],
+    ["7", "En el modelo ampliado, ARCH-LM tiene p<0,001: persiste volatilidad condicional no explicada."],
     ["8", "Los residuos ampliados tampoco son normales. HAC protege la inferencia sobre la media, pero no sustituye un modelo explícito de volatilidad."],
   ];
   s.mergeCells("B30:F30"); s.mergeCells("B31:F31"); s.mergeCells("B32:F32");
@@ -648,7 +655,7 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
   subtitle(
     s,
     "A2:W3",
-    "Extiende el modelo principal con riesgo soberano relativo, reservas, balanza comercial cambiaria, flujos de capital, diferencial de inflación y un factor de monedas regionales. Los coeficientes y pesos describen asociaciones; no identifican efectos causales.",
+    "Extiende el modelo principal con una prima local amplia, reservas, balanza comercial cambiaria, flujos de capital, diferencial de inflación y un factor de monedas regionales. Los coeficientes y pesos describen asociaciones; no identifican efectos causales.",
     COLORS.paleBlue
   );
 
@@ -870,7 +877,7 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
 // Validación
 {
   const s = sheets.Validacion;
-  title(s, "A1:R1", "Validación fuera de muestra");
+  title(s, "A1:R1", "Validación condicional pseudo-fuera de muestra");
   subtitle(s, "A2:R3", "Ventana expansiva de 48 meses (mayo de 2022–abril de 2026). La evaluación es condicional: usa valores contemporáneos ya realizados de Brent, dólar amplio, VIX, spread TES−UST y monedas regionales. Es una prueba explicativa, no un pronóstico genuinamente disponible en tiempo real.", COLORS.amber);
 
   s.getRange("A5:F5").values = [["Modelo", "Observaciones", "MAE (log)", "RMSE (log)", "MAPE", "Acierto dirección"]];
@@ -893,44 +900,23 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
     ["Reducción de MAE ampliado", 1 - n(expandedModelMetric.mae_log) / n(rwMetric.mae_log), "Mejora frente a la caminata aleatoria"],
     ["Reducción de RMSE ampliado", 1 - n(expandedModelMetric.rmse_log) / n(rwMetric.rmse_log), "Mejora frente a la caminata aleatoria"],
     ["Dirección correcta ampliado", n(expandedModelMetric.acierto_direccion_pct) / 100, "Signo mensual acertado"],
-    ["Cambio de MAPE vs. principal", (n(modelMetric.mape_pct) - n(expandedModelMetric.mape_pct)) / 100, "Positivo indica mejora del ampliado"],
+    ["Mejora de MAPE vs. principal (p.p.)", n(modelMetric.mape_pct) - n(expandedModelMetric.mape_pct), "Diferencia en puntos porcentuales; positivo indica mejora"],
   ];
   header(s, "H5:J5");
   s.getRange("H5:J9").format.borders = { preset: "all", style: "thin", color: "#D9E1F2" };
   s.getRange("I6:I9").format.numberFormat = "0.0%";
+  s.getRange("I9").format.numberFormat = "0.00 \"p.p.\"";
   s.getRange("H5:J9").format.wrapText = true;
   s.getRange("H6:J9").format.rowHeight = 38;
 
-  const heads = ["Mes", "ln TRM observada", "ln TRM modelo", "ln TRM caminata", "Δln observado", "Δln modelo", "TRM observada", "TRM modelo", "TRM caminata"];
-  s.getRange("A11:I11").values = [heads];
+  const baseHeads = ["Mes", "ln TRM observada", "ln TRM modelo principal", "ln TRM caminata", "Δln observado", "Δln modelo principal", "TRM observada", "TRM modelo principal", "TRM caminata"];
+  const expandedHeads = ["Mes", "ln TRM observada", "ln TRM modelo ampliado", "ln TRM caminata", "Δln observado", "Δln modelo ampliado", "TRM observada", "TRM modelo ampliado", "TRM caminata"];
+  s.getRange("A11:I11").values = [baseHeads];
   const valRows = validationPredictions.map((r) => [
     r.fecha.slice(0, 7), n(r.ln_trm_observada), n(r.ln_trm_modelo_condicional), n(r.ln_trm_caminata_aleatoria), n(r.cambio_log_observado), n(r.cambio_log_modelo), n(r.trm_observada), n(r.trm_modelo_condicional), n(r.trm_caminata_aleatoria),
   ]);
   const valEnd = 11 + valRows.length;
-  s.getRange(`A12:I${valEnd}`).values = valRows;
-  header(s, "A11:I11");
-  addTable(s, `A11:I${valEnd}`, "PrediccionesValidacionTable");
-  s.getRange(`B12:F${valEnd}`).format.numberFormat = "0.000000";
-  s.getRange(`G12:I${valEnd}`).format.numberFormat = "#,##0.00";
-
-  s.getRange("K25:N25").values = [["Mes", "TRM observada", "Modelo condicional", "Caminata aleatoria"]];
-  s.getRange(`K26:N${25 + valRows.length}`).formulas = valRows.map((_, i) => {
-    const r = 12 + i;
-    return [`=A${r}`, `=G${r}`, `=H${r}`, `=I${r}`];
-  });
-  header(s, "K25:N25");
-  s.getRange(`L26:N${25 + valRows.length}`).format.numberFormat = "#,##0";
-  const chart = s.charts.add("line", s.getRange(`K25:N${25 + valRows.length}`));
-  chart.title = "Validación condicional: TRM observada vs. comparadores";
-  chart.titleTextStyle.fontSize = 12;
-  chart.hasLegend = true;
-  chart.xAxis = { axisType: "textAxis", textStyle: { fontSize: 8 } };
-  chart.yAxis = { numberFormatCode: "#,##0" };
-  chart.setPosition("K5", "R22");
-
   const expandedValHeader = valEnd + 3;
-  section(s, `A${expandedValHeader - 1}:I${expandedValHeader - 1}`, "Predicciones condicionales del modelo ampliado");
-  s.getRange(`A${expandedValHeader}:I${expandedValHeader}`).values = [heads];
   const expandedValRows = expandedValidationPredictions.map((r) => [
     r.fecha.slice(0, 7),
     n(r.ln_trm_observada),
@@ -943,6 +929,30 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
     n(r.trm_caminata_aleatoria),
   ]);
   const expandedValEnd = expandedValHeader + expandedValRows.length;
+  s.getRange(`A12:I${valEnd}`).values = valRows;
+  header(s, "A11:I11");
+  addTable(s, `A11:I${valEnd}`, "PrediccionesValidacionTable");
+  s.getRange(`B12:F${valEnd}`).format.numberFormat = "0.000000";
+  s.getRange(`G12:I${valEnd}`).format.numberFormat = "#,##0.00";
+
+  s.getRange("K25:O25").values = [["Mes", "TRM observada", "Modelo principal condicional", "Modelo ampliado condicional", "Caminata aleatoria"]];
+  s.getRange(`K26:O${25 + valRows.length}`).formulas = valRows.map((_, i) => {
+    const r = 12 + i;
+    const expandedRow = expandedValHeader + 1 + i;
+    return [`=A${r}`, `=G${r}`, `=H${r}`, `=H${expandedRow}`, `=I${r}`];
+  });
+  header(s, "K25:O25");
+  s.getRange(`L26:O${25 + valRows.length}`).format.numberFormat = "#,##0";
+  const chart = s.charts.add("line", s.getRange(`K25:O${25 + valRows.length}`));
+  chart.title = "Validación condicional: observada, modelos y caminata";
+  chart.titleTextStyle.fontSize = 12;
+  chart.hasLegend = true;
+  chart.xAxis = { axisType: "textAxis", textStyle: { fontSize: 8 } };
+  chart.yAxis = { numberFormatCode: "#,##0" };
+  chart.setPosition("K5", "R22");
+
+  section(s, `A${expandedValHeader - 1}:I${expandedValHeader - 1}`, "Predicciones condicionales del modelo ampliado");
+  s.getRange(`A${expandedValHeader}:I${expandedValHeader}`).values = [expandedHeads];
   s.getRange(`A${expandedValHeader + 1}:I${expandedValEnd}`).values = expandedValRows;
   header(s, `A${expandedValHeader}:I${expandedValHeader}`);
   addTable(s, `A${expandedValHeader}:I${expandedValEnd}`, "PrediccionesValidacionAmpliadaTable");
@@ -1108,12 +1118,12 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
     ["Global", "Índice amplio del dólar", "Modelo principal", "Fed DTWEXBGS", "Δln contemporáneo", "+", "Fortaleza global USD", "Factor global común", "No es el DXY comercial de ICE"],
     ["Global", "VIX", "Modelo principal", "Promedio mensual", "Δln contemporáneo", "+", "Aversión al riesgo", "Risk-off y salida de emergentes", "Correlacionado con dólar global"],
     ["Externo", "Términos de intercambio", "Robustez alta", "BanRep 15360", "Δln", "−", "Poder de compra externo", "Incluye más exportaciones que petróleo", "Sustituir a Brent, no sumarlo automáticamente"],
-    ["Riesgo", "Spread TES−UST a 10 años", "Modelo ampliado", "BanRep 15274 − FRED DGS10", "Δ pp, contemporáneo", "+", "Riesgo soberano relativo", "Prima exigida a activos colombianos", "Combina riesgo país, duración y expectativas de tasas"],
+    ["Riesgo", "Spread TES−UST a 10 años", "Modelo ampliado", "BanRep 15274 − FRED DGS10", "Δ pp, contemporáneo", "+", "Prima local amplia", "Prima exigida a activos colombianos", "Combina riesgo país, duración y expectativas de tasas"],
     ["Reservas", "Reservas internacionales netas sin FLAR", "Modelo ampliado", "BanRep 15053", "Δln, rezago 1", "−", "Colchón externo", "Capacidad de intervención y liquidez", "La acumulación de reservas puede responder a la TRM"],
-    ["Comercio", "Balanza comercial cambiaria", "Modelo ampliado", "BanRep 16702", "asinh, rezago 1", "−", "Oferta neta de divisas", "Exportaciones menos importaciones canalizadas", "Es simultánea con la depreciación"],
+    ["Comercio", "Balanza comercial cambiaria", "Modelo ampliado", "BanRep 16702", "Δ asinh, rezago 1", "−", "Oferta neta de divisas", "Exportaciones menos importaciones canalizadas", "Es simultánea con la depreciación"],
     ["Precios", "Inflación observada CO−EE. UU.", "Modelo ampliado", "BanRep 15000 − FRED CPIAUCNS", "Diferencial interanual, rezago 1", "+", "Paridad de poder de compra", "Presiones relativas de precios", "Proxy observada, no expectativa de inflación"],
     ["Mercado", "Monedas regionales", "Modelo ampliado", "BRL, CLP y MXN por USD", "Promedio igual de z(Δln), base 2006–2019", "+", "Contagio regional", "Captura shocks latinoamericanos comunes", "Comparte información con VIX y dólar global"],
-    ["Flujos", "Flujo neto total de capital", "Modelo ampliado", "BanRep 16706", "asinh, rezago 1", "−", "Demanda de activos COP", "Resume entradas y salidas de capital", "Altamente endógeno y volátil"],
+    ["Flujos", "Flujo neto total de capital", "Modelo ampliado", "BanRep 16706", "Δ asinh, rezago 1", "−", "Demanda de activos COP", "Resume entradas y salidas de capital", "Altamente endógeno y volátil"],
     ["Riesgo", "EMBI/CDS Colombia", "Extensión futura", "Spread soberano", "Nivel o Δ", "+", "Riesgo específico", "Fiscal, político y refinanciación", "Sin descarga oficial pública estable para toda la muestra"],
     ["Política", "Intervención cambiaria", "Extensión futura", "Compras/ventas BanRep", "USD, rezago", "+ compras", "Demanda oficial de USD", "Importante en episodios puntuales", "Respuesta de política, no shock puro"],
   ];
@@ -1151,7 +1161,8 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
     ["Banco de la República", "Tasa de política, serie 59", "Diaria → mensual", "1998–2026", "Modelo principal", "Promedio mensual", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=59"],
     ["Banco de la República", "Remesas, serie 15363", "Mensual", "2000–2026", "Modelo principal", "Acumulado móvil 12 meses", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15363"],
     ["Ministerio de Hacienda", "Balance fiscal GNC", "Mensual", "2004–2026", "Modelo principal", "Balance de caja; déficit positivo tras cambiar signo", "https://www.minhacienda.gov.co/documents/d/portal/balance-fiscal-gnc-mensual-y-trimestral?download=true"],
-    ["U.S. EIA", "Brent RBRTE", "Mensual", "1987–2026", "Modelo principal", "Precio spot mensual, USD por barril", "https://www.eia.gov/dnav/pet/hist/LeafHandler.ashx?f=M&n=PET&s=RBRTE"],
+    ["U.S. EIA / FRED", "Brent DCOILBRENTEU", "Diaria → mensual", "1987–2026", "Modelo principal", "Promedio mensual, USD por barril", "https://fred.stlouisfed.org/series/DCOILBRENTEU"],
+    ["U.S. EIA", "Brent RBRTE", "Mensual", "1987–2026", "Verificación", "Referencia mensual equivalente", "https://www.eia.gov/dnav/pet/hist/LeafHandler.ashx?f=M&n=PET&s=RBRTE"],
     ["Federal Reserve / FRED", "Federal funds FEDFUNDS", "Mensual", "1954–2026", "Modelo principal", "Promedio mensual", "https://fred.stlouisfed.org/series/FEDFUNDS"],
     ["Federal Reserve / FRED", "Índice amplio USD DTWEXBGS", "Diaria → mensual", "2006–2026", "Modelo principal", "Índice nominal amplio", "https://fred.stlouisfed.org/series/DTWEXBGS"],
     ["Cboe / FRED", "VIXCLS", "Diaria → mensual", "1990–2026", "Modelo principal", "Promedio mensual", "https://fred.stlouisfed.org/series/VIXCLS"],
@@ -1159,8 +1170,8 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
     ["Banco de la República", "Reservas netas sin FLAR 15053", "Mensual", "1960–2026", "Modelo ampliado", "Log y rezago", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15053"],
     ["Banco de la República", "TES en pesos a 10 años 15274", "Diaria → mensual", "2003–2026", "Modelo ampliado", "Tasa cero cupón; promedio mensual", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15274"],
     ["U.S. Treasury / FRED", "Treasury 10 años DGS10", "Diaria → mensual", "1962–2026", "Modelo ampliado", "Promedio mensual; se resta de TES 10 años", "https://fred.stlouisfed.org/series/DGS10"],
-    ["Banco de la República", "Balanza comercial cambiaria 16702", "Mensual", "2001–2026", "Modelo ampliado", "asinh y rezago", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=16702"],
-    ["Banco de la República", "Flujo neto total de capital 16706", "Mensual", "2001–2026", "Modelo ampliado", "asinh y rezago", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=16706"],
+    ["Banco de la República", "Balanza comercial cambiaria 16702", "Mensual", "2001–2026", "Modelo ampliado", "Δ asinh y rezago", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=16702"],
+    ["Banco de la República", "Flujo neto total de capital 16706", "Mensual", "2001–2026", "Modelo ampliado", "Δ asinh y rezago", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=16706"],
     ["Banco de la República", "IPC total nacional 15000", "Mensual", "1954–2026", "Modelo ampliado", "Inflación interanual", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15000"],
     ["U.S. BLS / FRED", "IPC urbano no ajustado CPIAUCNS", "Mensual", "1913–2026", "Modelo ampliado", "Inflación interanual; octubre de 2025 interpolado", "https://fred.stlouisfed.org/series/CPIAUCNS"],
     ["OECD / FRED", "BRL por USD CCUSMA02BRM618N", "Mensual", "1994–2026", "Modelo ampliado", "Factor regional a partir de Δln", "https://fred.stlouisfed.org/series/CCUSMA02BRM618N"],
@@ -1223,10 +1234,14 @@ for (const [sheetName, range] of renderSpecs) {
 
 const xlsx = await SpreadsheetFile.exportXlsx(wb);
 await xlsx.save(OUTPUT_XLSX);
+if (path.resolve(OUTPUT_XLSX) !== path.resolve(DELIVERABLE_XLSX)) {
+  await fs.copyFile(OUTPUT_XLSX, DELIVERABLE_XLSX);
+}
 await fs.writeFile(path.join(OUTPUT_DIR, "qa_inspect.txt"), `${keyChecks.join("\n\n")}\n\nERROR SCAN\n${errors.ndjson}\n`, "utf8");
 
 console.log(JSON.stringify({
   output: OUTPUT_XLSX,
+  deliverable: DELIVERABLE_XLSX,
   rows_source: raw.length,
   rows_model: fit.length,
   rows_model_expanded: expandedFit.length,
