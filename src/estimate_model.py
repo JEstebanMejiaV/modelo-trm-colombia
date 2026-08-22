@@ -29,12 +29,92 @@ RESULTS = ROOT / "results"
 DATA = ROOT / "data"
 
 
-CORE_VARIABLES = [
+ECM_LEVEL_VARIABLES = [
     "ln_brent",
     "ln_remesas_12m",
     "diferencial_tasas_pp",
     "deficit_fiscal_12m_pct_pib",
     "ln_dolar_amplio",
+]
+
+
+# Cada factor es un jugador de la descomposicion Shapley. Todos sus terminos
+# (transformaciones y rezagos) entran o salen juntos al calcular el R2 marginal.
+BASE_FACTOR_SPECS = {
+    "Petróleo Brent": {
+        "grupo": "Global",
+        "terminos": [("D.ln_brent", 0)],
+    },
+    "Remesas": {
+        "grupo": "Sector externo Colombia",
+        "terminos": [("D.ln_remesas_12m", 1)],
+    },
+    "Diferencial de tasas": {
+        "grupo": "Política doméstica",
+        "terminos": [("D.diferencial_tasas_pp", 1)],
+    },
+    "Déficit fiscal": {
+        "grupo": "Política doméstica",
+        "terminos": [("D.deficit_fiscal_12m_pct_pib", 1)],
+    },
+    "Dólar amplio": {
+        "grupo": "Global",
+        "terminos": [("D.ln_dolar_amplio", 0)],
+    },
+    "VIX": {
+        "grupo": "Global",
+        "terminos": [("D.ln_vix", 0)],
+    },
+}
+
+
+EXPANDED_FACTOR_SPECS = {
+    **BASE_FACTOR_SPECS,
+    "Spread TES-Treasury 10 años": {
+        "grupo": "Riesgo local",
+        # Contemporaneo: esta version es contabilidad historica/nowcast, no causal.
+        "terminos": [("D.spread_tes_ust_10y_pp", 0)],
+    },
+    "Reservas internacionales": {
+        "grupo": "Sector externo Colombia",
+        "terminos": [("D.ln_reservas_netas_sin_flar", 1)],
+    },
+    "Balanza comercial cambiaria": {
+        "grupo": "Sector externo Colombia",
+        "terminos": [("asinh_balanza_comercial", 1)],
+    },
+    "Flujos netos de capital": {
+        "grupo": "Sector externo Colombia",
+        "terminos": [("asinh_flujos_capital", 1)],
+    },
+    "Diferencial de inflación": {
+        "grupo": "Política doméstica",
+        "terminos": [("diferencial_inflacion_pp", 1)],
+    },
+    "Monedas regionales": {
+        "grupo": "Regional",
+        "terminos": [("factor_monedas_regionales", 0)],
+    },
+}
+
+
+DIFFERENCED_COMPONENTS = [
+    "ln_brent",
+    "ln_remesas_12m",
+    "diferencial_tasas_pp",
+    "deficit_fiscal_12m_pct_pib",
+    "ln_dolar_amplio",
+    "ln_vix",
+    "spread_tes_ust_10y_pp",
+    "ln_reservas_netas_sin_flar",
+]
+
+
+LEVEL_COMPONENTS = [
+    "asinh_balanza_comercial",
+    "asinh_flujos_capital",
+    "diferencial_inflacion_pp",
+    "factor_monedas_regionales",
 ]
 
 
@@ -76,6 +156,24 @@ def read_fred(path: Path, output_name: str, daily: bool = False) -> pd.Series:
     return series
 
 
+def load_banrep_series(path: Path, output_name: str, daily: bool = False) -> pd.Series:
+    """Lee el JSON publico del graficador de BanRep y lo lleva a frecuencia mensual."""
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    item = payload[0] if isinstance(payload, list) else payload
+    data = pd.DataFrame(item["data"], columns=["timestamp_ms", output_name])
+    dates = pd.to_datetime(data.pop("timestamp_ms"), unit="ms", utc=True).dt.tz_convert(None)
+    data.index = pd.DatetimeIndex(dates)
+    series = pd.to_numeric(data[output_name], errors="coerce").dropna().sort_index()
+    if daily:
+        # Se promedia cada mercado por separado; no se cruzan calendarios diarios.
+        series = series.resample("MS").mean()
+    else:
+        series.index = month_start(series.index)
+        series = series.groupby(level=0).mean()
+    series.name = output_name
+    return series
+
+
 def load_remittances(path: Path) -> pd.Series:
     payload = json.loads(path.read_text(encoding="utf-8"))[0]
     data = pd.DataFrame(payload["data"], columns=["timestamp_ms", "remesas_usd_millones"])
@@ -85,14 +183,7 @@ def load_remittances(path: Path) -> pd.Series:
 
 
 def load_banrep_daily(path: Path, output_name: str) -> pd.Series:
-    payload = json.loads(path.read_text(encoding="utf-8"))[0]
-    data = pd.DataFrame(payload["data"], columns=["timestamp_ms", output_name])
-    dates = pd.to_datetime(data.pop("timestamp_ms"), unit="ms", utc=True).dt.tz_convert(None)
-    data.index = pd.DatetimeIndex(dates)
-    series = pd.to_numeric(data[output_name], errors="coerce").dropna().sort_index()
-    series = series.resample("MS").mean()
-    series.name = output_name
-    return series
+    return load_banrep_series(path, output_name, daily=True)
 
 
 def load_terms_of_trade(path: Path) -> pd.Series:
@@ -170,6 +261,31 @@ def build_dataset() -> pd.DataFrame:
         read_fred(RAW / "vix_diario_fred.csv", "vix", daily=True),
         load_remittances(RAW / "remesas_mensuales_banrep.json"),
         load_terms_of_trade(RAW / "series_15360_15368.json"),
+        load_banrep_series(
+            RAW / "reservas_netas_sin_flar_banrep.json",
+            "reservas_netas_sin_flar_usd_millones",
+        ),
+        load_banrep_series(
+            RAW / "tes_10y_banrep.json", "tes_10y_colombia_pct", daily=True
+        ),
+        read_fred(
+            RAW / "treasury_10y_diario_fred.csv",
+            "treasury_10y_eeuu_pct",
+            daily=True,
+        ),
+        load_banrep_series(
+            RAW / "balanza_comercial_cambiaria_banrep.json",
+            "balanza_comercial_cambiaria_usd_millones",
+        ),
+        load_banrep_series(
+            RAW / "flujos_capital_totales_banrep.json",
+            "flujos_capital_usd_millones",
+        ),
+        load_banrep_series(RAW / "ipc_colombia_banrep.json", "ipc_colombia"),
+        read_fred(RAW / "ipc_eeuu_mensual_fred.csv", "ipc_eeuu"),
+        read_fred(RAW / "brl_usd_mensual_fred.csv", "brl_por_usd"),
+        read_fred(RAW / "clp_usd_mensual_fred.csv", "clp_por_usd"),
+        read_fred(RAW / "mxn_usd_mensual_fred.csv", "mxn_por_usd"),
     ]
     data = pd.concat(series, axis=1, sort=True).sort_index()
     data = data.join(load_fiscal(RAW / "balance_fiscal_gnc_mensual_trimestral.xlsx"), how="outer")
@@ -180,6 +296,45 @@ def build_dataset() -> pd.DataFrame:
     data["diferencial_tasas_pp"] = (
         data["tasa_politica_colombia_pct"] - data["fed_funds_eeuu_pct"]
     )
+    data["spread_tes_ust_10y_pp"] = (
+        data["tes_10y_colombia_pct"] - data["treasury_10y_eeuu_pct"]
+    )
+
+    # CPIAUCNS no publico octubre de 2025. Se interpola solamente ese hueco
+    # interno para poder formar la inflacion interanual sin cortar la muestra.
+    ipc_eeuu_original = data["ipc_eeuu"].copy()
+    ipc_eeuu_completo = ipc_eeuu_original.interpolate(limit=1, limit_area="inside")
+    data["ipc_eeuu_interpolado"] = (
+        ipc_eeuu_original.isna() & ipc_eeuu_completo.notna()
+    ).astype(int)
+    data["ipc_eeuu"] = ipc_eeuu_completo
+    data["inflacion_colombia_interanual_pct"] = 100.0 * (
+        data["ipc_colombia"] / data["ipc_colombia"].shift(12) - 1.0
+    )
+    data["inflacion_eeuu_interanual_pct"] = 100.0 * (
+        data["ipc_eeuu"] / data["ipc_eeuu"].shift(12) - 1.0
+    )
+    data["diferencial_inflacion_pp"] = (
+        data["inflacion_colombia_interanual_pct"]
+        - data["inflacion_eeuu_interanual_pct"]
+    )
+
+    data["asinh_balanza_comercial"] = np.arcsinh(
+        data["balanza_comercial_cambiaria_usd_millones"] / 1000.0
+    )
+    data["asinh_flujos_capital"] = np.arcsinh(
+        data["flujos_capital_usd_millones"] / 1000.0
+    )
+
+    regional_returns = pd.DataFrame(
+        {
+            currency: np.log(data[currency].where(data[currency] > 0)).diff()
+            for currency in ["brl_por_usd", "clp_por_usd", "mxn_por_usd"]
+        }
+    )
+    calibration = regional_returns.loc["2006-01-01":"2019-12-01"]
+    regional_z = (regional_returns - calibration.mean()) / calibration.std(ddof=0)
+    data["factor_monedas_regionales"] = regional_z.mean(axis=1, skipna=False)
 
     positive_logs = {
         "ln_trm": "trm_cop_usd",
@@ -188,6 +343,7 @@ def build_dataset() -> pd.DataFrame:
         "ln_dolar_amplio": "indice_dolar_amplio",
         "ln_vix": "vix",
         "ln_terminos_intercambio": "terminos_intercambio",
+        "ln_reservas_netas_sin_flar": "reservas_netas_sin_flar_usd_millones",
     }
     for target, source in positive_logs.items():
         data[target] = np.log(data[source].where(data[source] > 0))
@@ -264,9 +420,12 @@ def select_ardl(y: pd.Series, exog: pd.DataFrame, fixed: pd.DataFrame) -> tuple[
 def difference_components(model_data: pd.DataFrame) -> pd.DataFrame:
     diff = pd.DataFrame(index=model_data.index)
     diff["D.ln_trm"] = model_data["ln_trm"].diff()
-    for variable in CORE_VARIABLES:
-        diff[f"D.{variable}"] = model_data[variable].diff()
-    diff["D.ln_vix"] = model_data["ln_vix"].diff()
+    for variable in DIFFERENCED_COMPONENTS:
+        if variable in model_data:
+            diff[f"D.{variable}"] = model_data[variable].diff()
+    for variable in LEVEL_COMPONENTS:
+        if variable in model_data:
+            diff[variable] = model_data[variable]
     diff["dummy_pandemia_2020"] = model_data["dummy_pandemia_2020"]
     return diff
 
@@ -278,7 +437,7 @@ def make_difference_design(
     x = pd.DataFrame(index=components.index)
     for lag in range(1, p + 1):
         x[f"D.ln_trm.L{lag}"] = components["D.ln_trm"].shift(lag)
-    drivers = [f"D.{variable}" for variable in CORE_VARIABLES] + ["D.ln_vix"]
+    drivers = [f"D.{variable}" for variable in ECM_LEVEL_VARIABLES] + ["D.ln_vix"]
     for driver in drivers:
         for lag in range(0, q + 1):
             x[f"{driver}.L{lag}"] = components[driver].shift(lag)
@@ -315,24 +474,24 @@ def select_difference_model(model_data: pd.DataFrame) -> tuple[SelectedDifferenc
     return selected, grid
 
 
+def design_term_name(component: str, lag: int) -> str:
+    return f"{component}.L{lag}"
+
+
 def make_timed_difference_design(
-    components: pd.DataFrame, p: int, index: pd.Index | None = None
+    components: pd.DataFrame,
+    p: int,
+    factor_specs: dict[str, dict[str, object]],
+    index: pd.Index | None = None,
 ) -> tuple[pd.Series, pd.DataFrame]:
     y = components["D.ln_trm"].rename("D.ln_trm")
     x = pd.DataFrame(index=components.index)
     for lag in range(1, p + 1):
         x[f"D.ln_trm.L{lag}"] = components["D.ln_trm"].shift(lag)
 
-    # Los precios globales se observan dentro del mes; las variables colombianas lentas
-    # se rezagan un mes para reducir simultaneidad y respetar sus fechas de publicación.
-    x["D.ln_brent.L0"] = components["D.ln_brent"]
-    x["D.ln_dolar_amplio.L0"] = components["D.ln_dolar_amplio"]
-    x["D.ln_vix.L0"] = components["D.ln_vix"]
-    x["D.ln_remesas_12m.L1"] = components["D.ln_remesas_12m"].shift(1)
-    x["D.diferencial_tasas_pp.L1"] = components["D.diferencial_tasas_pp"].shift(1)
-    x["D.deficit_fiscal_12m_pct_pib.L1"] = components[
-        "D.deficit_fiscal_12m_pct_pib"
-    ].shift(1)
+    for factor in factor_specs.values():
+        for component, lag in factor["terminos"]:
+            x[design_term_name(component, lag)] = components[component].shift(lag)
     x["dummy_pandemia_2020"] = components["dummy_pandemia_2020"]
     x = sm.add_constant(x, has_constant="add")
     combined = pd.concat([y, x], axis=1).dropna()
@@ -343,13 +502,20 @@ def make_timed_difference_design(
 
 def select_timed_difference_model(
     model_data: pd.DataFrame,
+    factor_specs: dict[str, dict[str, object]],
+    common_index: pd.Index | None = None,
 ) -> tuple[SelectedDifferenceModel, pd.DataFrame]:
     components = difference_components(model_data)
-    common_index = make_timed_difference_design(components, p=3)[0].index
+    if common_index is None:
+        common_index = make_timed_difference_design(
+            components, p=3, factor_specs=factor_specs
+        )[0].index
     candidates: list[dict[str, float | int]] = []
     selected: SelectedDifferenceModel | None = None
     for p in range(0, 4):
-        y, x = make_timed_difference_design(components, p=p, index=common_index)
+        y, x = make_timed_difference_design(
+            components, p=p, factor_specs=factor_specs, index=common_index
+        )
         result = sm.OLS(y, x).fit()
         candidates.append(
             {
@@ -600,6 +766,90 @@ def difference_fit_and_contributions(
     return fitted, contributions
 
 
+def exact_shapley_r2(
+    selected: SelectedDifferenceModel,
+    factor_specs: dict[str, dict[str, object]],
+    robust_coefficients: pd.DataFrame,
+) -> pd.DataFrame:
+    """Descompone exactamente el incremento del R2 mediante Shapley/LMG."""
+    factor_columns = {
+        name: [design_term_name(component, lag) for component, lag in spec["terminos"]]
+        for name, spec in factor_specs.items()
+    }
+    assigned = {column for columns in factor_columns.values() for column in columns}
+    base_columns = [column for column in selected.x.columns if column not in assigned]
+    missing = assigned.difference(selected.x.columns)
+    if missing:
+        raise ValueError(f"Faltan terminos para Shapley: {sorted(missing)}")
+
+    y = selected.y.to_numpy(dtype=float)
+    total_ss = float(np.square(y - y.mean()).sum())
+
+    def r_squared(columns: list[str]) -> float:
+        matrix = selected.x[columns].to_numpy(dtype=float)
+        beta, *_ = np.linalg.lstsq(matrix, y, rcond=None)
+        residual = y - matrix @ beta
+        return 1.0 - float(np.square(residual).sum()) / total_ss
+
+    names = list(factor_specs)
+    player_count = len(names)
+    cache: dict[int, float] = {}
+    for mask in range(1 << player_count):
+        columns = list(base_columns)
+        for player, factor_name in enumerate(names):
+            if mask & (1 << player):
+                columns.extend(factor_columns[factor_name])
+        cache[mask] = r_squared(columns)
+
+    empty_r2 = cache[0]
+    full_r2 = cache[(1 << player_count) - 1]
+    incremental_r2 = full_r2 - empty_r2
+    coefficient_lookup = robust_coefficients.set_index("termino")
+    rows: list[dict[str, object]] = []
+    for player, factor_name in enumerate(names):
+        shapley = 0.0
+        for mask in range(1 << player_count):
+            if mask & (1 << player):
+                continue
+            subset_size = mask.bit_count()
+            weight = (
+                math.factorial(subset_size)
+                * math.factorial(player_count - subset_size - 1)
+                / math.factorial(player_count)
+            )
+            shapley += weight * (cache[mask | (1 << player)] - cache[mask])
+
+        terms = factor_columns[factor_name]
+        coefficient = math.nan
+        p_value = math.nan
+        if len(terms) == 1 and terms[0] in coefficient_lookup.index:
+            coefficient = float(coefficient_lookup.loc[terms[0], "coeficiente"])
+            p_value = float(coefficient_lookup.loc[terms[0], "p_valor"])
+        rows.append(
+            {
+                "factor": factor_name,
+                "grupo": factor_specs[factor_name]["grupo"],
+                "terminos": ", ".join(terms),
+                "coeficiente_modelo": coefficient,
+                "p_valor_hac": p_value,
+                "shapley_r2": shapley,
+                "aporte_r2_puntos_porcentuales": 100.0 * shapley,
+                "peso_entre_factores_pct": 100.0 * shapley / incremental_r2,
+                "peso_r2_total_pct": 100.0 * shapley / full_r2,
+                "r2_base": empty_r2,
+                "r2_completo": full_r2,
+                "r2_incremental": incremental_r2,
+            }
+        )
+
+    result = pd.DataFrame(rows).sort_values("shapley_r2", ascending=False).reset_index(drop=True)
+    if not np.isclose(result["shapley_r2"].sum(), incremental_r2, atol=1e-10):
+        raise AssertionError("La suma Shapley no cierra contra el incremento del R2.")
+    if not np.isclose(result["peso_entre_factores_pct"].sum(), 100.0, atol=1e-8):
+        raise AssertionError("Los pesos Shapley no suman 100%.")
+    return result
+
+
 def bounds_to_frames(bounds_result) -> tuple[pd.DataFrame, pd.DataFrame]:
     summary = pd.DataFrame(
         [
@@ -619,12 +869,28 @@ def main() -> None:
     DATA.mkdir(parents=True, exist_ok=True)
 
     data = build_dataset()
-    model_columns = ["ln_trm", *CORE_VARIABLES, "ln_vix", "dln_vix", "dummy_pandemia_2020"]
+    model_columns = [
+        "ln_trm",
+        *ECM_LEVEL_VARIABLES,
+        "ln_vix",
+        "dln_vix",
+        "spread_tes_ust_10y_pp",
+        "ln_reservas_netas_sin_flar",
+        *LEVEL_COMPONENTS,
+        "dummy_pandemia_2020",
+    ]
     model_data = data.loc[pd.Timestamp("2006-01-01") :, model_columns].dropna().copy().asfreq("MS")
     if model_data.isna().any().any():
         raise ValueError("La muestra balanceada contiene meses faltantes.")
 
-    selected_diff, lag_grid_diff = select_timed_difference_model(model_data)
+    components = difference_components(model_data)
+    common_index = make_timed_difference_design(
+        components, p=3, factor_specs=EXPANDED_FACTOR_SPECS
+    )[0].index
+
+    selected_diff, lag_grid_diff = select_timed_difference_model(
+        model_data, BASE_FACTOR_SPECS, common_index=common_index
+    )
     _, coefficients_diff = tidy_robust_ols(selected_diff.result, maxlags=6)
     diagnostics_diff = diagnostics(selected_diff.result)
     predictions, validation = difference_validation(
@@ -634,8 +900,71 @@ def main() -> None:
         model_data, selected_diff
     )
 
+    selected_expanded, lag_grid_expanded = select_timed_difference_model(
+        model_data, EXPANDED_FACTOR_SPECS, common_index=common_index
+    )
+    _, coefficients_expanded = tidy_robust_ols(selected_expanded.result, maxlags=6)
+    diagnostics_expanded = diagnostics(selected_expanded.result)
+    predictions_expanded, validation_expanded = difference_validation(
+        model_data, selected_expanded, holdout=min(48, len(selected_expanded.y) // 4)
+    )
+    fitted_expanded, contributions_expanded = difference_fit_and_contributions(
+        model_data, selected_expanded
+    )
+    shapley_expanded = exact_shapley_r2(
+        selected_expanded, EXPANDED_FACTOR_SPECS, coefficients_expanded
+    )
+
+    def out_of_sample_r2(predictions_frame: pd.DataFrame) -> float:
+        model_error = (
+            predictions_frame["ln_trm_modelo_condicional"]
+            - predictions_frame["ln_trm_observada"]
+        )
+        benchmark_error = (
+            predictions_frame["ln_trm_caminata_aleatoria"]
+            - predictions_frame["ln_trm_observada"]
+        )
+        return 1.0 - float(np.square(model_error).sum()) / float(
+            np.square(benchmark_error).sum()
+        )
+
+    base_validation_row = validation.iloc[0]
+    expanded_validation_row = validation_expanded.iloc[0]
+    comparison = pd.DataFrame(
+        [
+            {
+                "modelo": "Base",
+                "observaciones": int(selected_diff.result.nobs),
+                "r_cuadrado": float(selected_diff.result.rsquared),
+                "r_cuadrado_ajustado": float(selected_diff.result.rsquared_adj),
+                "aic": float(selected_diff.result.aic),
+                "bic": float(selected_diff.result.bic),
+                "mape_pct": float(base_validation_row["mape_pct"]),
+                "acierto_direccion_pct": float(
+                    base_validation_row["acierto_direccion_pct"]
+                ),
+                "r2_fuera_muestra_vs_caminata": out_of_sample_r2(predictions),
+            },
+            {
+                "modelo": "Ampliado historico",
+                "observaciones": int(selected_expanded.result.nobs),
+                "r_cuadrado": float(selected_expanded.result.rsquared),
+                "r_cuadrado_ajustado": float(selected_expanded.result.rsquared_adj),
+                "aic": float(selected_expanded.result.aic),
+                "bic": float(selected_expanded.result.bic),
+                "mape_pct": float(expanded_validation_row["mape_pct"]),
+                "acierto_direccion_pct": float(
+                    expanded_validation_row["acierto_direccion_pct"]
+                ),
+                "r2_fuera_muestra_vs_caminata": out_of_sample_r2(
+                    predictions_expanded
+                ),
+            },
+        ]
+    )
+
     y = model_data["ln_trm"]
-    exog = model_data[CORE_VARIABLES]
+    exog = model_data[ECM_LEVEL_VARIABLES]
     fixed = model_data[["dln_vix", "dummy_pandemia_2020"]]
     selected_ecm, lag_grid_ecm = select_ardl(y, exog, fixed)
     uecm_model = UECM.from_ardl(selected_ecm.result.model)
@@ -647,7 +976,14 @@ def main() -> None:
 
     tests = integration_tests(
         model_data,
-        ["ln_trm", *CORE_VARIABLES, "ln_vix"],
+        [
+            "ln_trm",
+            *ECM_LEVEL_VARIABLES,
+            "ln_vix",
+            "spread_tes_ust_10y_pp",
+            "ln_reservas_netas_sin_flar",
+            "diferencial_inflacion_pp",
+        ],
     )
     short_run_ecm = tidy_result(uecm_result)
     long_run_ecm = tidy_long_run(uecm_result)
@@ -670,6 +1006,31 @@ def main() -> None:
     contributions_diff.to_csv(
         RESULTS / "contribuciones_modelo_principal.csv", encoding="utf-8-sig"
     )
+    lag_grid_expanded.to_csv(
+        RESULTS / "seleccion_rezagos_modelo_ampliado.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
+    coefficients_expanded.to_csv(
+        RESULTS / "coeficientes_modelo_ampliado.csv", index=False, encoding="utf-8-sig"
+    )
+    diagnostics_expanded.to_csv(
+        RESULTS / "diagnosticos_modelo_ampliado.csv", index=False, encoding="utf-8-sig"
+    )
+    fitted_expanded.to_csv(
+        RESULTS / "ajuste_historico_modelo_ampliado.csv", encoding="utf-8-sig"
+    )
+    contributions_expanded.to_csv(
+        RESULTS / "contribuciones_modelo_ampliado.csv", encoding="utf-8-sig"
+    )
+    shapley_expanded.to_csv(
+        RESULTS / "pesos_explicativos_modelo_ampliado.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
+    comparison.to_csv(
+        RESULTS / "comparacion_modelos.csv", index=False, encoding="utf-8-sig"
+    )
     lag_grid_ecm.to_csv(
         RESULTS / "seleccion_rezagos_ecm.csv", index=False, encoding="utf-8-sig"
     )
@@ -687,6 +1048,14 @@ def main() -> None:
     )
     predictions.to_csv(RESULTS / "validacion_predicciones.csv", encoding="utf-8-sig")
     validation.to_csv(RESULTS / "validacion_metricas.csv", index=False, encoding="utf-8-sig")
+    predictions_expanded.to_csv(
+        RESULTS / "validacion_predicciones_modelo_ampliado.csv", encoding="utf-8-sig"
+    )
+    validation_expanded.to_csv(
+        RESULTS / "validacion_metricas_modelo_ampliado.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
 
     metadata = {
         "muestra_inicio": model_data.index.min().strftime("%Y-%m-%d"),
@@ -700,6 +1069,34 @@ def main() -> None:
         "adl_bic": float(selected_diff.result.bic),
         "adl_r_cuadrado": float(selected_diff.result.rsquared),
         "adl_r_cuadrado_ajustado": float(selected_diff.result.rsquared_adj),
+        "modelo_ampliado": "Contabilidad historica mensual en primeras diferencias con 12 factores y errores HAC",
+        "ampliado_p_cambio_trm": selected_expanded.p,
+        "ampliado_observaciones": int(selected_expanded.result.nobs),
+        "ampliado_aic": float(selected_expanded.result.aic),
+        "ampliado_bic": float(selected_expanded.result.bic),
+        "ampliado_r_cuadrado": float(selected_expanded.result.rsquared),
+        "ampliado_r_cuadrado_ajustado": float(
+            selected_expanded.result.rsquared_adj
+        ),
+        "ampliado_temporizacion": "Brent, dolar amplio, VIX, spread TES-Treasury y monedas regionales contemporaneos; variables colombianas de publicacion lenta rezagadas un mes",
+        "pesos_metodo": "Shapley/LMG exacto del incremento del R2 sobre intercepto, dinamica de TRM y dummy de pandemia",
+        "pesos_suma_pct": float(shapley_expanded["peso_entre_factores_pct"].sum()),
+        "shapley_r2_base": float(shapley_expanded["r2_base"].iloc[0]),
+        "shapley_r2_completo": float(shapley_expanded["r2_completo"].iloc[0]),
+        "shapley_r2_incremental": float(
+            shapley_expanded["r2_incremental"].iloc[0]
+        ),
+        "factor_regional": "Promedio de cambios log estandarizados de BRL, CLP y MXN por USD; parametros calibrados 2006-2019",
+        "ipc_eeuu": "CPIAUCNS; octubre de 2025 interpolado linealmente por ausencia de dato oficial",
+        "flujos_capital": "Movimientos netos de capital de la balanza cambiaria, BanRep serie 16706",
+        "validacion_base_mape_pct": float(base_validation_row["mape_pct"]),
+        "validacion_ampliado_mape_pct": float(expanded_validation_row["mape_pct"]),
+        "validacion_base_acierto_direccion_pct": float(
+            base_validation_row["acierto_direccion_pct"]
+        ),
+        "validacion_ampliado_acierto_direccion_pct": float(
+            expanded_validation_row["acierto_direccion_pct"]
+        ),
         "ecm_p": selected_ecm.p,
         "ecm_q_comun": selected_ecm.q,
         "bounds_f": float(bounds.stat),
@@ -719,6 +1116,14 @@ def main() -> None:
     print(diagnostics_diff.to_string(index=False))
     print("\nValidación")
     print(validation.to_string(index=False))
+    print("\nComparacion base vs. ampliado")
+    print(comparison.to_string(index=False))
+    print("\nPesos explicativos Shapley del modelo ampliado")
+    print(
+        shapley_expanded[
+            ["factor", "grupo", "shapley_r2", "peso_entre_factores_pct"]
+        ].to_string(index=False)
+    )
     print("\nECM exploratorio: coeficientes de largo plazo")
     print(long_run_ecm.to_string(index=False))
 
