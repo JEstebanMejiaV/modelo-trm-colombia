@@ -6,11 +6,9 @@ Este proyecto estima un modelo mensual para explicar la variación del precio de
 
 La especificación preferida es un modelo en primeras diferencias:
 
-\[
-\Delta\ln(TRM_t)=c+\beta_1\Delta\ln(Brent_t)+\beta_2\Delta\ln(Dólar\ amplio_t)+\beta_3\Delta\ln(VIX_t)
-+\beta_4\Delta\ln(Remesas\ 12m_{t-1})+\beta_5\Delta(Diferencial\ de\ tasas_{t-1})
-+\beta_6\Delta(Déficit\ fiscal\ 12m/PIB_{t-1})+\beta_7Pandemia_t+u_t
-\]
+$$
+\Delta\ln(\text{TRM}_t) = c + \beta_1 \Delta\ln(\text{Brent}_t) + \beta_2 \Delta\ln(\text{Dólar amplio}_t) + \beta_3 \Delta\ln(\text{VIX}_t) + \beta_4 \Delta\ln(\text{Remesas 12m}_{t-1}) + \beta_5 \Delta(\text{Diferencial de tasas}_{t-1}) + \beta_6 \Delta(\text{Déficit fiscal 12m/PIB}_{t-1}) + \beta_7 \text{Pandemia}_t + u_t
+$$
 
 La muestra común cubre enero de 2006 a abril de 2026. La regresión efectiva tiene 240 observaciones, desde mayo de 2006, por las diferencias y rezagos. Los errores estándar son HAC con una ventana de seis meses.
 
