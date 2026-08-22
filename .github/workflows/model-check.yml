@@ -1,0 +1,30 @@
+name: Verificar modelo
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  reproducibilidad:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Reestimar modelo
+        run: python src/estimate_model.py
+
+      - name: Comprobar libro final
+        run: python -c "from openpyxl import load_workbook; w=load_workbook('deliverables/modelo_trm_colombia.xlsx', read_only=True); assert {'Resumen','Modelo_principal','Validacion','Fuentes'}.issubset(w.sheetnames)"
+
