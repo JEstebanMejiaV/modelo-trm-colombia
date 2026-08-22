@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Node / Codex runtime
+node_modules/
+.codex/
+.agents/
+
+# Editor and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Rendered previews and local QA artifacts
+outputs/
+
+# Exploratory downloads not used by the final model
+data/raw/catalogo_datos.json
+data/raw/mega_menu.json
+data/raw/remesas_basica.json
+data/raw/remesas_info.json
+data/raw/remesas_menu.json
+data/raw/remesas_serie_info.json
+data/raw/remesas_mensuales_banrep.xls
+data/raw/remesas_mensuales_banrep.xlsx
+data/raw/suameca_chunk1.js
+data/raw/suameca_chunk2.js
+data/raw/suameca_main.js
+data/raw/suameca_remesas.html
+data/raw/tasa_3m_colombia_fred.csv
+data/raw/tasa_3m_eeuu_fred.csv
+data/raw/terminos_intercambio_banrep.xlsx
+data/raw/trm_mensual_fred.csv
+
+# Superseded result aliases retained only in the local working folder
+results/ajuste_historico.csv
+results/coeficientes_corto_plazo.csv
+results/coeficientes_largo_plazo.csv
+results/diagnosticos.csv
+results/seleccion_rezagos.csv
+

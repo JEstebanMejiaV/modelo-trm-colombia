@@ -1,0 +1,20 @@
+{
+  "muestra_inicio": "2006-01-01",
+  "muestra_fin": "2026-04-01",
+  "observaciones": 244,
+  "modelo_principal": "Modelo mensual en primeras diferencias con temporización económica y errores HAC",
+  "adl_p_cambio_trm": 0,
+  "temporizacion": "Brent, dólar amplio y VIX contemporáneos; remesas, diferencial de tasas y déficit rezagados un mes",
+  "adl_observaciones": 240,
+  "adl_aic": -1106.246508405773,
+  "adl_bic": -1078.4013970190372,
+  "adl_r_cuadrado": 0.5006171263026511,
+  "adl_r_cuadrado_ajustado": 0.48554953959626557,
+  "ecm_p": 1,
+  "ecm_q_comun": 1,
+  "bounds_f": 3.4136952748726745,
+  "bounds_p_i0": 0.005325689761964569,
+  "bounds_p_i1": 0.07310834171939762,
+  "cointegracion_5pct": "no concluyente",
+  "velocidad_ajuste": -0.08956950478903522
+}
