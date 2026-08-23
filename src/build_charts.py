@@ -31,7 +31,7 @@ SOURCE_FILES = [
     RESULTS / "estabilidad_submuestras_resumen.csv",
     RESULTS / "comparacion_modelos.csv",
     RESULTS / "validacion_metricas_modelo_ampliado.csv",
-    RESULTS / "validacion_predicciones.csv",
+    RESULTS / "validacion_predicciones_modelo_principal.csv",
     RESULTS / "validacion_predicciones_modelo_ampliado.csv",
     RESULTS / "validacion_metricas_pronostico.csv",
     RESULTS / "validacion_predicciones_pronostico.csv",

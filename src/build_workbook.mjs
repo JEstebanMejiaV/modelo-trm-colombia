@@ -107,8 +107,8 @@ const raw = (await readCsv("data/modelo_trm_datos_mensuales.csv"))
   .filter((r) => r.fecha >= sourceStart && r.fecha <= metadata.muestra_fin);
 const coefs = await readCsv("results/coeficientes_modelo_principal.csv");
 const diagnostics = await readCsv("results/diagnosticos_modelo_principal.csv");
-const validationMetrics = await readCsv("results/validacion_metricas.csv");
-const validationPredictions = await readCsv("results/validacion_predicciones.csv");
+const validationMetrics = await readCsv("results/validacion_metricas_modelo_principal.csv");
+const validationPredictions = await readCsv("results/validacion_predicciones_modelo_principal.csv");
 const integration = await readCsv("results/pruebas_integracion.csv");
 const adlLags = await readCsv("results/seleccion_rezagos_adl_diferencias.csv");
 const bounds = await readCsv("results/bounds_resumen.csv");

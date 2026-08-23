@@ -115,11 +115,11 @@ Resume por factor el proveedor, estado, orígenes completos, porcentaje de cober
 
 ## Validación condicional
 
-### `validacion_metricas.csv` y `validacion_metricas_modelo_ampliado.csv`
+### `validacion_metricas_modelo_principal.csv` y `validacion_metricas_modelo_ampliado.csv`
 
 Presentan observaciones, MAE y RMSE en logaritmos, MAPE y acierto de dirección para una ventana expansiva de 48 meses. Cada archivo incluye su modelo y la caminata aleatoria como referencia.
 
-### `validacion_predicciones.csv` y `validacion_predicciones_modelo_ampliado.csv`
+### `validacion_predicciones_modelo_principal.csv` y `validacion_predicciones_modelo_ampliado.csv`
 
 Contienen las observaciones mensuales de esa validación: TRM observada, estimación condicional, caminata aleatoria y cambios logarítmicos. Permiten recalcular las métricas y revisar meses extremos.
 
@@ -140,7 +140,7 @@ Comparan de cero a tres rezagos del cambio de la TRM mediante AIC, BIC y R² aju
 
 ### `pruebas_integracion.csv`
 
-Reporta ADF y KPSS para niveles y diferencias, con número de observaciones y rezagos. ADF tiene como nula la presencia de raíz unitaria; KPSS, la estacionariedad. La evaluación ampliada del BEI está en los cuatro archivos siguientes.
+Reporta ADF y KPSS para niveles y diferencias de todas las variables activas del modelo, con número de observaciones y rezagos. ADF tiene como nula la presencia de raíz unitaria; KPSS, la estacionariedad. Incluye además `diferencial_bei_5y_comun_pp` para comparar ambas agregaciones. La evaluación ampliada del BEI está en los cuatro archivos siguientes.
 
 ### `comparacion_agregacion_bei_5y.csv`
 
@@ -178,7 +178,7 @@ Contiene las pruebas residuales del contraste ECM con la misma lógica general d
 
 ## Nombres heredados en copias locales
 
-En carpetas locales antiguas pueden aparecer `ajuste_historico.csv`, `coeficientes_corto_plazo.csv`, `coeficientes_largo_plazo.csv`, `diagnosticos.csv` o `seleccion_rezagos.csv`. Son alias obsoletos: el proyecto actual no los regenera ni los versiona. Para automatizaciones y citas deben usarse los nombres explícitos que terminan en `_modelo_principal`, `_modelo_ampliado` o `_ecm`.
+En carpetas locales antiguas pueden aparecer `ajuste_historico.csv`, `coeficientes_corto_plazo.csv`, `coeficientes_largo_plazo.csv`, `diagnosticos.csv`, `seleccion_rezagos.csv`, `validacion_metricas.csv` o `validacion_predicciones.csv`. Son alias obsoletos: el proyecto actual no los regenera ni los versiona. Para automatizaciones y citas deben usarse los nombres explícitos que terminan en `_modelo_principal`, `_modelo_ampliado`, `_modelo_pronostico` o `_ecm`.
 
 ## Metadatos
 

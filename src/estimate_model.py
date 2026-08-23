@@ -2117,8 +2117,8 @@ def main() -> None:
     diagnostics_ecm.to_csv(
         RESULTS / "diagnosticos_ecm.csv", index=False, encoding="utf-8-sig"
     )
-    predictions.to_csv(RESULTS / "validacion_predicciones.csv", encoding="utf-8-sig")
-    validation.to_csv(RESULTS / "validacion_metricas.csv", index=False, encoding="utf-8-sig")
+    predictions.to_csv(RESULTS / "validacion_predicciones_modelo_principal.csv", encoding="utf-8-sig")
+    validation.to_csv(RESULTS / "validacion_metricas_modelo_principal.csv", index=False, encoding="utf-8-sig")
     predictions_expanded.to_csv(
         RESULTS / "validacion_predicciones_modelo_ampliado.csv", encoding="utf-8-sig"
     )

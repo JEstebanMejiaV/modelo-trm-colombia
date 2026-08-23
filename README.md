@@ -59,7 +59,7 @@ El modelo ampliado conserva los siete términos del principal e incorpora seis b
 
 Base y ampliado usan los mismos 240 meses efectivos. Los coeficientes finales del ampliado son:
 
-| Término | Coeficiente | p-valor HAC |
+| Término | Coeficiente | p-valor |
 |---|---:|---:|
 | Constante | 0,00318 | 0,0945 |
 | \(\Delta\ln\) términos de intercambio, mes actual | −0,09186 | 0,0014 |

@@ -1,7 +1,7 @@
 {
   "generator": {
     "path": "src/build_charts.py",
-    "sha256": "e132964176063e8743f9097bc1f3f3f0659c535802da3a055d4f6a099f091414"
+    "sha256": "6266c393d85ae45d7cbf47ea786f4739e18e7f20a6663982620c6f6ab1807cf9"
   },
   "hash_method": "CSV canónico con 6 cifras significativas",
   "images": {
@@ -39,8 +39,8 @@
     "results/pesos_explicativos_modelo_ampliado.csv": "43bdcdadb315461662eda94696202a68ddfdb2bb561efb62d104c7a7c6eb60d9",
     "results/validacion_metricas_modelo_ampliado.csv": "bbc457ebcfd8fc6524e4be810b4de7487aad80172efaa4278c2310af6471aff4",
     "results/validacion_metricas_pronostico.csv": "a38c88f895a3555263ad5b5ccc4a37b2774d1570321cac0a85b2b511cac49e47",
-    "results/validacion_predicciones.csv": "f27903fbb89f7cb966ec327f991d101c9dd92d402f344b6f3a3ab53d28be5cce",
     "results/validacion_predicciones_modelo_ampliado.csv": "3beb25965de0cee820b4712f9628db1d01ebc13c166c202633c34d11cc5bd659",
+    "results/validacion_predicciones_modelo_principal.csv": "f27903fbb89f7cb966ec327f991d101c9dd92d402f344b6f3a3ab53d28be5cce",
     "results/validacion_predicciones_pronostico.csv": "e5401937d6d58b8e7f8d01dc6eb9daaed0979100e37cc2af3a97b4e4d298e0b8"
   },
   "version": 2
