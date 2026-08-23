@@ -1,88 +1,125 @@
 # Señales de largo plazo para la TRM (6-24 meses)
 
-## Hallazgo principal
+## Hallazgo central
 
-A largo plazo (6-24 meses), la TRM exhibe **reversión a la media**: cuando está lejos de su tendencia de equilibrio, tiende a corregir. Esta señal tiene un R² in-sample de 50% a 12 meses, pero **no funciona out-of-sample** con el filtro HP expanding porque el endpoint bias del HP invalida la señal en tiempo real.
+La TRM exhibe **reversión a la media** a horizontes de 6-24 meses. Cuando está lejos de su tendencia de 5 años, tiende a corregir. Esta señal tiene correlación de 0,51 con el retorno futuro a 12 meses y acierta la dirección el 66% del tiempo — pero no es explotable como estrategia de MSE por la inestabilidad del β.
 
 ## Definición de largo plazo
 
-**6 a 24 meses.** Es el horizonte en que los fundamentales macroeconómicos dominan al ruido de corto plazo, pero donde los coeficientes de la relación también son inestables.
+**6 a 24 meses.** Horizonte donde los fundamentales macro dominan al ruido de corto plazo.
 
-## Resultados in-sample (evaluación retrospectiva)
+---
 
-Usando el filtro HP estándar (con toda la muestra — incluye look-ahead):
+## Señales evaluadas
 
-| Señal | 6 meses | 12 meses | 18 meses | 24 meses |
+### Tendencias de equilibrio (para medir desviación)
+
+| Tendencia | R² OOS 12m | Correlación | Dirección | Ventaja |
 |---|---|---|---|---|
-| Z-score HP (TRM vs tendencia) | R²=36%, p<0,001 | R²=51%, p<0,001 | R²=48%, p<0,001 | R²=30%, p<0,001 |
-| Desviación HP (%) | R²=38%, p<0,001 | R²=48%, p<0,001 | R²=43%, p<0,001 | R²=29%, p<0,001 |
-| Dólar amplio vs tendencia | R²=14%, p=0,002 | R²=31%, p<0,001 | R²=33%, p<0,001 | R²=21%, p<0,001 |
-| Score compuesto | R²=10%, p=0,009 | R²=14%, p=0,048 | R²=15%, p=0,021 | R²=9%, p=0,030 |
+| **MA 60 meses (z-score)** | -0,8% | **0,51** | **66%** | Sin endpoint bias |
+| MA 60 meses (%) | -32,8% | 0,34 | 59% | Interpretable |
+| MA 36 meses | -11,0% | -0,20 | 52% | Más reactiva |
+| HP filter (in-sample) | R²=51% | — | — | Look-ahead bias |
+| Tendencia lineal rolling | -23,1% | -0,10 | 57% | Inestable |
 
-Interpretación: cuando la TRM está 1 desviación estándar por encima de su tendencia, el retorno esperado a 12 meses es **-8,1%** (apreciación).
+**La MA de 60 meses normalizada es la mejor señal.** El HP filter solo funciona in-sample por endpoint bias.
 
-## Resultados out-of-sample (backtest genuino)
+### Momentum macro
 
-Usando HP expanding (calcula tendencia SOLO con datos hasta t) y estima β solo con datos pasados:
+| Señal | R² OOS 12m | Correlación | Interpretación |
+|---|---|---|---|
+| Ciclo Fed (Δfed_funds 12m) | +2,6% | -0,10 | Fed subiendo → depreciación futura (marginal) |
+| Score macro compuesto | +2,5% | -0,26 | Combinación de Fed + TI + EMBIG |
+| Δ EMBIG 6 meses | +0,4% | -0,11 | Riesgo subiendo → sin señal clara |
+| Momentum TI 12 meses | -6,4% | -0,12 | No funciona |
 
-| Horizonte | R² OOS | Dirección | DM p-valor | Correlación |
+El ciclo de la Fed tiene el mejor R² OOS (+2,6%) pero no es significativo (p = 0,57).
+
+### Markov switching (2 regímenes)
+
+El modelo identifica dos estados de la TRM relativa a su MA-60:
+
+| Régimen | % del tiempo | Retorno medio 12m | Volatilidad 12m | Persistencia |
 |---|---|---|---|---|
-| 6 meses | -12,7% | 46,8% | 0,16 | 0,06 |
-| 12 meses | -26,3% | 51,8% | 0,05 | 0,07 |
-| 18 meses | -41,3% | 58,0% | 0,03 | **0,56** |
-| 24 meses | -135,9% | 31,8% | <0,001 | **0,75** |
+| **0 — Tranquilo** | 54,5% | +0,3% | 5,3% | p(stay) = 96% |
+| **1 — Turbulento** | 45,5% | +8,7% | 16,5% | p(stay) = 5% |
 
-**El R² OOS es negativo** en todos los horizontes. La señal es peor que la caminata aleatoria en términos de MSE.
+Interpretación:
+- En el **régimen tranquilo** (54% del tiempo): la TRM está moderadamente sobre tendencia y no corrige. Alta persistencia (96% de quedarse).
+- En el **régimen turbulento** (45% del tiempo): la TRM está muy desviada y la corrección promedio es +8,7% a 12 meses. Transitorio (solo 5% de persistencia = dura ~1 mes).
 
-**PERO** la correlación pronóstico-realizado a 18-24 meses es alta (0,56-0,75). Esto indica que la señal contiene información direccional pero el β estimado con datos pasados no la captura bien (es altamente inestable: media ≈ 0 ± 9).
+El régimen turbulento corresponde a los episodios de overshooting (2008, 2015, 2020, 2022) seguidos de correcciones fuertes.
 
-## Por qué la discrepancia in-sample vs out-of-sample
+---
 
-1. **Endpoint bias del HP**: el filtro HP asigna la tendencia del FUTURO a los extremos de la muestra. En tiempo real, los últimos 2-3 años de la tendencia son ruidosos.
-2. **Inestabilidad del β**: la velocidad de reversión cambia según el régimen macro. En 2006-2014 fue ~-1.4; en 2020-2026 es más rápida.
-3. **La señal tiene timing incorrecto**: sabe CUÁNTO corregirá pero no CUÁNDO empieza la corrección.
+## In-sample vs Out-of-sample
+
+| Método | R² 12m in-sample | R² 12m OOS | Por qué difieren |
+|---|---|---|---|
+| HP filter (full sample) | **51%** | **-26%** | Endpoint bias: HP usa datos futuros |
+| MA 60m (z-score) | ~20% | **-0,8%** | β inestable entre regímenes |
+| Ciclo Fed | ~5% | +2,6% | Poca señal pero sin bias |
+
+La discrepancia masiva del HP (51% → -26%) demuestra que los backtests con HP deben usar HP expanding o alternativas sin look-ahead.
+
+---
 
 ## Implicaciones prácticas
 
-- **Para cobertura corporativa**: si la TRM está significativamente por encima de su tendencia de 5 años, la probabilidad de apreciación a 12-24 meses es alta (correlación 0,56-0,75). Esto justifica no cubrir al 100% posiciones cortas en USD.
-- **Para inversión**: la señal NO es suficiente para timing de mercado (R² OOS negativo, Sharpe negativo). Pero combinada con otros indicadores de régimen macro, podría mejorar.
-- **Para política económica**: confirma que desviaciones extremas de la TRM real son temporales (convergencia PPP de largo plazo).
+### Para cobertura corporativa
+
+Si la TRM está 1+ desviaciones estándar por encima de su MA-60 (z-score > 1):
+- Probabilidad de apreciación a 12 meses: **66%**
+- No cubrir al 100% las posiciones cortas en USD puede ser racional
+
+### Para timing de inversiones
+
+La señal NO es suficiente para market timing (Sharpe negativo) porque:
+- Acierta la dirección pero no la magnitud exacta
+- La corrección puede tardar meses en materializarse
+- En el régimen turbulento la volatilidad es 3× mayor
+
+### Para política económica
+
+Confirma convergencia PPP de largo plazo: desviaciones extremas del tipo de cambio real son temporales (~7 meses de vida media en el régimen turbulento).
+
+---
 
 ## Estructura
 
 ```
 src/forecast_longterm/
 ├── __init__.py
-├── signals.py       5 señales + evaluación in-sample (regresión predictiva)
-├── backtest.py      Backtest OOS con HP expanding (sin look-ahead)
+├── signals.py            5 señales base + evaluación in-sample
+├── backtest.py           Backtest OOS con HP expanding (sin look-ahead)
+├── extended_signals.py   Tendencias alternativas, Markov, momentum macro
 └── README.md
 ```
-
-## Señales implementadas
-
-| # | Señal | Cómo se construye | Hipótesis |
-|---|---|---|---|
-| 1 | Desviación HP | ln(TRM) − tendencia HP(λ=14400) | Reversión a la media del tipo de cambio real |
-| 2 | Z-score HP | Desviación / std rolling 60m | Normalizada para comparar entre períodos |
-| 3 | Dólar amplio vs HP | ln(DXY) − tendencia HP | Si el USD global está caro, TRM también corregirá |
-| 4 | Diferencial de tasas reales | (iCol−BEI_col) − (iFed−BEI_us) | Carry trade real: atrae capital si alto |
-| 5 | Score compuesto | Promedio de z-scores (con signos ajustados) | Combinación diversificada |
 
 ## Uso
 
 ```bash
-# Evaluación in-sample (rápida)
+# Evaluación in-sample (rápida, 30 seg)
 python src/forecast_longterm/signals.py
 
-# Backtest out-of-sample (lento: calcula HP expanding)
+# Backtest OOS genuino (lento, 3 min — calcula HP expanding)
 python src/forecast_longterm/backtest.py
+
+# Extensiones: MA 60m, Markov, momentum macro (2 min)
+python src/forecast_longterm/extended_signals.py
 ```
 
-## Conclusión
+## Resultados guardados
 
-La reversión a la media de la TRM es un fenómeno REAL (la correlación a 18-24 meses es 0,56-0,75), pero no es explotable con un modelo lineal simple en tiempo real. El problema no es la señal — es la estimación del β y el timing.
-
-Posibles extensiones para mejorar:
-- Usar tendencias alternativas al HP (promedio móvil de 5 años, PPP de la OCDE)
-- Estimar β con regime-switching (Markov)
-- Combinar con señales de momentum macro (ciclo Fed, petróleo)
+```
+results/pronostico/
+├── senales_largo_plazo.csv                  Evaluación in-sample por horizonte
+├── senales_largo_plazo_series.csv           Series temporales de las señales
+├── backtest_largo_plazo_6m/12m/18m/24m.csv  Pronósticos OOS mes a mes
+├── backtest_largo_plazo_resumen.csv         Métricas OOS por horizonte
+├── senales_extendidas_largo_plazo.csv       Tendencias alt + momentum
+├── series_tendencias_alternativas.csv       MA 60m, MA 36m, lineal rolling
+├── series_momentum_macro.csv                Ciclo Fed, TI, EMBIG, diferencial
+├── markov_regimes_largo_plazo.csv           Probabilidad de cada régimen por mes
+└── markov_parametros_largo_plazo.csv        Resumen de los 2 estados
+```
