@@ -103,7 +103,7 @@ Compara combinaciones de rezagos del ARDL mediante AIC, BIC, HQIC y log-verosimi
 
 ### `coeficientes_corto_plazo_ecm.csv` y `coeficientes_largo_plazo_ecm.csv`
 
-Separan la dinámica de corto plazo y las relaciones normalizadas de largo plazo del ECM. Dado que la prueba bounds no confirma cointegración al 5%, los coeficientes de largo plazo son exploratorios y no deben presentarse como un equilibrio estable.
+Separan la dinámica de corto plazo y las relaciones normalizadas de largo plazo del ECM. `coeficientes_largo_plazo_ecm.csv` reporta el vector cointegrante con el coeficiente de `ln_trm` normalizado a 1. Para expresar la respuesta de equilibrio de la TRM ante una explicativa se debe invertir el signo de ese término —y de los extremos de su intervalo—. En variables logarítmicas el resultado es una elasticidad; en tasas o déficit medidos en puntos porcentuales es una semielasticidad. Dado que la prueba bounds no confirma cointegración al 5%, estos valores son exploratorios y no deben presentarse como un equilibrio estable.
 
 ### `diagnosticos_ecm.csv`
 

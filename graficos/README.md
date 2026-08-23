@@ -1,6 +1,6 @@
 # Gráficos explicativos del modelo de TRM
 
-Esta carpeta presenta cuatro lecturas visuales del modelo fuera del archivo Excel. Cada imagen se reconstruye con `python src/build_charts.py` a partir de los CSV versionados en `results/`; no contiene cifras digitadas manualmente. `metadata.json` registra las huellas de las fuentes y del generador, y `python src/check_charts.py` verifica que los PNG estén sincronizados. Los CSV se normalizan a diez cifras significativas antes de calcular la huella para tolerar diferencias irrelevantes de plataforma sin ocultar cambios visibles en los gráficos.
+Esta carpeta presenta cinco lecturas visuales del modelo fuera del archivo Excel. Cada imagen se reconstruye con `python src/build_charts.py` a partir de los CSV versionados en `results/`; no contiene cifras digitadas manualmente. `metadata.json` registra las huellas de las fuentes y del generador, y `python src/check_charts.py` verifica que los PNG estén sincronizados. Los CSV se normalizan a diez cifras significativas antes de calcular la huella para tolerar diferencias irrelevantes de plataforma sin ocultar cambios visibles en los gráficos.
 
 ## 1. Peso explicativo de los factores
 
@@ -28,9 +28,22 @@ Estandariza cada regresor a un movimiento de una desviación estándar para comp
 
 Este gráfico responde una pregunta distinta al peso Shapley. El efecto estandarizado muestra dirección, magnitud parcial e incertidumbre del coeficiente completo; Shapley distribuye la capacidad explicativa, incluida la señal compartida. Por eso un factor puede tener peso visible y un coeficiente impreciso.
 
+## 5. ECM: corto plazo, largo plazo y ajuste
+
+![Elasticidades y corrección de errores](05_ecm_elasticidades.png)
+
+Separa tres conceptos que no deben mezclarse:
+
+- Las variables en logaritmos se muestran como elasticidades: cambio porcentual aproximado de la TRM ante un aumento de 1% del factor.
+- El VIX aparece solo en corto plazo porque el ECM lo incorpora como cambio contemporáneo, no dentro del vector de niveles.
+- El diferencial de tasas y el déficit se muestran como semielasticidades: en corto plazo corresponden a un cambio mensual de 1 punto porcentual y en largo plazo a una diferencia de 1 punto porcentual en el nivel de equilibrio.
+- La curva inferior muestra qué proporción de un desequilibrio inicial permanecería después de cada mes. Con el coeficiente actual se corrige aproximadamente 9,0% por mes y la semivida es cercana a 7,4 meses; la banda transforma el intervalo del 95% de la velocidad de ajuste.
+
+El CSV de largo plazo contiene el vector cointegrante normalizado con coeficiente 1 para `ln_trm`. Para expresar la respuesta de equilibrio de la TRM, el gráfico invierte el signo de los términos explicativos y también invierte los extremos de sus intervalos. La prueba bounds es no concluyente al 5%; por ello estos valores de largo plazo son exploratorios, no evidencia confirmada de equilibrio.
+
 ## Cautelas comunes
 
-- Los cuatro gráficos describen asociaciones estadísticas, no causalidad.
+- Los cinco gráficos describen asociaciones estadísticas, no causalidad.
 - Brent, dólar amplio, VIX, spread TES–Treasury y monedas regionales usan información contemporánea realizada.
 - Balanza, capitales, reservas, remesas, tasas y déficit pueden responder a la propia TRM.
 - La balanza comercial tiene signo estimado positivo, contrario al esperado; esto puede reflejar simultaneidad o composición de los flujos.

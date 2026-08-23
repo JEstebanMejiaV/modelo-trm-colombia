@@ -8,7 +8,7 @@ Esta carpeta contiene seis programas con responsabilidades separadas:
 | `check_outputs.py` | Comprueba integridad de datos, muestra común, conciliación Shapley y sincronización entre los CSV y el archivo Excel. |
 | `check_reproducibility.py` | Compara los resultados regenerados con la versión comprometida usando tolerancias numéricas, para no confundir ruido de plataforma con un cambio econométrico. |
 | `build_workbook.mjs` | Construye el archivo Excel, genera las 11 hojas, exporta vistas previas y actualiza `deliverables/modelo_trm_colombia.xlsx`. |
-| `build_charts.py` | Construye cuatro gráficos PNG independientes desde los CSV de `results/` y los guarda en `graficos/`. |
+| `build_charts.py` | Construye cinco gráficos PNG independientes desde los CSV de `results/` y los guarda en `graficos/`. |
 | `check_charts.py` | Verifica que los PNG tengan el formato esperado y correspondan a los CSV y al generador actual mediante huellas SHA-256. |
 
 ## Flujo del proyecto
@@ -81,7 +81,7 @@ Por defecto, las vistas previas y el reporte de inspección quedan en `outputs/m
 
 1. Ejecutar la estimación.
 2. Reconstruir el archivo Excel cuando cambien resultados o documentación interna.
-3. Reconstruir y revisar los cuatro PNG de `graficos/`.
+3. Reconstruir y revisar los cinco PNG de `graficos/`.
 4. Ejecutar `python src/check_charts.py` para verificar su sincronización.
 5. Revisar las 11 vistas previas en `outputs/modelo_trm_colombia/previews/`.
 6. Ejecutar `python src/check_outputs.py`.

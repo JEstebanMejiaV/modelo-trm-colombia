@@ -1,7 +1,7 @@
 {
   "generator": {
     "path": "src/build_charts.py",
-    "sha256": "6589a849c1efa96b50892cd1b9292a4f476cde42e961a29da90fff17ac0fcb0b"
+    "sha256": "97a6e7828dacf80b1e77ef85f67e9e9e94fa0da5985086f8a8f0462ce3564557"
   },
   "hash_method": "CSV canónico con 10 cifras significativas",
   "images": {
@@ -20,9 +20,16 @@
     "04_efectos_tipicos.png": {
       "height": 1080,
       "width": 1920
+    },
+    "05_ecm_elasticidades.png": {
+      "height": 1080,
+      "width": 1920
     }
   },
   "sources": {
+    "results/bounds_resumen.csv": "923d5e7c96922bfe51dcb97584869564a980da45fb4b686f01df74dddb77d469",
+    "results/coeficientes_corto_plazo_ecm.csv": "31e0c68eabd727fe2362ff50f55a1fa6232d90a87d416900fbeb00818dc78156",
+    "results/coeficientes_largo_plazo_ecm.csv": "9fb800ca3710dec0034fd723a8be00a8aebf10e84b5f8e17741e8e2b51f9b525",
     "results/coeficientes_modelo_ampliado.csv": "915a3e858d6d33901bc3ec3a7ce3dfba6fe6cd0c67c83a8ffa3afef9b857c292",
     "results/comparacion_modelos.csv": "47538222d2baddd47cda9d8dea58fe25866bf49b907ddfdbd27573ea0c78e563",
     "results/contribuciones_modelo_ampliado.csv": "c58746d8dd0da1b3c4b22ca0195d972a346b8c8fdce604738b8a1a141775340e",

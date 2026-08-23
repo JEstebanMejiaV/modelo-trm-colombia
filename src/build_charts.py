@@ -33,6 +33,9 @@ SOURCE_FILES = [
     RESULTS / "validacion_predicciones_modelo_ampliado.csv",
     RESULTS / "coeficientes_modelo_ampliado.csv",
     RESULTS / "contribuciones_modelo_ampliado.csv",
+    RESULTS / "coeficientes_corto_plazo_ecm.csv",
+    RESULTS / "coeficientes_largo_plazo_ecm.csv",
+    RESULTS / "bounds_resumen.csv",
 ]
 
 IMAGE_FILES = [
@@ -40,6 +43,7 @@ IMAGE_FILES = [
     "02_desempeno_modelos.png",
     "03_validacion_trm.png",
     "04_efectos_tipicos.png",
+    "05_ecm_elasticidades.png",
 ]
 
 BACKGROUND = "#FFFFFF"
@@ -521,6 +525,266 @@ def chart_standardized_effects(
     save(fig, "04_efectos_tipicos.png")
 
 
+def ecm_record(
+    data: pd.DataFrame,
+    term: str,
+    estimate_column: str,
+    *,
+    reverse: bool = False,
+    multiplier: float = 1.0,
+) -> dict[str, float | bool]:
+    row = data.loc[data["termino"].eq(term)]
+    if len(row) != 1:
+        raise KeyError(f"Se esperaba un único término ECM para {term}.")
+    record = row.iloc[0]
+    estimate = float(record[estimate_column])
+    lower = float(record["ic_95_inferior"])
+    upper = float(record["ic_95_superior"])
+    if reverse:
+        estimate, lower, upper = -estimate, -upper, -lower
+    return {
+        "estimate": estimate * multiplier,
+        "lower": lower * multiplier,
+        "upper": upper * multiplier,
+        "significant": float(record["p_valor"]) < 0.05,
+    }
+
+
+def plot_ecm_horizons(
+    ax: plt.Axes,
+    specifications: list[tuple[str, str, str | None]],
+    short_run: pd.DataFrame,
+    long_run: pd.DataFrame,
+    *,
+    multiplier: float,
+    title: str,
+    xlabel: str,
+) -> None:
+    y = np.arange(len(specifications))
+    all_limits = [0.0]
+    for position, (_, short_term, long_term) in enumerate(specifications):
+        short = ecm_record(
+            short_run,
+            short_term,
+            "coeficiente",
+            multiplier=multiplier,
+        )
+        all_limits.extend([float(short["lower"]), float(short["upper"])])
+        short_y = position - 0.13
+        ax.hlines(
+            short_y,
+            float(short["lower"]),
+            float(short["upper"]),
+            color=BASE,
+            linewidth=2.2,
+        )
+        ax.scatter(
+            float(short["estimate"]),
+            short_y,
+            marker="o",
+            s=62,
+            facecolor=BASE if bool(short["significant"]) else BACKGROUND,
+            edgecolor=BASE,
+            linewidth=2,
+            zorder=3,
+        )
+
+        if long_term is not None:
+            long = ecm_record(
+                long_run,
+                long_term,
+                "coeficiente_largo_plazo",
+                reverse=True,
+                multiplier=multiplier,
+            )
+            all_limits.extend([float(long["lower"]), float(long["upper"])])
+            long_y = position + 0.13
+            ax.hlines(
+                long_y,
+                float(long["lower"]),
+                float(long["upper"]),
+                color=EXPANDED,
+                linewidth=2.2,
+            )
+            ax.scatter(
+                float(long["estimate"]),
+                long_y,
+                marker="D",
+                s=58,
+                facecolor=EXPANDED if bool(long["significant"]) else BACKGROUND,
+                edgecolor=EXPANDED,
+                linewidth=2,
+                zorder=3,
+            )
+
+    minimum, maximum = min(all_limits), max(all_limits)
+    padding = max((maximum - minimum) * 0.10, 0.08)
+    ax.set_xlim(minimum - padding, maximum + padding)
+    ax.axvline(0, color=FOREGROUND, linewidth=1.0)
+    ax.set_yticks(y, [item[0] for item in specifications])
+    ax.invert_yaxis()
+    ax.set_title(title, loc="left", fontweight="bold", pad=12)
+    ax.set_xlabel(xlabel)
+    ax.tick_params(axis="y", length=0)
+    clean_axis(ax)
+
+
+def chart_ecm(
+    short_run: pd.DataFrame,
+    long_run: pd.DataFrame,
+    bounds: pd.DataFrame,
+) -> None:
+    elasticity_specs = [
+        ("Dólar amplio", "D.ln_dolar_amplio.L0", "ln_dolar_amplio"),
+        ("Remesas 12 meses", "D.ln_remesas_12m.L0", "ln_remesas_12m"),
+        ("Petróleo Brent", "D.ln_brent.L0", "ln_brent"),
+        ("VIX", "dln_vix", None),
+    ]
+    semi_specs = [
+        ("Diferencial de tasas", "D.diferencial_tasas_pp.L0", "diferencial_tasas_pp"),
+        ("Déficit fiscal", "D.deficit_fiscal_12m_pct_pib.L0", "deficit_fiscal_12m_pct_pib"),
+    ]
+
+    adjustment = ecm_record(short_run, "ln_trm.L1", "coeficiente")
+    alpha = float(adjustment["estimate"])
+    if not -1.0 < alpha < 0.0:
+        raise ValueError("La velocidad de ajuste ECM debe estar entre −1 y 0.")
+    half_life = float(np.log(0.5) / np.log(1.0 + alpha))
+    bound = bounds.iloc[0]
+
+    fig = plt.figure(figsize=(12.8, 7.2))
+    grid = fig.add_gridspec(
+        2,
+        2,
+        width_ratios=[1.18, 1.0],
+        height_ratios=[1.04, 0.96],
+        wspace=0.34,
+        hspace=0.48,
+    )
+    ax_elasticities = fig.add_subplot(grid[:, 0])
+    ax_semi = fig.add_subplot(grid[0, 1])
+    ax_adjustment = fig.add_subplot(grid[1, 1])
+
+    plot_ecm_horizons(
+        ax_elasticities,
+        elasticity_specs,
+        short_run,
+        long_run,
+        multiplier=1.0,
+        title="Elasticidades · variables en log",
+        xlabel="Cambio de TRM ante +1% del factor (%)",
+    )
+    plot_ecm_horizons(
+        ax_semi,
+        semi_specs,
+        short_run,
+        long_run,
+        multiplier=100.0,
+        title="Semielasticidades · variables en p.p.",
+        xlabel="Cambio aproximado de TRM ante +1 p.p. del indicador (%)",
+    )
+
+    months = np.arange(0, 25)
+    remaining = np.power(1.0 + alpha, months) * 100.0
+    alpha_lower = float(adjustment["lower"])
+    alpha_upper = float(adjustment["upper"])
+    remaining_lower = np.power(1.0 + alpha_lower, months) * 100.0
+    remaining_upper = np.power(1.0 + alpha_upper, months) * 100.0
+    half_life_lower = float(np.log(0.5) / np.log(1.0 + alpha_lower))
+    half_life_upper = float(np.log(0.5) / np.log(1.0 + alpha_upper))
+    ax_adjustment.plot(months, remaining, color=EXPANDED, linewidth=2.6)
+    ax_adjustment.fill_between(
+        months,
+        remaining_lower,
+        remaining_upper,
+        color=EXPANDED,
+        alpha=0.14,
+    )
+    ax_adjustment.axhline(50, color=GRID, linewidth=1.0)
+    ax_adjustment.scatter(half_life, 50, color=POSITIVE, s=62, zorder=3)
+    ax_adjustment.annotate(
+        f"Semivida ≈ {es(half_life)} meses\nIC 95%: {es(half_life_lower)}–{es(half_life_upper)}",
+        xy=(half_life, 50),
+        xytext=(half_life + 2.0, 67),
+        arrowprops={"arrowstyle": "-", "color": MUTED, "linewidth": 1.0},
+        color=FOREGROUND,
+        fontweight="bold",
+    )
+    ax_adjustment.text(
+        0.02,
+        0.93,
+        f"Se corrige {es(-alpha * 100)}% del desequilibrio por mes",
+        transform=ax_adjustment.transAxes,
+        va="top",
+        color=FOREGROUND,
+        fontweight="bold",
+    )
+    ax_adjustment.text(
+        0.98,
+        0.08,
+        "Banda: IC 95% de la velocidad",
+        transform=ax_adjustment.transAxes,
+        ha="right",
+        va="bottom",
+        color=MUTED,
+        fontsize=9,
+    )
+    ax_adjustment.set_xlim(0, 24)
+    ax_adjustment.set_ylim(0, 105)
+    ax_adjustment.set_title(
+        "Corrección del desequilibrio", loc="left", fontweight="bold", pad=12
+    )
+    ax_adjustment.set_xlabel("Meses desde el choque")
+    ax_adjustment.set_ylabel("Desequilibrio restante (%)")
+    clean_axis(ax_adjustment, grid_axis="both")
+
+    horizon_legend = [
+        Line2D(
+            [0], [0], marker="o", color=BASE, markerfacecolor=BASE,
+            linestyle="None", label="Corto plazo"
+        ),
+        Line2D(
+            [0], [0], marker="D", color=EXPANDED, markerfacecolor=EXPANDED,
+            linestyle="None", label="Largo plazo exploratorio"
+        ),
+        Line2D(
+            [0], [0], marker="o", color=FOREGROUND, markerfacecolor=BACKGROUND,
+            linestyle="None", label="Intervalo cruza cero"
+        ),
+    ]
+    fig.legend(
+        handles=horizon_legend,
+        loc="lower center",
+        bbox_to_anchor=(0.5, 0.045),
+        ncol=3,
+        frameon=False,
+    )
+    fig.suptitle(
+        "ECM exploratorio: corto plazo, largo plazo y corrección",
+        x=0.04,
+        y=0.975,
+        ha="left",
+        fontsize=20,
+        fontweight="bold",
+    )
+    fig.text(
+        0.04,
+        0.925,
+        f"Bounds F = {es(float(bound['estadistico_f']), 3)} y p-valor I(1) = {es(float(bound['p_valor_i1']), 3)}: la cointegración no es concluyente al 5%.",
+        color=MUTED,
+        fontsize=12,
+    )
+    fig.text(
+        0.04,
+        0.015,
+        "Puntos e intervalos HAC del 95%. El largo plazo invierte el signo del vector cointegrante normalizado para expresar la respuesta de la TRM; debe leerse solo como contraste exploratorio.",
+        color=MUTED,
+        fontsize=9.2,
+    )
+    fig.subplots_adjust(left=0.12, right=0.98, top=0.83, bottom=0.15)
+    save(fig, "05_ecm_elasticidades.png")
+
+
 def main() -> None:
     CHARTS.mkdir(parents=True, exist_ok=True)
     weights = pd.read_csv(RESULTS / "pesos_explicativos_modelo_ampliado.csv")
@@ -532,14 +796,18 @@ def main() -> None:
     )
     coefficients = pd.read_csv(RESULTS / "coeficientes_modelo_ampliado.csv")
     contributions = pd.read_csv(RESULTS / "contribuciones_modelo_ampliado.csv")
+    ecm_short = pd.read_csv(RESULTS / "coeficientes_corto_plazo_ecm.csv")
+    ecm_long = pd.read_csv(RESULTS / "coeficientes_largo_plazo_ecm.csv")
+    bounds = pd.read_csv(RESULTS / "bounds_resumen.csv")
 
     configure_style()
     chart_weights(weights)
     chart_performance(comparison, validation)
     chart_validation(base_predictions, expanded_predictions)
     chart_standardized_effects(weights, coefficients, contributions)
+    chart_ecm(ecm_short, ecm_long, bounds)
     write_metadata()
-    print(f"OK: 4 gráficos creados en {CHARTS}")
+    print(f"OK: 5 gráficos creados en {CHARTS}")
 
 
 if __name__ == "__main__":

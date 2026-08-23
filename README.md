@@ -105,7 +105,7 @@ El diccionario completo de columnas, unidades, códigos de fuente y cautelas est
 - `deliverables/modelo_trm_colombia.xlsx`: archivo Excel final con resumen, datos, fórmulas, estimaciones, pesos, validación, diagnósticos y fuentes.
 - `src/estimate_model.py`: prepara los datos, estima los modelos y guarda los resultados.
 - `src/build_workbook.mjs`: construye el archivo Excel auditable a partir de los resultados.
-- `src/build_charts.py`: reconstruye los cuatro gráficos PNG independientes.
+- `src/build_charts.py`: reconstruye los cinco gráficos PNG independientes.
 - `graficos/`: imágenes explicativas y guía de lectura.
 - `data/modelo_trm_datos_mensuales.csv`: base mensual consolidada.
 - `results/pesos_explicativos_modelo_ampliado.csv`: descomposición Shapley exacta.
@@ -118,7 +118,7 @@ El diccionario completo de columnas, unidades, códigos de fuente y cautelas est
 - [`src/README.md`](src/README.md): flujo de estimación, funciones principales y reproducción técnica.
 - [`results/README.md`](results/README.md): significado y uso de cada resultado CSV y de `metadata.json`.
 - [`deliverables/README.md`](deliverables/README.md): contenido y ruta de auditoría de las 11 hojas del archivo Excel.
-- [`graficos/README.md`](graficos/README.md): cuatro gráficos independientes sobre pesos, desempeño, validación y efectos típicos.
+- [`graficos/README.md`](graficos/README.md): cinco gráficos independientes sobre pesos, desempeño, validación, efectos típicos y el ECM.
 
 ## Reproducir la estimación
 
