@@ -49,8 +49,8 @@ El CSV de largo plazo contiene el vector cointegrante normalizado con coeficient
 - Términos de intercambio, dólar amplio, VIX, EMBIG Colombia y monedas regionales usan información contemporánea realizada.
 - El factor histórico usa BRL, CLP, MXN y PEN; el pronóstico usa BRL, CLP y MXN porque obtiene menor BIC. PEN mejora el ajuste histórico, no el desempeño ex ante.
 - La evaluación con rezagos sigue siendo pseudo-tiempo-real: el archivo hacia adelante está activo, pero 0 de 12 factores tienen cobertura histórica versionada completa para los 48 orígenes.
-- En el modelo ampliado, balanza, capitales, reservas, remesas, tasas, déficit y el diferencial de compensación inflacionaria entran rezagados, pero aun así pueden compartir choques o responder indirectamente a la propia TRM.
-- El diferencial BEI a cinco años se construye con compensaciones de mercado: combina inflación esperada con primas por riesgo inflacionario y diferencias de liquidez entre bonos nominales e indexados; no es una expectativa pura.
+- En el modelo ampliado, balanza, capitales, reservas, remesas, tasas, déficit y el cambio del diferencial de compensación inflacionaria entran rezagados, pero aun así pueden compartir choques o responder indirectamente a la propia TRM.
+- El diferencial BEI a cinco años se construye con compensaciones de mercado y entra en primera diferencia; su nivel es sensible a tendencias. Combina inflación esperada con primas por riesgo inflacionario y diferencias de liquidez entre bonos nominales e indexados; no es una expectativa pura.
 - EMBIG Colombia mide una prima de riesgo soberano de mercado; su coeficiente contemporáneo también puede recoger liquidez y aversión global al riesgo.
 - La balanza comercial tiene signo estimado positivo, contrario al esperado; esto puede reflejar simultaneidad o composición de los flujos.
 - ARCH-LM y Jarque–Bera alertan sobre volatilidad condicional y colas no normales; RESET no rechaza la forma funcional al 5% en el ampliado.

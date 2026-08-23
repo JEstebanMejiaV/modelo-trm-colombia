@@ -9,7 +9,7 @@ Este directorio contiene tres capas distintas. No deben confundirse los archivos
 - En las tablas, signo `+` significa que se espera un aumento de COP/USD; signo `−`, una disminución de COP/USD.
 - `ln(x)` es el logaritmo natural; `Δx_t = x_t - x_{t-1}`; `L1` es un rezago mensual; `pp` significa puntos porcentuales y `pb`, puntos básicos (`100 pb = 1 pp`).
 - Los signos son hipótesis económicas, no resultados causales ni restricciones impuestas a la regresión.
-- Las series diarias se convierten en promedios aritméticos mensuales usando únicamente las observaciones publicadas. Las dos curvas TES y el BEI estadounidense se promedian por separado antes de construir los diferenciales, por lo que no se cruzan calendarios diarios con festivos diferentes.
+- Las series diarias se convierten en promedios aritméticos mensuales usando únicamente las observaciones publicadas. La especificación activa promedia por separado las dos curvas TES y el BEI estadounidense; la robustez también calcula el diferencial solo sobre fechas diarias comunes.
 - Los faltantes se conservan vacíos: no se sustituyen por cero ni se interpolan en la capa activa.
 
 ## Las tres capas
@@ -40,7 +40,7 @@ Son instantáneas de las descargas originales en JSON, CSV o Excel. `src/estimat
 | `pen_usd_mensual_bcrp.json` | PEN por USD, promedio interbancario del período, BCRPData `PN01207PM` ([serie](https://estadisticas.bcrp.gob.pe/estadisticas/series/mensuales/resultados/PN01207PM/html), [API](https://estadisticas.bcrp.gob.pe/estadisticas/series/api/PN01207PM/json/2005-12/2026-4/esp)) | Mensual | Sin agregación adicional; se conserva 2005-12 para calcular el cambio de 2006-01 |
 | `balance_fiscal_gnc_mensual_trimestral.xlsx` | Balance del Gobierno Nacional Central, Ministerio de Hacienda ([fuente](https://www.minhacienda.gov.co/documents/d/portal/balance-fiscal-gnc-mensual-y-trimestral?download=true)) | Mensual/anual en hojas del archivo Excel | Se leen balance e ingresos en montos e ingresos como porcentaje del PIB |
 
-Las dos tasas TES se agregan antes de restarlas: el BEI colombiano no se calcula cruzando observaciones diarias de calendarios distintos. De forma análoga, `BKEVEN05` se agrega por separado antes de construir el diferencial Colombia−EE. UU.
+En la construcción activa, las dos tasas TES y `BKEVEN05` se agregan por separado antes de formar el diferencial Colombia−EE. UU. Para comprobar el efecto de calendarios distintos, el consolidado conserva además una versión calculada solo con fechas en las que existen simultáneamente las tres observaciones diarias y registra cuántos días comunes quedan en cada mes.
 
 #### Atribución y condiciones de reutilización
 
@@ -69,7 +69,7 @@ Estos archivos se conservan únicamente para auditoría histórica y comparacion
 
 ### 3. Muestra balanceada para estimación
 
-`modelo_trm_muestra_estimacion.csv` contiene únicamente las 17 columnas de nivel o transformación previa necesarias para estimar. Se crea desde enero de 2006, se eliminan las filas con algún faltante y se exige frecuencia mensual sin huecos. El corte objetivo tiene 244 meses, de enero de 2006 a abril de 2026.
+`modelo_trm_muestra_estimacion.csv` contiene las 18 columnas de nivel o transformación previa necesarias para estimar y comparar la robustez BEI. Se crea desde enero de 2006, se eliminan las filas con algún faltante y se exige frecuencia mensual sin huecos. El corte objetivo tiene 244 meses, de enero de 2006 a abril de 2026.
 
 Este CSV todavía no es la matriz final de regresores: durante la estimación se calculan primeras diferencias y rezagos. Para comparar todos los candidatos sobre las mismas fechas se reserva la muestra común correspondiente al máximo de tres rezagos de `Δln(TRM)`. Por ello, aunque BIC selecciona cero rezagos adicionales de TRM, la regresión efectiva usa 240 observaciones, de mayo de 2006 a abril de 2026.
 
@@ -94,6 +94,9 @@ Todas las columnas tienen frecuencia mensual después de la consolidación.
 | `tes_5y_pesos_colombia_pct` | Promedio mensual de TES cero cupón nominal en pesos a 5 años, BanRep `15273`; porcentaje. | Primer componente de `bei_colombia_5y_pct`; sin entrada separada. | Incorpora tasa real esperada, compensación de inflación y primas de plazo, liquidez y riesgo. |
 | `tes_5y_uvr_colombia_pct` | Promedio mensual de TES cero cupón en UVR a 5 años, BanRep `15276`; porcentaje real. | Se resta de la tasa nominal para formar `bei_colombia_5y_pct`; sin entrada separada. | Las curvas nominal y UVR pueden diferir en liquidez, tributación y primas; su resta no es una encuesta de expectativas. |
 | `bei_eeuu_5y_pct` | Promedio mensual de `BKEVEN05`; compensación de inflación cero cupón a 5 años, porcentaje con capitalización continua. | Se resta del BEI colombiano; sin entrada separada. | Incluye primas de riesgo de inflación y liquidez. Es un producto de investigación del Federal Reserve Board sujeto a revisión y cambios metodológicos. |
+| `tes_5y_pesos_comun_pct` | Promedio mensual del TES nominal limitado a fechas con TES UVR y `BKEVEN05` disponibles simultáneamente. | Insumo de robustez; no entra en la especificación activa. | Puede usar pocos días en meses con calendarios o faltantes diferentes. |
+| `tes_5y_uvr_comun_pct` | Promedio mensual del TES UVR sobre las mismas fechas diarias comunes. | Insumo de robustez; no entra en la especificación activa. | Comparte la pérdida de observaciones de la intersección diaria. |
+| `bei_eeuu_5y_comun_pct` | Promedio mensual de `BKEVEN05` sobre fechas diarias comunes. | Insumo de robustez; no entra en la especificación activa. | La intersección no corrige diferencias de liquidez o metodología entre mercados. |
 | `balanza_comercial_cambiaria_usd_millones` | Exportaciones menos importaciones canalizadas en la balanza cambiaria, BanRep `16702`; millones de USD. | Se transforma con `asinh(flujo/1000)`, se diferencia y entra con `L1`; signo `−`. | Es flujo de caja cambiario, no la balanza de pagos por causación; es simultánea con la TRM. |
 | `flujos_capital_usd_millones` | Movimientos netos totales de capital de la balanza cambiaria, BanRep `16706`; millones de USD. | Se transforma con `asinh(flujo/1000)`, se diferencia y entra con `L1`; signo `−` para entradas netas. | Muy volátil y endógeno; no confundir con la serie `16708`, que cubre solo sector real y Gobierno. |
 | `brl_por_usd` | Reales brasileños por USD, OECD/FRED `CCUSMA02BRM618N`. | Alimenta el factor regional; aumento = depreciación regional, signo `+`. | No entra individualmente y comparte shocks con controles globales. |
@@ -116,7 +119,10 @@ Todas las columnas tienen frecuencia mensual después de la consolidación.
 | `diferencial_tasas_pp` | `tasa_politica_colombia_pct − fed_funds_eeuu_pct`; pp. | El modelo usa `Δ` con `L1`; signo `−`. | Diferencial nominal; no descuenta inflación esperada ni riesgo. |
 | `embig_colombia_pp` | `embig_colombia_pb / 100`; puntos porcentuales. | El modelo usa `Δ` contemporáneo; signo `+`. | Reescala el indicador, no cambia su contenido. Al usar el promedio del propio mes, es explicativo/nowcast y no un predictor disponible al inicio del mes. |
 | `bei_colombia_5y_pct` | `tes_5y_pesos_colombia_pct − tes_5y_uvr_colombia_pct`; compensación de inflación de mercado a 5 años, pp. | Componente colombiano del diferencial; sin entrada separada. | Igualar horizonte mejora comparabilidad, pero no elimina las primas de inflación, plazo y liquidez ni diferencias entre los mercados nominal y UVR. |
-| `diferencial_bei_5y_pp` | `bei_colombia_5y_pct − bei_eeuu_5y_pct`; pp, ambos a horizonte de 5 años. | Entra en nivel con `L1`; signo `+`. | Es diferencial de compensaciones de inflación de mercado, no diferencia de encuestas ni expectativa pura. El nivel recibe apoyo de ADF/KPSS con constante y rezagos BIC, pero la conclusión es sensible a tendencia y selección de rezagos. |
+| `diferencial_bei_5y_pp` | `bei_colombia_5y_pct − bei_eeuu_5y_pct`; pp, ambos a horizonte de 5 años y agregados por separado. | El modelo usa `Δ` con `L1`; signo `+`. | El nivel es sensible a tendencia: ADF con tendencia no rechaza raíz unitaria al 5% y KPSS con tendencia rechaza estacionariedad. |
+| `diferencial_bei_5y_comun_pp` | Diferencial calculado diariamente y promediado solo sobre fechas comunes de TES nominal, TES UVR y `BKEVEN05`; pp. | Robustez en nivel y primera diferencia; no es la especificación activa. | Conserva menos observaciones intrames; el mínimo observado es 4 días comunes. |
+| `diferencia_comun_menos_separada_pp` | `diferencial_bei_5y_comun_pp − diferencial_bei_5y_pp`; pp. | Diagnóstico de agregación; no entra como regresor. | Una diferencia pequeña no implica equivalencia conceptual entre los mercados. |
+| `dias_tes_pesos`, `dias_tes_uvr`, `dias_bei_eeuu`, `dias_comunes_bei` | Número de observaciones diarias publicadas usadas por mes en cada componente y en su intersección. | Control de cobertura intrames. | No mide calidad ni liquidez de las cotizaciones. |
 | `asinh_balanza_comercial` | `asinh(balanza_comercial_cambiaria_usd_millones / 1000)`; transformación adimensional sobre USD miles de millones. | El modelo usa su primera diferencia con `L1`; signo `−`. | El nivel transformado no es estacionario; `asinh` conserva signo y admite cero, pero el coeficiente no es una elasticidad constante. |
 | `asinh_flujos_capital` | `asinh(flujos_capital_usd_millones / 1000)`; transformación adimensional sobre USD miles de millones. | El modelo usa su primera diferencia con `L1`; signo `−`. | El nivel transformado no es estacionario; se mantienen las cautelas de escala y endogeneidad de los flujos. |
 | `factor_monedas_regionales_3` | Promedio simple de los `z(Δln)` de BRL, CLP y MXN por USD. Media y desviación estándar poblacional (`ddof=0`) se calibran en 2006-01 a 2019-12. | Entra en `t` en la robustez histórica de tres monedas y con `L1` en el pronóstico seleccionado. | Exige las tres monedas (`skipna=False`) y puede absorber información de VIX/dólar. |
@@ -141,7 +147,7 @@ Todas las columnas tienen frecuencia mensual después de la consolidación.
 El encabezado exacto de `modelo_trm_muestra_estimacion.csv` es:
 
 ```text
-fecha,ln_trm,ln_terminos_intercambio,ln_remesas_12m,diferencial_tasas_pp,deficit_fiscal_12m_pct_pib,ln_dolar_amplio,ln_vix,dln_vix,embig_colombia_pp,ln_reservas_netas_sin_flar,asinh_balanza_comercial,asinh_flujos_capital,diferencial_bei_5y_pp,factor_monedas_regionales_3,factor_monedas_regionales_4,dummy_pandemia_2020
+fecha,ln_trm,ln_terminos_intercambio,ln_remesas_12m,diferencial_tasas_pp,deficit_fiscal_12m_pct_pib,ln_dolar_amplio,ln_vix,dln_vix,embig_colombia_pp,ln_reservas_netas_sin_flar,asinh_balanza_comercial,asinh_flujos_capital,diferencial_bei_5y_pp,diferencial_bei_5y_comun_pp,factor_monedas_regionales_3,factor_monedas_regionales_4,dummy_pandemia_2020
 ```
 
 La matriz del modelo ampliado se construye así:
@@ -160,7 +166,7 @@ La matriz del modelo ampliado se construye así:
 | `ln_reservas_netas_sin_flar` | `Δln_reservas_netas_sin_flar` | `L1` | `−` |
 | `asinh_balanza_comercial` | `Δasinh` | `L1` | `−` |
 | `asinh_flujos_capital` | `Δasinh` | `L1` | `−` |
-| `diferencial_bei_5y_pp` | Nivel del diferencial de compensación de inflación a 5 años | `L1` | `+` |
+| `diferencial_bei_5y_pp` | Primera diferencia del diferencial de compensación de inflación a 5 años | `L1` | `+` |
 | `factor_monedas_regionales_4` | Factor de cuatro monedas | `t` en la explicación histórica | `+` |
 | `factor_monedas_regionales_3` | Factor de tres monedas | `L1` en el pronóstico seleccionado | `+` |
 | `dummy_pandemia_2020` | Dummy | `t` | Sin signo estructural |
@@ -169,7 +175,7 @@ Términos de intercambio, dólar amplio, VIX, EMBIG y factor regional usan infor
 
 ### Calendario del modelo de pronóstico
 
-La ecuación de pronóstico evita regresores contemporáneos: términos de intercambio y déficit usan `L3`; remesas, reservas, balanza y flujos de capital usan `L2`; tasas, dólar amplio, VIX, EMBIG, diferencial BEI y factor regional de tres monedas usan `L1`. La variable dependiente incorpora un rezago propio seleccionado por BIC. El detalle factor por factor está en `results/calendario_disponibilidad_pronostico.csv`.
+La ecuación de pronóstico evita regresores contemporáneos: términos de intercambio y déficit usan `L3`; remesas, reservas, balanza y flujos de capital usan `L2`; tasas, dólar amplio, VIX, EMBIG, el último cambio completo del diferencial BEI y el factor regional de tres monedas usan `L1`. La variable dependiente incorpora un rezago propio seleccionado por BIC. El detalle factor por factor está en `results/calendario_disponibilidad_pronostico.csv`.
 
 Este calendario evita anticipar el valor del mes objetivo, pero la base usa la última revisión hoy disponible de cada serie. Por tanto, la prueba es pseudo-tiempo-real. `data/vintages/` añade un archivo inmutable hacia adelante, cataloga versiones fiscales y deja una recuperación ALFRED reanudable. La cobertura histórica versionada sigue en cero; consulte `data/vintages/README.md` y `results/cobertura_vintages_pronostico.csv`.
 
@@ -183,6 +189,6 @@ La ruta ALFRED solicita, serie por serie, FEDFUNDS, dólar amplio, VIX, BRL, CLP
 
 1. **Términos de intercambio en lugar de Brent.** `Δln_terminos_intercambio_t` resume el cambio en el poder de compra externo de las exportaciones colombianas frente a sus importaciones. Una mejora suele reducir COP/USD, de ahí el signo esperado negativo. Es una medida más amplia y específica para Colombia que un solo precio petrolero, pero su publicación con cerca de dos meses de rezago obliga a tratarla como explicación ex post.
 2. **EMBIG Colombia en lugar de TES−Treasury.** `embig_colombia_pb` es el promedio mensual de las observaciones diarias publicadas; `embig_colombia_pp = embig_colombia_pb / 100`. El modelo usa `Δembig_colombia_pp_t`: un aumento representa mayor prima soberana y se asocia con depreciación. El indicador es preferible al antiguo spread de monedas y duraciones distintas, pero sigue siendo una canasta propietaria de composición cambiante y no un CDS de vencimiento constante.
-3. **Compensación de inflación a cinco años en lugar de inflación realizada.** Primero se promedian por separado los TES nominales y UVR a cinco años; después se calcula `bei_colombia_5y_pct`. `bei_eeuu_5y_pct` es el promedio mensual de la compensación cero cupón `BKEVEN05`. Finalmente, `diferencial_bei_5y_pp = bei_colombia_5y_pct − bei_eeuu_5y_pct` entra en nivel con `L1`. El horizonte común mejora la comparación, pero ambas medidas incluyen primas de riesgo de inflación y liquidez; por eso se describen como compensaciones de mercado comparables, no como expectativas puras ni como encuestas.
+3. **Compensación de inflación a cinco años en lugar de inflación realizada.** Primero se promedian por separado los TES nominales y UVR a cinco años; después se calcula `bei_colombia_5y_pct`. `bei_eeuu_5y_pct` es el promedio mensual de `BKEVEN05`. El diferencial Colombia−EE. UU. entra en primera diferencia con `L1`, porque su nivel es sensible a tendencias y quiebres. La versión sobre fechas diarias comunes se conserva como robustez: su correlación con la separada es 99,97%, pero en el peor mes usa solo 4 días. Ambas medidas incluyen primas de riesgo de inflación y liquidez; son compensaciones de mercado comparables, no expectativas puras ni encuestas.
 
 Las tres sustituciones mejoran la correspondencia económica de los controles, pero no resuelven simultaneidad, revisiones de datos ni identificación causal. Las cinco instantáneas nuevas —incluido PEN— se descargaron el 23 de agosto de 2026; `results/metadata.json` registra la fecha y el SHA-256 de cada archivo para detectar revisiones o cambios accidentales.

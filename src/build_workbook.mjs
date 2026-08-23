@@ -127,6 +127,10 @@ const shapleyIntervals = await readCsv("results/intervalos_bootstrap_pesos_shapl
 const stabilityDetail = await readCsv("results/estabilidad_submuestras_modelo_ampliado.csv");
 const stabilitySummary = await readCsv("results/estabilidad_submuestras_resumen.csv");
 const vintageCoverage = await readCsv("results/cobertura_vintages_pronostico.csv");
+const beiAggregation = await readCsv("results/comparacion_agregacion_bei_5y.csv");
+const beiStationarity = await readCsv("results/pruebas_estacionariedad_bei_5y.csv");
+const beiTrends = await readCsv("results/tendencias_quiebres_bei_5y.csv");
+const beiSpecifications = await readCsv("results/comparacion_especificaciones_bei_5y.csv");
 const modelComparison = await readCsv("results/comparacion_modelos.csv");
 const regionalComparison = await readCsv("results/comparacion_factor_regional.csv");
 const forecastAvailability = await readCsv("results/calendario_disponibilidad_pronostico.csv");
@@ -159,6 +163,7 @@ const TERM_LABELS = {
   "D.asinh_balanza_comercial.L1": "Δ asinh balanza comercial cambiaria (t−1)",
   "D.asinh_flujos_capital.L1": "Δ asinh flujo neto de capital (t−1)",
   "diferencial_bei_5y_pp.L1": "Diferencial BEI 5 años (t−1)",
+  "D.diferencial_bei_5y_pp.L1": "Δ diferencial BEI 5 años (t−1)",
   "factor_monedas_regionales_4.L0": "Factor regional BRL, CLP, MXN y PEN (t)",
   "factor_monedas_regionales_3.L1": "Factor regional BRL, CLP y MXN (t−1)",
   factor_monedas_regionales_3: "Factor regional de tres monedas",
@@ -209,6 +214,7 @@ const sheetNames = [
   "Modelo_ampliado",
   "Pesos_explicativos",
   "Robustez",
+  "BEI_robustez",
   "Validacion",
   "Pronostico",
   "ECM_exploratorio",
@@ -1037,6 +1043,132 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
   s.freezePanes.freezeColumns(2);
 }
 
+// Robustez del diferencial BEI (sin gráficos)
+{
+  const s = sheets.BEI_robustez;
+  const activeBei = beiSpecifications.find((r) => r.especificacion.includes("vigente"));
+  const levelBei = beiSpecifications.find((r) => r.especificacion.includes("Nivel") && r.especificacion.includes("referencia"));
+  const commonDays = beiAggregation.map((r) => n(r.dias_comunes)).filter((value) => value !== null).sort((a, b) => a - b);
+  const medianCommonDays = commonDays.length % 2
+    ? commonDays[Math.floor(commonDays.length / 2)]
+    : (commonDays[commonDays.length / 2 - 1] + commonDays[commonDays.length / 2]) / 2;
+  title(s, "A1:L1", "Robustez del diferencial de compensación inflacionaria a cinco años");
+  subtitle(
+    s,
+    "A2:L3",
+    `Se adopta Δ diferencial BEI con promedios mensuales separados y rezago de un mes: BIC ${n(activeBei.bic).toFixed(2)} frente a ${n(levelBei.bic).toFixed(2)} en nivel. La evidencia de raíz unitaria del nivel cambia al incluir tendencia o quiebre; la primera diferencia es estable en todas las pruebas.`,
+    COLORS.amber
+  );
+
+  section(s, "A5:L5", "Comparación dentro del modelo ampliado — misma muestra de 240 meses");
+  s.getRange("A6:L6").values = [[
+    "Especificación", "Agregación", "Transformación", "Extensión", "R² ajustado", "BIC", "Coef. BEI", "p HAC", "MAPE cond.", "R² validación", "Quiebre", "Cautela",
+  ]];
+  s.getRange(`A7:L${6 + beiSpecifications.length}`).values = beiSpecifications.map((r) => [
+    r.especificacion,
+    r.agregacion_bei,
+    r.transformacion_bei,
+    r.extension_deterministica,
+    n(r.r_cuadrado_ajustado),
+    n(r.bic),
+    n(r.coeficiente_bei_pre_quiebre),
+    n(r.p_valor_hac_bei_pre_quiebre),
+    n(r.mape_condicional_pct) / 100,
+    n(r.r2_validacion_condicional_vs_caminata),
+    r.fecha_quiebre_za || "—",
+    String(r.quiebre_elegido_con_muestra_completa).toLowerCase() === "true" ? "Quiebre elegido ex post" : "Comparación regular",
+  ]);
+  header(s, "A6:L6");
+  addTable(s, `A6:L${6 + beiSpecifications.length}`, "EspecificacionesBeiTable");
+  s.getRange(`E7:E${6 + beiSpecifications.length}`).format.numberFormat = "0.000";
+  s.getRange(`F7:H${6 + beiSpecifications.length}`).format.numberFormat = "0.0000";
+  s.getRange(`I7:J${6 + beiSpecifications.length}`).format.numberFormat = "0.00%";
+  s.getRange(`A7:L${6 + beiSpecifications.length}`).format.rowHeight = 34;
+
+  section(s, "A15:F15", "Comparación de agregación mensual");
+  s.getRange("A16:C16").values = [["Métrica", "Valor", "Lectura"]];
+  const aggregationSummary = [
+    ["Correlación entre agregaciones", n(metadata.diferencial_bei_5y_correlacion_agregaciones), "Prácticamente idénticas en el conjunto de la muestra"],
+    ["Diferencia media común − separada", n(metadata.diferencial_bei_5y_diferencia_media_comun_menos_separada_pp), "Puntos porcentuales"],
+    ["Máxima diferencia absoluta", n(metadata.diferencial_bei_5y_max_diferencia_abs_agregacion_pp), "Puntos porcentuales; ocurre en un mes con pocos cruces"],
+    ["Mínimo de días comunes", n(metadata.diferencial_bei_5y_min_dias_comunes_mes), "La intersección puede perder gran parte del mes"],
+    ["Mediana de días comunes", medianCommonDays, "Días con las tres curvas observadas"],
+  ];
+  s.getRange(`A17:C${16 + aggregationSummary.length}`).values = aggregationSummary;
+  header(s, "A16:C16");
+  addTable(s, `A16:C${16 + aggregationSummary.length}`, "AgregacionBeiResumenTable");
+  s.getRange("B17:B17").format.numberFormat = "0.00%";
+  s.getRange("B18:B19").format.numberFormat = "0.0000";
+  s.getRange("B20:B21").format.numberFormat = "0";
+
+  section(s, "A24:L24", "Estacionariedad con constante, tendencia y quiebre endógeno");
+  const stationarityRows = beiStationarity.filter((r) => (
+    (r.prueba === "ADF" && ["constante", "constante_tendencia"].includes(r.deterministico))
+    || (r.prueba === "KPSS" && r.deterministico === "constante_tendencia")
+    || (r.prueba === "Zivot-Andrews" && r.deterministico === "constante_tendencia_con_quiebre")
+  ));
+  s.getRange("A25:K25").values = [[
+    "Agregación", "Transformación", "Prueba", "Determinístico", "H₀", "N", "Estadístico", "p-valor", "Rezagos", "Fecha quiebre", "Crítico 5%",
+  ]];
+  s.getRange(`A26:K${25 + stationarityRows.length}`).values = stationarityRows.map((r) => [
+    r.agregacion,
+    r.transformacion,
+    r.prueba,
+    r.deterministico,
+    r.hipotesis_nula,
+    n(r.n),
+    n(r.estadistico),
+    n(r.p_valor),
+    n(r.rezagos),
+    r.fecha_quiebre || "—",
+    n(r.critico_5_pct),
+  ]);
+  header(s, "A25:K25");
+  addTable(s, `A25:K${25 + stationarityRows.length}`, "EstacionariedadBeiTable");
+  s.getRange(`G26:H${25 + stationarityRows.length}`).format.numberFormat = "0.0000";
+  s.getRange(`K26:K${25 + stationarityRows.length}`).format.numberFormat = "0.0000";
+  s.getRange(`A26:K${25 + stationarityRows.length}`).format.rowHeight = 31;
+
+  const trendsStart = 27 + stationarityRows.length;
+  section(s, `A${trendsStart}:L${trendsStart}`, "Tendencias determinísticas del propio diferencial BEI");
+  s.getRange(`A${trendsStart + 1}:L${trendsStart + 1}`).values = [[
+    "Agregación", "Modelo", "Quiebre ZA", "N", "R² ajustado", "BIC", "Tendencia pp/año", "p tendencia", "Cambio nivel", "p nivel", "Cambio pendiente", "p pendiente",
+  ]];
+  s.getRange(`A${trendsStart + 2}:L${trendsStart + 1 + beiTrends.length}`).values = beiTrends.map((r) => [
+    r.agregacion,
+    r.modelo_deterministico,
+    r.fecha_quiebre_za,
+    n(r.observaciones),
+    n(r.r_cuadrado_ajustado),
+    n(r.bic),
+    n(r.tendencia_pp_por_ano),
+    n(r.p_valor_hac_tendencia),
+    n(r.cambio_nivel_quiebre_pp),
+    n(r.p_valor_hac_cambio_nivel),
+    n(r.cambio_pendiente_pp_por_ano),
+    n(r.p_valor_hac_cambio_pendiente),
+  ]);
+  header(s, `A${trendsStart + 1}:L${trendsStart + 1}`);
+  addTable(s, `A${trendsStart + 1}:L${trendsStart + 1 + beiTrends.length}`, "TendenciasBeiTable");
+  s.getRange(`E${trendsStart + 2}:L${trendsStart + 1 + beiTrends.length}`).format.numberFormat = "0.0000";
+  s.getRange(`A${trendsStart + 2}:L${trendsStart + 1 + beiTrends.length}`).format.rowHeight = 32;
+
+  const noteRow = trendsStart + beiTrends.length + 3;
+  subtitle(
+    s,
+    `A${noteRow}:L${noteRow + 2}`,
+    "Lectura conjunta: el nivel parece estacionario con constante, pero deja de ser concluyente al incluir tendencia; Zivot–Andrews tampoco rechaza raíz unitaria al 5%. El quiebre de 2009 se seleccionó con toda la muestra y no mejora el BIC del modelo de TRM. La primera diferencia separada ofrece el mejor BIC, conserva casi el mismo desempeño condicional y evita depender de una fecha de quiebre estimada ex post.",
+    COLORS.paleGray
+  );
+  s.getRange("A:A").format.columnWidth = 34;
+  s.getRange("B:B").format.columnWidth = 27;
+  s.getRange("C:D").format.columnWidth = 19;
+  s.getRange("E:L").format.columnWidth = 15;
+  s.getRange(`A1:L${noteRow + 2}`).format.wrapText = true;
+  s.freezePanes.freezeRows(6);
+  s.freezePanes.freezeColumns(2);
+}
+
 // Validación
 {
   const s = sheets.Validacion;
@@ -1434,7 +1566,7 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
     ["Riesgo", "EMBIG Colombia", "Modelo ampliado", "BCRPData PD04715XD", "Δ pp, contemporáneo", "+", "Riesgo soberano externo", "Prima de bonos soberanos frente a Treasuries", "Canasta con duración y composición variables; no es CDS a 5 años"],
     ["Reservas", "Reservas internacionales netas sin FLAR", "Modelo ampliado", "BanRep 15053", "Δln, rezago 1", "−", "Colchón externo", "Capacidad de intervención y liquidez", "La acumulación de reservas puede responder a la TRM"],
     ["Comercio", "Balanza comercial cambiaria", "Modelo ampliado", "BanRep 16702", "Δ asinh, rezago 1", "−", "Oferta neta de divisas", "Exportaciones menos importaciones canalizadas", "Es simultánea con la depreciación"],
-    ["Precios", "Diferencial BEI 5 años CO−EE. UU.", "Modelo ampliado", "BanRep 15273−15276 menos Fed BKEVEN05", "Nivel en pp, rezago 1", "+", "Compensación inflacionaria relativa", "Horizonte común de cinco años", "Incluye primas de riesgo de inflación y liquidez; no es expectativa pura"],
+    ["Precios", "Diferencial BEI 5 años CO−EE. UU.", "Modelo ampliado", "BanRep 15273−15276 menos Fed BKEVEN05", "Primera diferencia en pp, rezago 1", "+", "Cambio en la compensación inflacionaria relativa", "La diferencia es robustamente estacionaria y mejora BIC", "Incluye primas de riesgo de inflación y liquidez; el nivel es sensible a tendencia y quiebre"],
     ["Mercado", "Monedas regionales", "Modelo ampliado", "BRL, CLP, MXN y PEN por USD", "Promedio igual de z(Δln), base 2006–2019", "+", "Contagio regional", "PEN mejora la explicación histórica frente a tres monedas", "Comparte información con VIX y dólar global"],
     ["Pronóstico", "Modelo de un mes", "Pronóstico publicado", "Variables disponibles al inicio de t", "Rezagos de 1 a 3 meses", "—", "Predicción ex ante", "Composición regional de tres monedas seleccionada por BIC", "Backtest pseudo-tiempo-real: faltan vintages históricos"],
     ["Flujos", "Flujo neto total de capital", "Modelo ampliado", "BanRep 16706", "Δ asinh, rezago 1", "−", "Demanda de activos COP", "Resume entradas y salidas de capital", "Altamente endógeno y volátil"],
@@ -1480,9 +1612,9 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
     ["Banco de la República", "Términos de intercambio 15360", "Mensual", "1995–2026", "Modelo principal", "Índice encadenado; Δln contemporáneo en explicación ex post", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15360"],
     ["Banco de la República", "Reservas netas sin FLAR 15053", "Mensual", "1960–2026", "Modelo ampliado", "Log y rezago", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15053"],
     ["BCRPData", "EMBIG Colombia PD04715XD", "Diaria → mensual", "2006–2026", "Modelo ampliado", "Promedio mensual; pb/100; fuentes originales Reuters/J.P. Morgan", "https://estadisticas.bcrp.gob.pe/estadisticas/series/diarias/tasas-de-interes-embig-variacion-en-pbs"],
-    ["Banco de la República", "TES pesos cero cupón 5 años 15273", "Diaria → mensual", "2003–2026", "Modelo ampliado", "Promedio mensual; componente nominal del BEI", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15273"],
-    ["Banco de la República", "TES UVR cero cupón 5 años 15276", "Diaria → mensual", "2003–2026", "Modelo ampliado", "Promedio mensual; componente real del BEI", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15276"],
-    ["Federal Reserve Board", "GSW BKEVEN05", "Diaria → mensual", "2003–2026", "Modelo ampliado", "Compensación inflacionaria cero cupón 5 años; producto de investigación revisable", "https://www.federalreserve.gov/data/yield-curve-tables/feds200805_1.html"],
+    ["Banco de la República", "TES pesos cero cupón 5 años 15273", "Diaria → mensual", "2003–2026", "Modelo ampliado", "Promedio mensual separado; comparación adicional sobre fechas comunes", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15273"],
+    ["Banco de la República", "TES UVR cero cupón 5 años 15276", "Diaria → mensual", "2003–2026", "Modelo ampliado", "Promedio mensual separado; comparación adicional sobre fechas comunes", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15276"],
+    ["Federal Reserve Board", "GSW BKEVEN05", "Diaria → mensual", "2003–2026", "Modelo ampliado", "Promedio separado; robustez con fechas comunes; producto de investigación revisable", "https://www.federalreserve.gov/data/yield-curve-tables/feds200805_1.html"],
     ["Banco de la República", "Balanza comercial cambiaria 16702", "Mensual", "2001–2026", "Modelo ampliado", "Δ asinh y rezago", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=16702"],
     ["Banco de la República", "Flujo neto total de capital 16706", "Mensual", "2001–2026", "Modelo ampliado", "Δ asinh y rezago", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=16706"],
     ["OECD / FRED", "BRL por USD CCUSMA02BRM618N", "Mensual", "1994–2026", "Modelo ampliado", "Factor regional a partir de Δln", "https://fred.stlouisfed.org/series/CCUSMA02BRM618N"],
@@ -1515,6 +1647,7 @@ for (const spec of [
   { range: "Modelo_ampliado!A5:N22", rows: 18, cols: 14 },
   { range: "Pesos_explicativos!A1:H24", rows: 24, cols: 8 },
   { range: "Robustez!A1:P39", rows: 39, cols: 16 },
+  { range: "BEI_robustez!A1:L54", rows: 54, cols: 12 },
   { range: "Validacion!A5:J16", rows: 12, cols: 10 },
   { range: "Pronostico!A5:P32", rows: 28, cols: 16 },
 ]) {
@@ -1536,6 +1669,7 @@ const renderSpecs = [
   ["Modelo_ampliado", "A1:W36"],
   ["Pesos_explicativos", "A1:R30"],
   ["Robustez", "A1:P39"],
+  ["BEI_robustez", "A1:L54"],
   ["Validacion", "A1:R30"],
   ["Pronostico", "A1:P42"],
   ["ECM_exploratorio", "A1:H30"],

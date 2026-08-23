@@ -1,0 +1,7 @@
+﻿agregacion,variable,modelo_deterministico,fecha_quiebre_za,observaciones,r_cuadrado_ajustado,aic,bic,tendencia_pp_por_ano,p_valor_hac_tendencia,cambio_nivel_quiebre_pp,p_valor_hac_cambio_nivel,cambio_pendiente_pp_por_ano,p_valor_hac_cambio_pendiente
+Medias mensuales separadas,diferencial_bei_5y_pp,Sin tendencia,2009-01-01,244,-2.220446049e-16,777.8905592,781.3877275,,,,,,
+Medias mensuales separadas,diferencial_bei_5y_pp,Tendencia lineal,2009-01-01,244,0.007327105698,777.0899765,784.084313,0.02159408638,0.5086989687,,,,
+Medias mensuales separadas,diferencial_bei_5y_pp,Tendencia segmentada con quiebre ZA,2009-01-01,244,0.2501841377,710.6051252,724.5937981,1.180297632,0.0002535002603,-3.300772484,6.386469637e-07,-1.102839888,0.0009624730542
+Fechas diarias comunes,diferencial_bei_5y_comun_pp,Sin tendencia,2009-01-01,244,0,778.8882204,782.3853886,,,,,,
+Fechas diarias comunes,diferencial_bei_5y_comun_pp,Tendencia lineal,2009-01-01,244,0.007062663142,778.1526293,785.1469657,0.02138715202,0.5139101619,,,,
+Fechas diarias comunes,diferencial_bei_5y_comun_pp,Tendencia segmentada con quiebre ZA,2009-01-01,244,0.2505399115,711.4869854,725.4756583,1.178994287,0.0002735804938,-3.308769799,7.135381707e-07,-1.101357064,0.001029278347

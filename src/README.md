@@ -8,7 +8,7 @@ Esta carpeta contiene siete programas con responsabilidades separadas:
 | `archive_vintage.py` | Crea snapshots inmutables por fecha de origen, recupera vintages históricos disponibles y genera la matriz de cobertura del pronóstico. |
 | `check_outputs.py` | Comprueba integridad de datos, muestra común, conciliación Shapley y sincronización entre los CSV y el archivo Excel. |
 | `check_reproducibility.py` | Compara los resultados regenerados con la versión comprometida usando tolerancias numéricas, para no confundir ruido de plataforma con un cambio econométrico. |
-| `build_workbook.mjs` | Construye el archivo Excel, genera las 13 hojas, exporta vistas previas y actualiza `deliverables/modelo_trm_colombia.xlsx`. |
+| `build_workbook.mjs` | Construye el archivo Excel, genera las 14 hojas, exporta vistas previas y actualiza `deliverables/modelo_trm_colombia.xlsx`. |
 | `build_charts.py` | Construye cinco gráficos PNG independientes desde los CSV de `results/` y los guarda en `graficos/`. |
 | `check_charts.py` | Verifica que los PNG tengan el formato esperado y correspondan a los CSV y al generador actual mediante huellas SHA-256. |
 
@@ -36,7 +36,7 @@ deliverables/modelo_trm_colombia.xlsx
 `BASE_FACTOR_SPECS`, `EXPANDED_FACTOR_SPECS_3/4` y `FORECAST_FACTOR_SPECS_3/4` declaran cada factor, su grupo, transformación y rezago. `make_timed_difference_design()` usa esas especificaciones para mantener una sola ruta de construcción.
 
 - Factores contemporáneos del histórico: términos de intercambio, dólar amplio, VIX, EMBIG Colombia y factor regional de cuatro monedas.
-- Factores rezagados un mes: remesas, diferencial de tasas, déficit fiscal, reservas, balanza cambiaria, capitales y diferencial BEI a cinco años.
+- Factores rezagados un mes: remesas, diferencial de tasas, déficit fiscal, reservas, balanza cambiaria, capitales y primera diferencia del BEI a cinco años.
 - Variable dependiente: cambio mensual del logaritmo de la TRM.
 - Inferencia: OLS con errores estándar HAC de seis meses.
 - Selección dinámica: BIC entre cero y tres rezagos de la variación de la TRM; la selección actual es cero.
@@ -44,7 +44,7 @@ deliverables/modelo_trm_colombia.xlsx
 
 Los términos de intercambio entran como `D.ln_terminos_intercambio.L0`; su rezago de publicación cercano a dos meses refuerza que el uso contemporáneo es explicativo *ex post*. El riesgo soberano entra como `D.embig_colombia_pp.L0`: se promedia diariamente el EMBIG Colombia de BCRPData y se convierte de puntos básicos a puntos porcentuales. Debe mantenerse la atribución a BCRPData y a sus fuentes originales Reuters/J.P. Morgan; la descarga pública no equivale a una licencia abierta sobre la metodología o la marca EMBIG.
 
-El diferencial BEI a cinco años entra en nivel con `L1`. Para Colombia se restan los promedios mensuales de TES nominales y TES UVR al mismo horizonte; luego se resta la compensación estadounidense `BKEVEN05`. Es una compensación de inflación de mercado, no una expectativa pura: incorpora primas de riesgo de inflación y diferencias de liquidez. Las fuentes, fórmulas y cautelas de reutilización se detallan en [`data/README.md`](../data/README.md).
+El diferencial BEI a cinco años entra como `D.diferencial_bei_5y_pp.L1`. Para Colombia se restan los promedios mensuales de TES nominales y TES UVR al mismo horizonte; luego se resta la compensación estadounidense `BKEVEN05`. `build_bei_aggregations()` conserva también una versión limitada a fechas diarias comunes. `bei_stationarity_tests()` y `bei_trend_break_models()` evalúan constante, tendencia y quiebres; `bei_model_specification_comparison()` contrasta seis variantes sobre la misma muestra. Es una compensación de inflación de mercado, no una expectativa pura. Las fuentes, fórmulas y cautelas se detallan en [`data/README.md`](../data/README.md).
 
 La temporización contemporánea hace que el modelo ampliado sea una explicación histórica o *nowcast*, no un pronóstico disponible antes de observar el mes. PEN, descargado de BCRPData `PN01207PM`, mejora BIC, R² ajustado y MAPE de esa explicación frente al factor de tres monedas.
 
@@ -97,7 +97,7 @@ Por defecto, las vistas previas y el reporte de inspección quedan en `outputs/m
 2. Reconstruir el archivo Excel cuando cambien resultados o documentación interna.
 3. Reconstruir y revisar los cinco PNG de `graficos/`.
 4. Ejecutar `python src/check_charts.py` para verificar su sincronización.
-5. Revisar las 13 vistas previas en `outputs/modelo_trm_colombia/previews/`.
+5. Revisar las 14 vistas previas en `outputs/modelo_trm_colombia/previews/`.
 6. Ejecutar `python src/check_outputs.py`.
 7. Ejecutar `python src/check_reproducibility.py` después de una reestimación limpia sobre una versión ya comprometida.
 8. Confirmar que no existan cambios inesperados ni errores de formato.

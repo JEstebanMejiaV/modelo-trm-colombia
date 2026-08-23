@@ -54,67 +54,75 @@ El modelo ampliado conserva los siete términos del principal e incorpora seis b
 2. cambio rezagado de reservas internacionales netas sin FLAR;
 3. cambio rezagado de la balanza comercial cambiaria transformada;
 4. cambio rezagado de los movimientos netos de capital transformados;
-5. nivel rezagado del **Diferencial de compensación inflacionaria 5 años** Colombia–EE. UU.; y
+5. cambio rezagado del **Diferencial de compensación inflacionaria 5 años** Colombia–EE. UU.; y
 6. factor contemporáneo de monedas regionales.
 
 Base y ampliado usan los mismos 240 meses efectivos. Los coeficientes finales del ampliado son:
 
 | Término | Coeficiente | p-valor HAC |
 |---|---:|---:|
-| Constante | 0,00494 | 0,2100 |
-| \(\Delta\ln\) términos de intercambio, mes actual | −0,08584 | 0,0014 |
-| \(\Delta\ln\) remesas 12 meses, rezago 1 | 0,07147 | 0,5096 |
-| \(\Delta\) diferencial de tasas, rezago 1 | −0,00657 | 0,2138 |
-| \(\Delta\) déficit fiscal 12 meses/PIB, rezago 1 | −0,00050 | 0,8850 |
-| \(\Delta\ln\) dólar amplio, mes actual | 0,26735 | 0,2368 |
-| \(\Delta\ln\) VIX, mes actual | 0,01416 | 0,1709 |
-| \(\Delta\) EMBIG Colombia, en puntos porcentuales, mes actual | 0,01519 | 0,2097 |
-| \(\Delta\ln\) reservas netas sin FLAR, rezago 1 | −0,28547 | 0,0128 |
-| \(\Delta\,\mathrm{asinh}\) balanza comercial cambiaria, rezago 1 | 0,04835 | <0,0001 |
-| \(\Delta\,\mathrm{asinh}\) movimientos netos de capital, rezago 1 | 0,00070 | 0,8408 |
-| Diferencial de compensación inflacionaria 5 años, nivel rezagado 1 | −0,00072 | 0,6688 |
-| Factor regional BRL, CLP, MXN y PEN, mes actual | 0,01621 | <0,0001 |
-| Indicador de pandemia | −0,00266 | 0,6848 |
+| Constante | 0,00318 | 0,0945 |
+| \(\Delta\ln\) términos de intercambio, mes actual | −0,09186 | 0,0014 |
+| \(\Delta\ln\) remesas 12 meses, rezago 1 | 0,10076 | 0,3217 |
+| \(\Delta\) diferencial de tasas, rezago 1 | −0,00496 | 0,2946 |
+| \(\Delta\) déficit fiscal 12 meses/PIB, rezago 1 | −0,00075 | 0,8276 |
+| \(\Delta\ln\) dólar amplio, mes actual | 0,24145 | 0,2524 |
+| \(\Delta\ln\) VIX, mes actual | 0,01144 | 0,2422 |
+| \(\Delta\) EMBIG Colombia, en puntos porcentuales, mes actual | 0,01710 | 0,1323 |
+| \(\Delta\ln\) reservas netas sin FLAR, rezago 1 | −0,29366 | 0,0131 |
+| \(\Delta\,\mathrm{asinh}\) balanza comercial cambiaria, rezago 1 | 0,04699 | <0,0001 |
+| \(\Delta\,\mathrm{asinh}\) movimientos netos de capital, rezago 1 | 0,00065 | 0,8505 |
+| \(\Delta\) diferencial de compensación inflacionaria 5 años, rezago 1 | −0,00627 | 0,1771 |
+| Factor regional BRL, CLP, MXN y PEN, mes actual | 0,01653 | <0,0001 |
+| Indicador de pandemia | −0,00272 | 0,6686 |
 
 La transformación \(\mathrm{asinh}\) conserva el signo y admite ceros, pero sus coeficientes no son elasticidades constantes. La significancia individual tampoco debe confundirse con el peso explicativo: un factor puede compartir mucha información con otros y, por multicolinealidad, tener un p-valor individual alto.
 
 | Métrica | Modelo principal | Modelo ampliado |
 |---|---:|---:|
 | Observaciones efectivas | 240 | 240 |
-| R² | 49,45% | 60,42% |
-| R² ajustado | 47,92% | 58,14% |
-| MAPE, validación condicional de 48 meses | 2,01% | 1,69% |
+| R² | 49,45% | 60,77% |
+| R² ajustado | 47,92% | 58,52% |
+| MAPE, validación condicional de 48 meses | 2,01% | 1,70% |
 | Acierto de dirección | 68,75% | 81,25% |
-| R² condicional frente a caminata aleatoria | 31,92% | 48,99% |
+| R² condicional frente a caminata aleatoria | 31,92% | 47,42% |
 
-Los diagnósticos de ambos modelos no detectan autocorrelación a 12 meses y CUSUM no rechaza estabilidad. En el modelo principal, Jarque–Bera rechaza normalidad y ARCH-LM no rechaza al 5% (p = 0,080). En el ampliado, Jarque–Bera y ARCH-LM rechazan normalidad y homocedasticidad; RESET no rechaza al 5% (p = 0,101). Los errores HAC robustecen la inferencia de la ecuación de media, pero no modelan volatilidad ni colas extremas.
+Los diagnósticos de ambos modelos no detectan autocorrelación a 12 meses y CUSUM no rechaza estabilidad. En el modelo principal, Jarque–Bera rechaza normalidad y ARCH-LM no rechaza al 5% (p = 0,080). En el ampliado, Jarque–Bera y ARCH-LM rechazan normalidad y homocedasticidad; RESET no rechaza al 5% (p = 0,078). Los errores HAC robustecen la inferencia de la ecuación de media, pero no modelan volatilidad ni colas extremas.
+
+## Robustez del diferencial BEI
+
+El nivel del diferencial parece estacionario si solo se incluye constante —ADF p = 0,013 y KPSS no rechaza—, pero la conclusión cambia con tendencia: ADF da p = 0,054 y KPSS rechaza estacionariedad. Zivot–Andrews con constante, tendencia y quiebre selecciona enero de 2009, pero tampoco rechaza raíz unitaria al 5% (p = 0,089). La primera diferencia sí supera ADF, KPSS y Zivot–Andrews en ambas agregaciones.
+
+En la ecuación ampliada, la primera diferencia con promedios separados tiene el menor BIC: **−1103,45**, frente a **−1101,29** para el nivel. Su MAPE condicional es **1,70%**, apenas 0,009 p.p. mayor que el nivel. Un quiebre de coeficiente elegido ex post en enero de 2009 empeora el BIC a −1093,39 y ni el cambio de coeficiente ni el efecto posterior son significativos al 5%; por eso no se adopta.
+
+La agregación sobre fechas comunes produce una serie casi idéntica a los promedios separados: correlación de **99,97%**, diferencia media de 0,00004 p.p. y máxima de 0,156 p.p. Sin embargo, algunos meses conservan apenas **4 días comunes** —mediana: 19—. Se mantienen los promedios separados, que aprovechan toda la información publicada de cada mercado.
 
 ## Cuánto pesa cada factor
 
 El peso se calcula mediante una descomposición Shapley/LMG exacta del R². Se estiman los 4.096 subconjuntos posibles de los 12 factores y se promedia su aporte marginal en todos los órdenes de entrada.
 
-El bloque fijo —intercepto, dinámica seleccionada de TRM y pandemia— explica 1,78% de la variación. Los 12 factores elevan el R² a 60,42%, un incremento de 58,63 puntos porcentuales. La columna “peso” reparte ese incremento y suma 100%.
+El bloque fijo —intercepto, dinámica seleccionada de TRM y pandemia— explica 1,78% de la variación. Los 12 factores elevan el R² a 60,77%, un incremento de 58,99 puntos porcentuales. La columna “peso” reparte ese incremento y suma 100%.
 
 | Factor | Peso entre los 12 factores | Aporte al R² |
 |---|---:|---:|
-| Monedas regionales | 30,08% | 17,64 p.p. |
-| Dólar amplio | 20,26% | 11,88 p.p. |
-| Riesgo soberano EMBIG Colombia | 18,02% | 10,57 p.p. |
-| VIX | 8,42% | 4,94 p.p. |
-| Balanza comercial cambiaria | 7,53% | 4,42 p.p. |
-| Términos de intercambio | 6,64% | 3,89 p.p. |
-| Movimientos netos de capital | 4,23% | 2,48 p.p. |
-| Reservas internacionales | 2,58% | 1,51 p.p. |
-| Remesas | 1,08% | 0,63 p.p. |
-| Diferencial de compensación inflacionaria 5 años | 0,51% | 0,30 p.p. |
-| Diferencial de tasas | 0,51% | 0,30 p.p. |
-| Déficit fiscal | 0,12% | 0,07 p.p. |
+| Monedas regionales | 30,13% | 17,77 p.p. |
+| Dólar amplio | 20,13% | 11,88 p.p. |
+| Riesgo soberano EMBIG Colombia | 18,22% | 10,75 p.p. |
+| VIX | 8,32% | 4,91 p.p. |
+| Balanza comercial cambiaria | 7,37% | 4,35 p.p. |
+| Términos de intercambio | 6,73% | 3,97 p.p. |
+| Movimientos netos de capital | 4,22% | 2,49 p.p. |
+| Reservas internacionales | 2,58% | 1,52 p.p. |
+| Remesas | 1,15% | 0,68 p.p. |
+| Diferencial de compensación inflacionaria 5 años | 0,59% | 0,35 p.p. |
+| Diferencial de tasas | 0,43% | 0,26 p.p. |
+| Déficit fiscal | 0,13% | 0,07 p.p. |
 
 Estos pesos miden ajuste estadístico en esta muestra. No miden causalidad, importancia estructural ni el efecto de una intervención. Cuando dos factores están correlacionados, Shapley distribuye su señal compartida; por eso el peso no es igual al tamaño o a la significancia de un coeficiente.
 
-La incertidumbre se evalúa con 200 réplicas de un *bootstrap* circular de bloques de 12 meses. Los intervalos percentiles del 95% de los tres factores principales son: monedas regionales, **20,66%–34,56%**; dólar amplio, **11,87%–27,43%**; y EMBIG Colombia, **12,23%–26,21%**. Son intervalos de la asignación Shapley bajo remuestreo temporal, no intervalos de un efecto causal.
+La incertidumbre se evalúa con 200 réplicas de un *bootstrap* circular de bloques de 12 meses. Los intervalos percentiles del 95% de los tres factores principales son: monedas regionales, **21,65%–34,72%**; dólar amplio, **12,02%–26,98%**; y EMBIG Colombia, **12,33%–26,56%**. Son intervalos de la asignación Shapley bajo remuestreo temporal, no intervalos de un efecto causal.
 
-La jerarquía general es estable en cinco cortes: la correlación de rangos de Spearman frente a la muestra completa va de **0,944 a 0,972**. Sin embargo, la submuestra 2020–2026 conserva el signo de solo **7 de 12** coeficientes y el mayor cambio individual de peso alcanza **6,71 p.p.**. Por eso la estabilidad de rangos no debe confundirse con estabilidad paramétrica.
+La jerarquía general es estable en cinco cortes: la correlación de rangos de Spearman frente a la muestra completa va de **0,909 a 0,979**. La submuestra 2020–2026 conserva el signo de **9 de 12** coeficientes y el mayor cambio individual de peso alcanza **6,60 p.p.**. Por eso la estabilidad de rangos no debe confundirse con estabilidad paramétrica.
 
 ## Tres monedas, cuatro monedas y PEN
 
@@ -122,10 +130,10 @@ El PEN procede de [BCRPData, serie `PN01207PM`](https://estadisticas.bcrp.gob.pe
 
 | Uso | Composición | R² ajustado | BIC | MAPE 48 meses |
 |---|---|---:|---:|---:|
-| Explicación histórica | BRL, CLP y MXN | 55,92% | −1088,91 | 1,80% |
-| Explicación histórica | BRL, CLP, MXN y PEN | **58,14%** | **−1101,29** | **1,69%** |
-| Pronóstico con información rezagada | BRL, CLP y MXN | **10,42%** | **−914,29** | **2,63%** |
-| Pronóstico con información rezagada | BRL, CLP, MXN y PEN | 9,68% | −912,31 | 2,67% |
+| Explicación histórica | BRL, CLP y MXN | 56,35% | −1091,27 | 1,83% |
+| Explicación histórica | BRL, CLP, MXN y PEN | **58,52%** | **−1103,45** | **1,70%** |
+| Pronóstico con información rezagada | BRL, CLP y MXN | **10,20%** | **−913,69** | **2,63%** |
+| Pronóstico con información rezagada | BRL, CLP, MXN y PEN | 9,74% | −912,46 | 2,69% |
 
 La selección depende del propósito: PEN mejora la explicación histórica, pero no mejora el pronóstico. Por eso el ampliado histórico usa cuatro monedas y el pronóstico usa tres.
 
@@ -133,7 +141,7 @@ La selección depende del propósito: PEN mejora la explicación histórica, per
 
 Esta ecuación pronostica la TRM promedio del mes `t` al inicio de `t`. No usa factores económicos del mes objetivo: términos de intercambio y déficit entran con tres meses de rezago; remesas, reservas, balanza y capitales con dos; dólar amplio, VIX, EMBIG, tasas, compensación inflacionaria y monedas regionales con uno. BIC selecciona además un rezago de `Δln(TRM)`.
 
-La validación expansiva de 48 meses obtiene MAPE de **2,63%**, acierto de dirección de **47,92%** y R² frente a la caminata aleatoria de **−11,52%**. La caminata obtiene MAPE de **2,39%**. Es decir, la ecuación explicativa no se convierte automáticamente en un buen pronóstico y, con esta información, el benchmark simple sigue siendo superior.
+La validación expansiva de 48 meses obtiene MAPE de **2,63%**, acierto de dirección de **52,08%** y R² frente a la caminata aleatoria de **−10,98%**. La caminata obtiene MAPE de **2,39%**. Es decir, la ecuación explicativa no se convierte automáticamente en un buen pronóstico y, con esta información, el benchmark simple sigue siendo superior.
 
 La evaluación es **pseudo-tiempo-real**: respeta el calendario de publicación, pero usa la última versión disponible de cada serie. El repositorio ahora archiva descargas por fecha de origen y deja implementada una recuperación ALFRED reanudable; sin embargo, el proveedor cortó las conexiones individuales y el paquete multiserie se descartó por contener datos posteriores al origen. Por ello **0 de 12 factores** tienen todavía cobertura versionada completa para los 48 orígenes. Las series de BanRep y BCRPData también carecen aquí de una historia integral de revisiones. La matriz de cobertura está en `results/cobertura_vintages_pronostico.csv`.
 
@@ -243,4 +251,3 @@ Estas notas documentan procedencia y uso técnico; no sustituyen una revisión j
 1. Completar la descarga histórica ALFRED y conseguir vintages de BanRep/BCRPData —si los proveedores los publican— antes de rotular la evaluación como backtest genuino.
 2. Ampliar la validación temporal, aplicar comparaciones Diebold–Mariano y revisar modelos más parsimoniosos de pronóstico.
 3. Modelar explícitamente volatilidad y colas señaladas por ARCH-LM y Jarque–Bera, y explorar no linealidades sin asumir que RESET las confirma.
-4. Evaluar el diferencial BEI en diferencias, con quiebres y tendencias, y comparar la agregación mensual separada con fechas diarias comunes.
