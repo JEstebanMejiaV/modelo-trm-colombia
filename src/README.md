@@ -21,7 +21,6 @@ Esta carpeta contiene el pipeline de estimación, validación y documentación d
 | `extended_forecast.py` | Pronóstico parsimonioso (top-3), backtest genuino parcial, GARCH(1,1) y forecast combination. |
 | `advanced_diagnostics.py` | Rolling window (120 meses), pronóstico multihorizonte (h=1,2,3,6) y threshold regression. |
 | `improve_explanation_2.py` | PDL del dólar amplio, intervención cambiaria BanRep y estimación robusta (Huber, LAD). |
-| `explore_new_variables.py` | Evalúa candidatas externas: expectativas de inflación, NFCI, pendiente de curva, estrés financiero. |
 
 ## Paquete `model/`
 

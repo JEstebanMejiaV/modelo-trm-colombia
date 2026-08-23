@@ -202,15 +202,17 @@ La TRM está expresada como COP por USD: un aumento significa depreciación del 
 
 El modelo histórico y el pronóstico son productos distintos. El primero explica con realizaciones contemporáneas; el segundo evita esa anticipación, aunque todavía necesita archivos de *vintages* para una validación genuina en tiempo real. El diccionario completo está en [`data/README.md`](data/README.md).
 
-## Trazabilidad heredada — insumos no activos
+## Trazabilidad heredada — insumos eliminados
 
-Los siguientes archivos se conservan únicamente como instantáneas *raw* heredadas para auditoría. **No entran en la base consolidada, las ecuaciones activas ni los resultados finales.**
+Los siguientes archivos se conservaron como instantáneas heredadas hasta agosto 2026 y fueron eliminados del repositorio al confirmar que no entran en el modelo activo:
 
-| Insumo heredado | Uso anterior | Sustitución activa |
+| Insumo eliminado | Uso anterior | Sustitución activa |
 |---|---|---|
 | Brent (`brent_diario_fred.csv`) | Indicador de ingreso externo ligado al petróleo. | Índice de términos de intercambio de Colombia. |
 | TES a 10 años y Treasury a 10 años (`tes_10y_banrep.json`, `treasury_10y_diario_fred.csv`) | Proxy TES–Treasury de riesgo local. | EMBIG Colombia mensual. |
 | IPC de Colombia y EE. UU. (`ipc_colombia_banrep.json`, `ipc_eeuu_mensual_fred.csv`) | Diferencial de inflación realizada. | Diferencial de compensación inflacionaria de mercado a cinco años. |
+
+Si se necesitan para auditoría histórica, están accesibles en el historial de git.
 
 ## Archivos principales
 

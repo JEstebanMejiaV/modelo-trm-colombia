@@ -43,6 +43,19 @@ results/coeficientes_corto_plazo.csv
 results/coeficientes_largo_plazo.csv
 results/diagnosticos.csv
 results/seleccion_rezagos.csv
+results/validacion_metricas.csv
+results/validacion_predicciones.csv
+
+# Removed raw sources (superseded by better alternatives in the active model)
+data/raw/brent_diario_fred.csv
+data/raw/tes_10y_banrep.json
+data/raw/treasury_10y_diario_fred.csv
+data/raw/ipc_colombia_banrep.json
+data/raw/ipc_eeuu_mensual_fred.csv
+data/raw/estres_financiero_fred.csv
+data/raw/expectativas_inflacion_eeuu_fred.csv
+data/raw/nfci_fred.csv
+data/raw/pendiente_curva_eeuu_fred.csv
 
 
 # ALFRED API cache (JSON responses per origin per series)
