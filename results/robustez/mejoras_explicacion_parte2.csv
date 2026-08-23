@@ -1,0 +1,4 @@
+﻿modelo,parametros,r_cuadrado_ajustado,bic,mape_pct,efecto_total_dolar,arch_lm_p,nota,coef_intervencion,p_valor_intervencion,estimador,r_cuadrado,n_outliers_detectados,residuo_max_abs,residuo_std
+PDL dolar (L0-L3),17.0,0.5848237160248742,-1090.0264434940764,1.7373781296110173,0.464035497652541,0.006024647435453092,Efecto acumulado dolar (L0+L1+L2+L3): 0.4640,,,,,,,
+Con intervencion cambiaria,15.0,0.5834039189110667,-1098.0255112762695,,,0.001734217311518354,"coef=0.00006, p=0.7696",5.601429791449842e-05,0.7696106561176778,,,,,
+OLS (referencia),,,,,,,,,,OLS (referencia),0.6077231207021747,0.0,0.07447878173898748,0.02074257368988964
