@@ -1665,6 +1665,213 @@ def bounds_to_frames(bounds_result) -> tuple[pd.DataFrame, pd.DataFrame]:
     return summary, critical
 
 
+def estimate_explanation(
+    model_data: pd.DataFrame,
+    components: pd.DataFrame,
+    common_index: pd.Index,
+) -> dict:
+    """
+    Estima los modelos de explicación histórica (principal y ampliado).
+
+    Incluye:
+    - Modelo principal (BASE_FACTOR_SPECS): selección de rezagos, coeficientes,
+      diagnósticos, ajuste, contribuciones y validación condicional.
+    - Modelo ampliado 3 monedas (EXPANDED_FACTOR_SPECS_3): coeficientes y validación.
+    - Modelo ampliado 4 monedas (EXPANDED_FACTOR_SPECS_4): la especificación activa
+      con Shapley, bootstrap e intervalos de estabilidad.
+    - Contraste ARDL–ECM exploratorio.
+
+    Retorna un diccionario con todos los objetos necesarios para la escritura
+    de resultados y la comparación con el pronóstico.
+    """
+    # ── Modelo principal ─────────────────────────────────────────────────────
+    selected_diff, lag_grid_diff = select_timed_difference_model(
+        model_data, BASE_FACTOR_SPECS, common_index=common_index
+    )
+    _, coefficients_diff = tidy_robust_ols(selected_diff.result, maxlags=6)
+    diagnostics_diff = diagnostics(selected_diff.result)
+    predictions, validation = difference_validation(
+        model_data, selected_diff, holdout=min(48, len(selected_diff.y) // 4)
+    )
+    fitted_diff, contributions_diff = difference_fit_and_contributions(
+        model_data, selected_diff
+    )
+
+    # ── Modelo ampliado — 3 monedas (comparación) ────────────────────────────
+    selected_expanded_3, _ = select_timed_difference_model(
+        model_data, EXPANDED_FACTOR_SPECS_3, common_index=common_index
+    )
+    _, coefficients_expanded_3 = tidy_robust_ols(selected_expanded_3.result, maxlags=6)
+    predictions_expanded_3, validation_expanded_3 = difference_validation(
+        model_data, selected_expanded_3, holdout=min(48, len(selected_expanded_3.y) // 4)
+    )
+
+    # ── Modelo ampliado — 4 monedas (activo) ─────────────────────────────────
+    selected_expanded, lag_grid_expanded = select_timed_difference_model(
+        model_data, EXPANDED_FACTOR_SPECS_4, common_index=common_index
+    )
+    _, coefficients_expanded = tidy_robust_ols(selected_expanded.result, maxlags=6)
+    diagnostics_expanded = diagnostics(selected_expanded.result)
+    predictions_expanded, validation_expanded = difference_validation(
+        model_data, selected_expanded, holdout=min(48, len(selected_expanded.y) // 4)
+    )
+    fitted_expanded, contributions_expanded = difference_fit_and_contributions(
+        model_data, selected_expanded
+    )
+    shapley_expanded = exact_shapley_r2(
+        selected_expanded, EXPANDED_FACTOR_SPECS_4, coefficients_expanded
+    )
+    shapley_bootstrap = block_bootstrap_shapley(
+        selected_expanded, EXPANDED_FACTOR_SPECS_4, shapley_expanded
+    )
+    stability_detail, stability_summary = subsample_stability(
+        selected_expanded,
+        EXPANDED_FACTOR_SPECS_4,
+        shapley_expanded,
+        coefficients_expanded,
+    )
+
+    # ── Contraste ARDL–ECM exploratorio ──────────────────────────────────────
+    y = model_data["ln_trm"]
+    exog = model_data[ECM_LEVEL_VARIABLES]
+    fixed = model_data[["dln_vix", "dummy_pandemia_2020"]]
+    selected_ecm, lag_grid_ecm = select_ardl(y, exog, fixed)
+    uecm_model = UECM.from_ardl(selected_ecm.result.model)
+    uecm_result = uecm_model.fit(
+        cov_type="HAC", cov_kwds={"maxlags": 6, "use_correction": True}, use_t=True
+    )
+    bounds = uecm_result.bounds_test(case=3, cov_type="nonrobust")
+    bounds_summary, bounds_critical = bounds_to_frames(bounds)
+    short_run_ecm = tidy_result(uecm_result)
+    long_run_ecm = tidy_long_run(uecm_result)
+    diagnostics_ecm = diagnostics(selected_ecm.result)
+
+    # ── Pruebas de integración ───────────────────────────────────────────────
+    tests = integration_tests(
+        model_data,
+        [
+            "ln_trm",
+            *ECM_LEVEL_VARIABLES,
+            "ln_vix",
+            "embig_colombia_pp",
+            "ln_reservas_netas_sin_flar",
+            "asinh_balanza_comercial",
+            "asinh_flujos_capital",
+            "diferencial_bei_5y_pp",
+            "diferencial_bei_5y_comun_pp",
+        ],
+    )
+
+    return {
+        "selected_diff": selected_diff,
+        "lag_grid_diff": lag_grid_diff,
+        "coefficients_diff": coefficients_diff,
+        "diagnostics_diff": diagnostics_diff,
+        "predictions": predictions,
+        "validation": validation,
+        "fitted_diff": fitted_diff,
+        "contributions_diff": contributions_diff,
+        "selected_expanded_3": selected_expanded_3,
+        "coefficients_expanded_3": coefficients_expanded_3,
+        "predictions_expanded_3": predictions_expanded_3,
+        "validation_expanded_3": validation_expanded_3,
+        "selected_expanded": selected_expanded,
+        "lag_grid_expanded": lag_grid_expanded,
+        "coefficients_expanded": coefficients_expanded,
+        "diagnostics_expanded": diagnostics_expanded,
+        "predictions_expanded": predictions_expanded,
+        "validation_expanded": validation_expanded,
+        "fitted_expanded": fitted_expanded,
+        "contributions_expanded": contributions_expanded,
+        "shapley_expanded": shapley_expanded,
+        "shapley_bootstrap": shapley_bootstrap,
+        "stability_detail": stability_detail,
+        "stability_summary": stability_summary,
+        "selected_ecm": selected_ecm,
+        "lag_grid_ecm": lag_grid_ecm,
+        "bounds": bounds,
+        "bounds_summary": bounds_summary,
+        "bounds_critical": bounds_critical,
+        "short_run_ecm": short_run_ecm,
+        "long_run_ecm": long_run_ecm,
+        "diagnostics_ecm": diagnostics_ecm,
+        "uecm_result": uecm_result,
+        "tests": tests,
+    }
+
+
+def estimate_forecast(
+    model_data: pd.DataFrame,
+    components: pd.DataFrame,
+) -> dict:
+    """
+    Estima el modelo de pronóstico con rezagos de publicación.
+
+    Compara composiciones regionales de 3 y 4 monedas y selecciona por BIC.
+    Retorna los resultados del pronóstico seleccionado y las variantes para
+    la comparación regional.
+    """
+    forecast_common_index = make_timed_difference_design(
+        components, p=3, factor_specs=FORECAST_FACTOR_SPECS_4
+    )[0].index
+
+    # ── Pronóstico — 3 monedas ───────────────────────────────────────────────
+    selected_forecast_3, lag_grid_forecast_3 = select_timed_difference_model(
+        model_data, FORECAST_FACTOR_SPECS_3, common_index=forecast_common_index
+    )
+    _, coefficients_forecast_3 = tidy_robust_ols(selected_forecast_3.result, maxlags=6)
+    diagnostics_forecast_3 = diagnostics(selected_forecast_3.result)
+    predictions_forecast_3, validation_forecast_3 = difference_validation(
+        model_data, selected_forecast_3, holdout=min(48, len(selected_forecast_3.y) // 4)
+    )
+
+    # ── Pronóstico — 4 monedas ───────────────────────────────────────────────
+    selected_forecast_4, lag_grid_forecast_4 = select_timed_difference_model(
+        model_data, FORECAST_FACTOR_SPECS_4, common_index=forecast_common_index
+    )
+    _, coefficients_forecast_4 = tidy_robust_ols(selected_forecast_4.result, maxlags=6)
+    diagnostics_forecast_4 = diagnostics(selected_forecast_4.result)
+    predictions_forecast_4, validation_forecast_4 = difference_validation(
+        model_data, selected_forecast_4, holdout=min(48, len(selected_forecast_4.y) // 4)
+    )
+
+    # ── Selección por BIC ────────────────────────────────────────────────────
+    if selected_forecast_3.result.bic <= selected_forecast_4.result.bic:
+        forecast_currencies = "BRL, CLP y MXN"
+        selected_forecast = selected_forecast_3
+        lag_grid_forecast = lag_grid_forecast_3
+        coefficients_forecast = coefficients_forecast_3
+        diagnostics_forecast = diagnostics_forecast_3
+        predictions_forecast = predictions_forecast_3.copy()
+        validation_forecast = validation_forecast_3.copy()
+    else:
+        forecast_currencies = "BRL, CLP, MXN y PEN"
+        selected_forecast = selected_forecast_4
+        lag_grid_forecast = lag_grid_forecast_4
+        coefficients_forecast = coefficients_forecast_4
+        diagnostics_forecast = diagnostics_forecast_4
+        predictions_forecast = predictions_forecast_4.copy()
+        validation_forecast = validation_forecast_4.copy()
+
+    return {
+        "forecast_currencies": forecast_currencies,
+        "selected_forecast": selected_forecast,
+        "lag_grid_forecast": lag_grid_forecast,
+        "coefficients_forecast": coefficients_forecast,
+        "diagnostics_forecast": diagnostics_forecast,
+        "predictions_forecast": predictions_forecast,
+        "validation_forecast": validation_forecast,
+        "selected_forecast_3": selected_forecast_3,
+        "coefficients_forecast_3": coefficients_forecast_3,
+        "predictions_forecast_3": predictions_forecast_3,
+        "validation_forecast_3": validation_forecast_3,
+        "selected_forecast_4": selected_forecast_4,
+        "coefficients_forecast_4": coefficients_forecast_4,
+        "predictions_forecast_4": predictions_forecast_4,
+        "validation_forecast_4": validation_forecast_4,
+    }
+
+
 def main() -> None:
     RESULTS.mkdir(parents=True, exist_ok=True)
     DATA.mkdir(parents=True, exist_ok=True)
@@ -1711,92 +1918,66 @@ def main() -> None:
         components, p=3, factor_specs=EXPANDED_FACTOR_SPECS
     )[0].index
 
-    selected_diff, lag_grid_diff = select_timed_difference_model(
-        model_data, BASE_FACTOR_SPECS, common_index=common_index
-    )
-    _, coefficients_diff = tidy_robust_ols(selected_diff.result, maxlags=6)
-    diagnostics_diff = diagnostics(selected_diff.result)
-    predictions, validation = difference_validation(
-        model_data, selected_diff, holdout=min(48, len(selected_diff.y) // 4)
-    )
-    fitted_diff, contributions_diff = difference_fit_and_contributions(
-        model_data, selected_diff
-    )
+    # ── Explicación histórica (principal + ampliado + ECM) ───────────────────
+    print("Estimando modelos de explicación histórica...")
+    explanation = estimate_explanation(model_data, components, common_index)
+    selected_diff = explanation["selected_diff"]
+    lag_grid_diff = explanation["lag_grid_diff"]
+    coefficients_diff = explanation["coefficients_diff"]
+    diagnostics_diff = explanation["diagnostics_diff"]
+    predictions = explanation["predictions"]
+    validation = explanation["validation"]
+    fitted_diff = explanation["fitted_diff"]
+    contributions_diff = explanation["contributions_diff"]
+    selected_expanded_3 = explanation["selected_expanded_3"]
+    coefficients_expanded_3 = explanation["coefficients_expanded_3"]
+    predictions_expanded_3 = explanation["predictions_expanded_3"]
+    validation_expanded_3 = explanation["validation_expanded_3"]
+    selected_expanded = explanation["selected_expanded"]
+    lag_grid_expanded = explanation["lag_grid_expanded"]
+    coefficients_expanded = explanation["coefficients_expanded"]
+    diagnostics_expanded = explanation["diagnostics_expanded"]
+    predictions_expanded = explanation["predictions_expanded"]
+    validation_expanded = explanation["validation_expanded"]
+    fitted_expanded = explanation["fitted_expanded"]
+    contributions_expanded = explanation["contributions_expanded"]
+    shapley_expanded = explanation["shapley_expanded"]
+    shapley_bootstrap = explanation["shapley_bootstrap"]
+    stability_detail = explanation["stability_detail"]
+    stability_summary = explanation["stability_summary"]
+    selected_ecm = explanation["selected_ecm"]
+    lag_grid_ecm = explanation["lag_grid_ecm"]
+    bounds = explanation["bounds"]
+    bounds_summary = explanation["bounds_summary"]
+    bounds_critical = explanation["bounds_critical"]
+    short_run_ecm = explanation["short_run_ecm"]
+    long_run_ecm = explanation["long_run_ecm"]
+    diagnostics_ecm = explanation["diagnostics_ecm"]
+    uecm_result = explanation["uecm_result"]
+    tests = explanation["tests"]
 
-    selected_expanded_3, _ = select_timed_difference_model(
-        model_data, EXPANDED_FACTOR_SPECS_3, common_index=common_index
-    )
-    _, coefficients_expanded_3 = tidy_robust_ols(selected_expanded_3.result, maxlags=6)
-    predictions_expanded_3, validation_expanded_3 = difference_validation(
-        model_data, selected_expanded_3, holdout=min(48, len(selected_expanded_3.y) // 4)
-    )
-
-    selected_expanded, lag_grid_expanded = select_timed_difference_model(
-        model_data, EXPANDED_FACTOR_SPECS_4, common_index=common_index
-    )
-    _, coefficients_expanded = tidy_robust_ols(selected_expanded.result, maxlags=6)
-    diagnostics_expanded = diagnostics(selected_expanded.result)
     bei_model_comparison = bei_model_specification_comparison(
         model_data, selected_expanded, bei_break_date
     )
-    predictions_expanded, validation_expanded = difference_validation(
-        model_data, selected_expanded, holdout=min(48, len(selected_expanded.y) // 4)
-    )
-    fitted_expanded, contributions_expanded = difference_fit_and_contributions(
-        model_data, selected_expanded
-    )
-    shapley_expanded = exact_shapley_r2(
-        selected_expanded, EXPANDED_FACTOR_SPECS_4, coefficients_expanded
-    )
-    shapley_bootstrap = block_bootstrap_shapley(
-        selected_expanded, EXPANDED_FACTOR_SPECS_4, shapley_expanded
-    )
-    stability_detail, stability_summary = subsample_stability(
-        selected_expanded,
-        EXPANDED_FACTOR_SPECS_4,
-        shapley_expanded,
-        coefficients_expanded,
-    )
 
-    forecast_common_index = make_timed_difference_design(
-        components, p=3, factor_specs=FORECAST_FACTOR_SPECS_4
-    )[0].index
-    selected_forecast_3, lag_grid_forecast_3 = select_timed_difference_model(
-        model_data, FORECAST_FACTOR_SPECS_3, common_index=forecast_common_index
-    )
-    _, coefficients_forecast_3 = tidy_robust_ols(selected_forecast_3.result, maxlags=6)
-    diagnostics_forecast_3 = diagnostics(selected_forecast_3.result)
-    predictions_forecast_3, validation_forecast_3 = difference_validation(
-        model_data, selected_forecast_3, holdout=min(48, len(selected_forecast_3.y) // 4)
-    )
-
-    selected_forecast_4, lag_grid_forecast_4 = select_timed_difference_model(
-        model_data, FORECAST_FACTOR_SPECS_4, common_index=forecast_common_index
-    )
-    _, coefficients_forecast_4 = tidy_robust_ols(selected_forecast_4.result, maxlags=6)
-    diagnostics_forecast_4 = diagnostics(selected_forecast_4.result)
-    predictions_forecast_4, validation_forecast_4 = difference_validation(
-        model_data, selected_forecast_4, holdout=min(48, len(selected_forecast_4.y) // 4)
-    )
-
-    # La composición del pronóstico se elige por BIC, antes de mirar la métrica
-    # de la ventana de validación. La explicación histórica conserva cuatro monedas.
-    if selected_forecast_3.result.bic <= selected_forecast_4.result.bic:
-        forecast_currencies = "BRL, CLP y MXN"
-        selected_forecast = selected_forecast_3
-        lag_grid_forecast = lag_grid_forecast_3
-        coefficients_forecast = coefficients_forecast_3
-        diagnostics_forecast = diagnostics_forecast_3
-        predictions_forecast = predictions_forecast_3.copy()
-        validation_forecast = validation_forecast_3.copy()
-    else:
-        forecast_currencies = "BRL, CLP, MXN y PEN"
-        selected_forecast = selected_forecast_4
-        lag_grid_forecast = lag_grid_forecast_4
-        coefficients_forecast = coefficients_forecast_4
-        diagnostics_forecast = diagnostics_forecast_4
-        predictions_forecast = predictions_forecast_4.copy()
-        validation_forecast = validation_forecast_4.copy()
+    # ── Pronóstico con rezagos de publicación ────────────────────────────────
+    print("Estimando modelo de pronóstico...")
+    forecast = estimate_forecast(model_data, components)
+    forecast_currencies = forecast["forecast_currencies"]
+    selected_forecast = forecast["selected_forecast"]
+    lag_grid_forecast = forecast["lag_grid_forecast"]
+    coefficients_forecast = forecast["coefficients_forecast"]
+    diagnostics_forecast = forecast["diagnostics_forecast"]
+    predictions_forecast = forecast["predictions_forecast"]
+    validation_forecast = forecast["validation_forecast"]
+    selected_forecast_3 = forecast["selected_forecast_3"]
+    coefficients_forecast_3 = forecast["coefficients_forecast_3"]
+    predictions_forecast_3 = forecast["predictions_forecast_3"]
+    validation_forecast_3 = forecast["validation_forecast_3"]
+    selected_forecast_4 = forecast["selected_forecast_4"]
+    coefficients_forecast_4 = forecast["coefficients_forecast_4"]
+    predictions_forecast_4 = forecast["predictions_forecast_4"]
+    validation_forecast_4 = forecast["validation_forecast_4"]
 
     def out_of_sample_r2(
         predictions_frame: pd.DataFrame,
@@ -1945,35 +2126,6 @@ def main() -> None:
             "trm_modelo_condicional": "trm_pronostico_publicacion",
         }
     )
-
-    y = model_data["ln_trm"]
-    exog = model_data[ECM_LEVEL_VARIABLES]
-    fixed = model_data[["dln_vix", "dummy_pandemia_2020"]]
-    selected_ecm, lag_grid_ecm = select_ardl(y, exog, fixed)
-    uecm_model = UECM.from_ardl(selected_ecm.result.model)
-    uecm_result = uecm_model.fit(
-        cov_type="HAC", cov_kwds={"maxlags": 6, "use_correction": True}, use_t=True
-    )
-    bounds = uecm_result.bounds_test(case=3, cov_type="nonrobust")
-    bounds_summary, bounds_critical = bounds_to_frames(bounds)
-
-    tests = integration_tests(
-        model_data,
-        [
-            "ln_trm",
-            *ECM_LEVEL_VARIABLES,
-            "ln_vix",
-            "embig_colombia_pp",
-            "ln_reservas_netas_sin_flar",
-            "asinh_balanza_comercial",
-            "asinh_flujos_capital",
-            "diferencial_bei_5y_pp",
-            "diferencial_bei_5y_comun_pp",
-        ],
-    )
-    short_run_ecm = tidy_result(uecm_result)
-    long_run_ecm = tidy_long_run(uecm_result)
-    diagnostics_ecm = diagnostics(selected_ecm.result)
 
     data.to_csv(DATA / "modelo_trm_datos_mensuales.csv", encoding="utf-8-sig", float_format="%.10g")
     model_data.to_csv(DATA / "modelo_trm_muestra_estimacion.csv", encoding="utf-8-sig", float_format="%.10g")
