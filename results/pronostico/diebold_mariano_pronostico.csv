@@ -1,0 +1,2 @@
+﻿test,loss,kernel_hac,observaciones,loss_media_modelo,loss_media_benchmark,diferencia_loss_media,estadistico_dm,p_valor_dos_colas,p_valor_una_cola_modelo_mejor,modelo,benchmark
+Diebold-Mariano,cuadrática (MSE),Bartlett (6 rezagos),48,0.001151793452856703,0.0010378355471236155,-0.0001139579057330874,-1.2574814862136618,0.21479185576729987,0.8926040721163501,ln_trm_pronostico_publicacion,ln_trm_caminata_aleatoria

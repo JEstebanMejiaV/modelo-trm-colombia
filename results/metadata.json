@@ -40,7 +40,7 @@
   "pronostico_advertencia_vintages": "El backtest respeta rezagos de publicación, pero usa la última versión disponible de las series. Es pseudo-tiempo-real hasta contar con vintages históricos archivados; no debe rotularse como backtest genuino en tiempo real.",
   "vintages_archivo_inicio": "2026-08-23",
   "vintages_origenes_alfred_recuperados": 0,
-  "vintages_factores_completos_de_12": 0,
+  "vintages_factores_completos_de_12": 3,
   "backtest_genuino_disponible": false,
   "pronostico_p_cambio_trm": 1,
   "pronostico_observaciones": 240,

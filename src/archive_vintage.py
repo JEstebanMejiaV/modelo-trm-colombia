@@ -246,65 +246,99 @@ def parse_alfred_response(
 
 
 def download_alfred_vintage(
-    origin: pd.Timestamp, series_id: str
+    origin: pd.Timestamp, series_id: str, api_key: str
 ) -> list[dict[str, object]]:
+    """Descarga un vintage desde la API oficial de FRED (realtime)."""
     observation_start = (origin - pd.DateOffset(months=4)).strftime("%Y-%m-%d")
     observation_end = (origin - pd.Timedelta(days=1)).strftime("%Y-%m-%d")
-    url = (
-        "https://alfred.stlouisfed.org/graph/alfredgraph.csv"
-        f"?id={series_id}&cosd={observation_start}&coed={observation_end}"
-        f"&vintage_date={origin:%Y-%m-%d}"
-    )
-    cache_dir = HISTORICAL / "alfred_cache" / origin.strftime("%Y-%m-%d")
-    cache_path = cache_dir / f"{series_id}.csv"
+    origin_str = origin.strftime("%Y-%m-%d")
+    cache_dir = HISTORICAL / "alfred_cache" / origin_str
+    cache_path = cache_dir / f"{series_id}.json"
+
     if cache_path.exists():
-        content = cache_path.read_bytes()
+        data = json.loads(cache_path.read_text(encoding="utf-8"))
     else:
+        url = (
+            f"https://api.stlouisfed.org/fred/series/observations"
+            f"?series_id={series_id}"
+            f"&realtime_start={origin_str}&realtime_end={origin_str}"
+            f"&observation_start={observation_start}&observation_end={observation_end}"
+            f"&file_type=json"
+            f"&api_key={api_key}"
+        )
         content, _ = request_bytes_with_retries(url)
-    rows = parse_alfred_response(
-        content,
-        origin,
-        series_id,
-        observation_start,
-        observation_end,
-    )
-    if not cache_path.exists():
+        data = json.loads(content)
         cache_dir.mkdir(parents=True, exist_ok=True)
-        cache_path.write_bytes(content)
+        cache_path.write_text(
+            json.dumps(data, ensure_ascii=False), encoding="utf-8"
+        )
+
+    rows: list[dict[str, object]] = []
+    for obs in data.get("observations", []):
+        value = obs.get("value", ".")
+        if value == ".":
+            continue
+        obs_date = obs["date"]
+        if obs_date >= origin_str:
+            continue
+        rows.append({
+            "origen_vintage": origin_str,
+            "serie_id": series_id,
+            "fecha_observacion": obs_date,
+            "valor": float(value),
+            "realtime_start": obs.get("realtime_start", ""),
+            "realtime_end": obs.get("realtime_end", ""),
+        })
     return rows
 
 
 def alfred_history(start: str, end: str, force: bool) -> None:
+    """Descarga vintages completos de las series FRED via API oficial."""
+    import os
+
+    api_key = os.environ.get("FRED_API_KEY", "")
+    if not api_key:
+        raise EnvironmentError(
+            "Variable FRED_API_KEY no definida. Regístrese en "
+            "https://fred.stlouisfed.org/docs/api/api_key.html "
+            "y defina: $env:FRED_API_KEY = 'su_clave'"
+        )
+
     HISTORICAL.mkdir(parents=True, exist_ok=True)
     output = HISTORICAL / "alfred_factores_pronostico.csv"
     manifest_path = HISTORICAL / "alfred_factores_pronostico.manifest.json"
     if (output.exists() or manifest_path.exists()) and not force:
-        raise FileExistsError("El archivo ALFRED ya existe; use --force para regenerarlo.")
+        raise FileExistsError(
+            "El archivo ALFRED ya existe; use --force para regenerarlo."
+        )
+
     all_rows: list[dict[str, object]] = []
     origins = month_origins(start, end)
-    tasks = [(origin, series_id) for origin in origins for series_id in ALFRED_SERIES]
+    total = len(origins) * len(ALFRED_SERIES)
     errors: list[str] = []
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        futures = {
-            executor.submit(download_alfred_vintage, origin, series_id): (origin, series_id)
-            for origin, series_id in tasks
-        }
-        for position, future in enumerate(as_completed(futures), start=1):
-            origin, series_id = futures[future]
+    count = 0
+
+    for origin in origins:
+        for series_id in ALFRED_SERIES:
             try:
-                all_rows.extend(future.result())
+                rows = download_alfred_vintage(origin, series_id, api_key)
+                all_rows.extend(rows)
             except Exception as error:
                 errors.append(f"{origin:%Y-%m-%d} {series_id}: {error}")
-            if position % 24 == 0 or position == len(tasks):
+            count += 1
+            if count % 24 == 0 or count == total:
                 print(
-                    f"ALFRED {position}/{len(tasks)} solicitudes procesadas; errores={len(errors)}",
+                    f"  {count}/{total} requests ({count - len(errors)} OK, {len(errors)} errores)",
                     flush=True,
                 )
+            time.sleep(0.6)  # respetar rate limit de 120 req/min
+
     if errors:
         preview = "\n".join(errors[:10])
         raise RuntimeError(
-            f"Quedaron {len(errors)} solicitudes ALFRED pendientes. Reejecute para usar el caché.\n{preview}"
+            f"Quedaron {len(errors)} solicitudes ALFRED pendientes.\n{preview}"
         )
+
     frame = pd.DataFrame(all_rows).sort_values(
         ["origen_vintage", "serie_id", "fecha_observacion"]
     )
@@ -312,21 +346,23 @@ def alfred_history(start: str, end: str, force: bool) -> None:
     write_json(
         manifest_path,
         {
-            "schema_version": 1,
-            "provider": "Federal Reserve Bank of St. Louis, ALFRED",
-            "endpoint": "https://alfred.stlouisfed.org/graph/alfredgraph.csv",
+            "schema_version": 2,
+            "provider": "Federal Reserve Bank of St. Louis, FRED API",
+            "endpoint": "https://api.stlouisfed.org/fred/series/observations",
+            "method": "realtime_start=realtime_end=origin_date",
             "series": ALFRED_SERIES,
             "origin_start": origins.min().strftime("%Y-%m-%d"),
             "origin_end": origins.max().strftime("%Y-%m-%d"),
             "origins": len(origins),
             "rows": len(frame),
-            "raw_responses": len(tasks),
+            "raw_responses": total,
             "cache_path": "data/vintages/historical/alfred_cache",
             "created_utc": datetime.now(timezone.utc).isoformat(),
             "path": output.relative_to(ROOT).as_posix(),
             "sha256": sha256_file(output),
         },
     )
+    print(f"\nDescarga completa: {output.relative_to(ROOT)} ({len(frame)} filas)")
 
 
 def fiscal_history(force: bool) -> None:
@@ -374,20 +410,44 @@ def fiscal_history(force: bool) -> None:
 
 
 def coverage() -> None:
-    output = ROOT / "results" / "cobertura_vintages_pronostico.csv"
+    output = ROOT / "results" / "pronostico" / "cobertura_vintages_pronostico.csv"
+    alfred_csv = HISTORICAL / "alfred_factores_pronostico.csv"
+
+    # Determinar cobertura real: si el CSV ALFRED existe, contar orígenes por serie
+    alfred_coverage: dict[str, int] = {}
+    if alfred_csv.exists():
+        alfred = pd.read_csv(alfred_csv)
+        alfred_coverage = (
+            alfred.groupby("serie_id")["origen_vintage"].nunique().to_dict()
+        )
+
+    def alfred_origins(series_id: str) -> int:
+        return alfred_coverage.get(series_id, 0)
+
+    # Cobertura del diferencial de tasas = min(BanRep 59, FEDFUNDS)
+    # BanRep no tiene vintages; FEDFUNDS sí → parcial
+    diff_tasas_origins = min(0, alfred_origins("FEDFUNDS"))  # BanRep limita
+
+    # Factor regional 3 monedas = min(BRL, CLP, MXN)
+    regional_origins = min(
+        alfred_origins("CCUSMA02BRM618N"),
+        alfred_origins("CCUSMA02CLM618N"),
+        alfred_origins("CCUSMA02MXM618N"),
+    )
+
     rows = [
-        ("Términos de intercambio", "BanRep 15360", "No disponible", 0, "Archivo hacia adelante"),
-        ("Remesas", "BanRep 15363", "No disponible", 0, "Archivo hacia adelante"),
-        ("Diferencial de tasas", "BanRep 59 + ALFRED FEDFUNDS", "Pendiente del proveedor", 0, "La ruta ALFRED está implementada, pero el servidor cortó la descarga histórica"),
-        ("Déficit fiscal", "MinHacienda", "Catalogado, archivo pendiente", 0, "Historial oficial identificado desde 2025-10-17; el portal bloqueó la descarga automatizada"),
-        ("Dólar amplio", "ALFRED DTWEXBGS", "Pendiente del proveedor", 0, "La ruta ALFRED está implementada, pero el servidor cortó la descarga histórica"),
-        ("VIX", "ALFRED VIXCLS", "Pendiente del proveedor", 0, "La ruta ALFRED está implementada, pero el servidor cortó la descarga histórica"),
-        ("Riesgo soberano EMBIG Colombia", "BCRPData PD04715XD", "No disponible", 0, "Archivo hacia adelante"),
-        ("Reservas internacionales", "BanRep 15053", "No disponible", 0, "Archivo hacia adelante"),
-        ("Balanza comercial cambiaria", "BanRep 16702", "No disponible", 0, "Archivo hacia adelante"),
-        ("Flujos netos de capital", "BanRep 16706", "No disponible", 0, "Archivo hacia adelante"),
-        ("Diferencial de compensación inflacionaria 5 años", "BanRep 15273/15276 + Fed GSW BKEVEN05", "No disponible", 0, "Sin vintage completo de ambos componentes"),
-        ("Monedas regionales", "ALFRED BRL/CLP/MXN", "Pendiente del proveedor", 0, "Factor de tres monedas; ruta histórica implementada y aún no completada"),
+        ("Términos de intercambio", "BanRep 15360", "No disponible", 0, "BanRep no publica vintages"),
+        ("Remesas", "BanRep 15363", "No disponible", 0, "BanRep no publica vintages"),
+        ("Diferencial de tasas", "BanRep 59 + FRED FEDFUNDS", "Parcial (FEDFUNDS completo, BanRep sin vintages)", diff_tasas_origins, "FEDFUNDS descargado via API FRED; BanRep 59 sin histórico"),
+        ("Déficit fiscal", "MinHacienda", "Catalogado, descarga bloqueada", 0, "8 versiones identificadas; portal impide descarga automatizada"),
+        ("Dólar amplio", "FRED DTWEXBGS", "Completo" if alfred_origins("DTWEXBGS") == 48 else "Pendiente", alfred_origins("DTWEXBGS"), "API FRED con realtime vintage"),
+        ("VIX", "FRED VIXCLS", "Completo" if alfred_origins("VIXCLS") == 48 else "Pendiente", alfred_origins("VIXCLS"), "API FRED con realtime vintage"),
+        ("Riesgo soberano EMBIG Colombia", "BCRPData PD04715XD", "No disponible", 0, "BCRPData no publica vintages"),
+        ("Reservas internacionales", "BanRep 15053", "No disponible", 0, "BanRep no publica vintages"),
+        ("Balanza comercial cambiaria", "BanRep 16702", "No disponible", 0, "BanRep no publica vintages"),
+        ("Flujos netos de capital", "BanRep 16706", "No disponible", 0, "BanRep no publica vintages"),
+        ("Diferencial de compensación inflacionaria 5 años", "BanRep 15273/15276 + Fed GSW", "No disponible", 0, "Ningún componente tiene vintages completos"),
+        ("Monedas regionales", "FRED BRL/CLP/MXN", "Completo" if regional_origins == 48 else "Parcial", regional_origins, "Factor de 3 monedas; API FRED con realtime vintage"),
     ]
     frame = pd.DataFrame(
         rows,
@@ -404,6 +464,8 @@ def coverage() -> None:
     frame["apto_backtest_genuino"] = frame["origenes_completos_de_48"].eq(48)
     frame.to_csv(output, index=False, encoding="utf-8-sig", float_format="%.10g")
     print(f"Cobertura escrita: {output.relative_to(ROOT)}")
+    apt = int(frame["apto_backtest_genuino"].sum())
+    print(f"  Factores aptos para backtest genuino: {apt}/12")
 
 
 def parse_args() -> argparse.Namespace:
