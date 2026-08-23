@@ -1,6 +1,6 @@
 # Código de estimación y construcción del archivo Excel
 
-Esta carpeta contiene cuatro programas con responsabilidades separadas:
+Esta carpeta contiene seis programas con responsabilidades separadas:
 
 | Archivo | Función |
 |---|---|
@@ -8,6 +8,8 @@ Esta carpeta contiene cuatro programas con responsabilidades separadas:
 | `check_outputs.py` | Comprueba integridad de datos, muestra común, conciliación Shapley y sincronización entre los CSV y el archivo Excel. |
 | `check_reproducibility.py` | Compara los resultados regenerados con la versión comprometida usando tolerancias numéricas, para no confundir ruido de plataforma con un cambio econométrico. |
 | `build_workbook.mjs` | Construye el archivo Excel, genera las 11 hojas, exporta vistas previas y actualiza `deliverables/modelo_trm_colombia.xlsx`. |
+| `build_charts.py` | Construye cuatro gráficos PNG independientes desde los CSV de `results/` y los guarda en `graficos/`. |
+| `check_charts.py` | Verifica que los PNG tengan el formato esperado y correspondan a los CSV y al generador actual mediante huellas SHA-256. |
 
 ## Flujo del proyecto
 
@@ -21,6 +23,7 @@ data/modelo_trm_datos_mensuales.csv
 modelo base + modelo ampliado + ECM exploratorio
    ↓
 results/*.csv y results/metadata.json
+   ├──→ src/build_charts.py → graficos/*.png
    ↓
 build_workbook.mjs
    ↓
@@ -61,6 +64,7 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
 python .\src\estimate_model.py
+python .\src\build_charts.py
 ```
 
 La construcción del archivo Excel requiere un entorno Node compatible con `@oai/artifact-tool`:
@@ -77,10 +81,12 @@ Por defecto, las vistas previas y el reporte de inspección quedan en `outputs/m
 
 1. Ejecutar la estimación.
 2. Reconstruir el archivo Excel cuando cambien resultados o documentación interna.
-3. Revisar las 11 vistas previas en `outputs/modelo_trm_colombia/previews/`.
-4. Ejecutar `python src/check_outputs.py`.
-5. Ejecutar `python src/check_reproducibility.py` después de una reestimación limpia sobre una versión ya comprometida.
-6. Confirmar que no existan cambios inesperados ni errores de formato.
+3. Reconstruir y revisar los cuatro PNG de `graficos/`.
+4. Ejecutar `python src/check_charts.py` para verificar su sincronización.
+5. Revisar las 11 vistas previas en `outputs/modelo_trm_colombia/previews/`.
+6. Ejecutar `python src/check_outputs.py`.
+7. Ejecutar `python src/check_reproducibility.py` después de una reestimación limpia sobre una versión ya comprometida.
+8. Confirmar que no existan cambios inesperados ni errores de formato.
 
 ## Mejoras econométricas futuras
 

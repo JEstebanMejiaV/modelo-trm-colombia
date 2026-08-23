@@ -25,6 +25,12 @@ jobs:
       - name: Reestimar modelo
         run: python src/estimate_model.py
 
+      - name: Comprobar sincronización de gráficos versionados
+        run: python src/check_charts.py
+
+      - name: Reconstruir gráficos explicativos
+        run: python src/build_charts.py
+
       - name: Comprobar reproducibilidad de resultados versionados
         run: python src/check_reproducibility.py
 
