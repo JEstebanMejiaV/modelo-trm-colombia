@@ -1,0 +1,17 @@
+{
+  "document": "Balance Fiscal GNC (mensual y trimestral) - 2004 - Abril 2026",
+  "file_entry_id": 2107923,
+  "official_history_url": "https://www.minhacienda.gov.co/politica-fiscal/cifras-de-politica-fiscal/gobierno-nacional-central/balance/-/document_library/dgai/view_file/2107923",
+  "retrieval_status": "catalogued_binary_download_blocked_by_portal",
+  "retrieval_note": "El historial oficial fue verificado, pero el portal devolvió una página de validación en lugar del XLSX al intentar descargar versiones antiguas. Ninguna versión se cuenta como vintage recuperado sin archivo y SHA-256.",
+  "versions": [
+    {"version": "18.0", "published_date": "2025-10-17"},
+    {"version": "19.0", "published_date": "2025-11-14"},
+    {"version": "20.0", "published_date": "2025-11-28"},
+    {"version": "21.0", "published_date": "2025-12-15"},
+    {"version": "22.0", "published_date": "2026-02-06"},
+    {"version": "23.0", "published_date": "2026-03-02"},
+    {"version": "24.0", "published_date": "2026-04-14"},
+    {"version": "25.0", "published_date": "2026-06-22"}
+  ]
+}

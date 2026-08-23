@@ -1,13 +1,14 @@
 # Código de estimación y construcción del archivo Excel
 
-Esta carpeta contiene seis programas con responsabilidades separadas:
+Esta carpeta contiene siete programas con responsabilidades separadas:
 
 | Archivo | Función |
 |---|---|
-| `estimate_model.py` | Lee las fuentes, construye la base mensual, estima los modelos base, ampliado y de pronóstico, compara factores regionales 3–4, calcula validaciones, diagnósticos y pesos Shapley, y actualiza `data/` y `results/`. |
+| `estimate_model.py` | Lee las fuentes, construye la base mensual, estima los modelos base, ampliado y de pronóstico, compara factores regionales 3–4, calcula validaciones, diagnósticos, pesos Shapley, intervalos por bloques y estabilidad por submuestras, y actualiza `data/` y `results/`. |
+| `archive_vintage.py` | Crea snapshots inmutables por fecha de origen, recupera vintages históricos disponibles y genera la matriz de cobertura del pronóstico. |
 | `check_outputs.py` | Comprueba integridad de datos, muestra común, conciliación Shapley y sincronización entre los CSV y el archivo Excel. |
 | `check_reproducibility.py` | Compara los resultados regenerados con la versión comprometida usando tolerancias numéricas, para no confundir ruido de plataforma con un cambio econométrico. |
-| `build_workbook.mjs` | Construye el archivo Excel, genera las 12 hojas, exporta vistas previas y actualiza `deliverables/modelo_trm_colombia.xlsx`. |
+| `build_workbook.mjs` | Construye el archivo Excel, genera las 13 hojas, exporta vistas previas y actualiza `deliverables/modelo_trm_colombia.xlsx`. |
 | `build_charts.py` | Construye cinco gráficos PNG independientes desde los CSV de `results/` y los guarda en `graficos/`. |
 | `check_charts.py` | Verifica que los PNG tengan el formato esperado y correspondan a los CSV y al generador actual mediante huellas SHA-256. |
 
@@ -62,6 +63,12 @@ En las validaciones recursivas se reestiman los coeficientes, pero se conserva l
 
 Los pesos son descriptivos. No identifican causalidad ni sustituyen pruebas de estabilidad por submuestras.
 
+`block_bootstrap_shapley()` usa 200 réplicas de bloques circulares de 12 meses y 64 permutaciones antitéticas por réplica. `subsample_stability()` calcula Shapley exacto y coeficientes HAC en cinco cortes. La semilla fija hace reproducibles los intervalos, pero no elimina la incertidumbre de especificación.
+
+## Archivo de vintages
+
+`archive_vintage.py` no forma parte de la ejecución normal del estimador porque requiere acceso a los proveedores. Un snapshot completo se crea con `snapshot --origin-date`; las fechas existentes no se sobrescriben. `alfred-history` intenta recuperar los 48 orígenes, valida que cada observación sea anterior a su origen y reanuda desde caché, pero solo publica el consolidado cuando las 288 respuestas están completas. En esta actualización el proveedor cortó las conexiones, por lo que la cobertura sigue en cero. `coverage` regenera el CSV y CI valida las huellas versionadas sin volver a conectarse a Internet.
+
 ## Reproducción
 
 Desde la raíz del repositorio:
@@ -90,16 +97,15 @@ Por defecto, las vistas previas y el reporte de inspección quedan en `outputs/m
 2. Reconstruir el archivo Excel cuando cambien resultados o documentación interna.
 3. Reconstruir y revisar los cinco PNG de `graficos/`.
 4. Ejecutar `python src/check_charts.py` para verificar su sincronización.
-5. Revisar las 12 vistas previas en `outputs/modelo_trm_colombia/previews/`.
+5. Revisar las 13 vistas previas en `outputs/modelo_trm_colombia/previews/`.
 6. Ejecutar `python src/check_outputs.py`.
 7. Ejecutar `python src/check_reproducibility.py` después de una reestimación limpia sobre una versión ya comprometida.
 8. Confirmar que no existan cambios inesperados ni errores de formato.
 
 ## Mejoras econométricas futuras
 
-- archivo de *vintages* históricos para convertir el backtest rezagado en una evaluación genuina en tiempo real;
 - validación temporal con más de un punto de corte y comparación Diebold–Mariano;
-- estabilidad por submuestras y ventanas móviles;
-- intervalos Shapley mediante bootstrap por bloques;
+- ventanas móviles adicionales y pruebas formales de quiebre;
+- completar vintages BanRep/BCRPData si los proveedores publican historiales revisados;
 - modelo explícito de volatilidad para el ARCH residual;
 - comparación de modelos de pronóstico más parsimoniosos y combinaciones de pronósticos.

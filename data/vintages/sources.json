@@ -1,0 +1,119 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "id": "banrep_trm_1",
+      "provider": "Banco de la República",
+      "raw_path": "data/raw/trm_diaria_banrep.json",
+      "url": "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=1"
+    },
+    {
+      "id": "banrep_tasa_politica_59",
+      "provider": "Banco de la República",
+      "raw_path": "data/raw/tasa_politica_diaria_banrep.json",
+      "url": "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=59"
+    },
+    {
+      "id": "banrep_remesas_15363",
+      "provider": "Banco de la República",
+      "raw_path": "data/raw/remesas_mensuales_banrep.json",
+      "url": "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15363"
+    },
+    {
+      "id": "banrep_terminos_intercambio_15360",
+      "provider": "Banco de la República",
+      "raw_path": "data/raw/series_15360_15368.json",
+      "url": "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15360"
+    },
+    {
+      "id": "banrep_reservas_15053",
+      "provider": "Banco de la República",
+      "raw_path": "data/raw/reservas_netas_sin_flar_banrep.json",
+      "url": "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15053"
+    },
+    {
+      "id": "banrep_tes_pesos_5y_15273",
+      "provider": "Banco de la República",
+      "raw_path": "data/raw/tes_5y_pesos_banrep.json",
+      "url": "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15273"
+    },
+    {
+      "id": "banrep_tes_uvr_5y_15276",
+      "provider": "Banco de la República",
+      "raw_path": "data/raw/tes_5y_uvr_banrep.json",
+      "url": "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15276"
+    },
+    {
+      "id": "banrep_balanza_cambiaria_16702",
+      "provider": "Banco de la República",
+      "raw_path": "data/raw/balanza_comercial_cambiaria_banrep.json",
+      "url": "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=16702"
+    },
+    {
+      "id": "banrep_flujos_capital_16706",
+      "provider": "Banco de la República",
+      "raw_path": "data/raw/flujos_capital_totales_banrep.json",
+      "url": "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=16706"
+    },
+    {
+      "id": "fred_fedfunds",
+      "provider": "FRED/ALFRED",
+      "raw_path": "data/raw/fed_funds_mensual_fred.csv",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=FEDFUNDS"
+    },
+    {
+      "id": "fred_dtwexbgs",
+      "provider": "FRED/ALFRED",
+      "raw_path": "data/raw/dolar_amplio_diario_fred.csv",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DTWEXBGS"
+    },
+    {
+      "id": "fred_vixcls",
+      "provider": "FRED/ALFRED",
+      "raw_path": "data/raw/vix_diario_fred.csv",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS"
+    },
+    {
+      "id": "fred_brl",
+      "provider": "FRED/ALFRED",
+      "raw_path": "data/raw/brl_usd_mensual_fred.csv",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=CCUSMA02BRM618N"
+    },
+    {
+      "id": "fred_clp",
+      "provider": "FRED/ALFRED",
+      "raw_path": "data/raw/clp_usd_mensual_fred.csv",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=CCUSMA02CLM618N"
+    },
+    {
+      "id": "fred_mxn",
+      "provider": "FRED/ALFRED",
+      "raw_path": "data/raw/mxn_usd_mensual_fred.csv",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=CCUSMA02MXM618N"
+    },
+    {
+      "id": "fed_gsw_bkeven05",
+      "provider": "Federal Reserve Board",
+      "raw_path": "data/raw/bei_5y_eeuu_diario_fed.csv",
+      "url": "https://www.federalreserve.gov/data/yield-curve-tables/feds200805.csv"
+    },
+    {
+      "id": "bcrp_embig_colombia_pd04715xd",
+      "provider": "BCRPData; fuentes originales Reuters/J.P. Morgan",
+      "raw_path": "data/raw/embig_colombia_diario_bcrp.json",
+      "url": "https://estadisticas.bcrp.gob.pe/estadisticas/series/api/PD04715XD/json/2005-12-1/{origin_date_bcrp}/esp"
+    },
+    {
+      "id": "bcrp_pen_pn01207pm",
+      "provider": "BCRPData",
+      "raw_path": "data/raw/pen_usd_mensual_bcrp.json",
+      "url": "https://estadisticas.bcrp.gob.pe/estadisticas/series/api/PN01207PM/json/2005-12/{origin_month_bcrp}/esp"
+    },
+    {
+      "id": "minhacienda_balance_gnc",
+      "provider": "Ministerio de Hacienda y Crédito Público",
+      "raw_path": "data/raw/balance_fiscal_gnc_mensual_trimestral.xlsx",
+      "url": "https://www.minhacienda.gov.co/documents/d/portal/balance-fiscal-gnc-mensual-y-trimestral?download=true"
+    }
+  ]
+}

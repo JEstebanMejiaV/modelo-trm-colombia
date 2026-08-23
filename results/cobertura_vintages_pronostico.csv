@@ -1,0 +1,13 @@
+﻿factor,fuentes,estado_vintages_2022_05_a_2026_04,origenes_completos_de_48,detalle,cobertura_pct,archivo_hacia_adelante_desde,apto_backtest_genuino
+Términos de intercambio,BanRep 15360,No disponible,0,Archivo hacia adelante,0,2026-08-23,False
+Remesas,BanRep 15363,No disponible,0,Archivo hacia adelante,0,2026-08-23,False
+Diferencial de tasas,BanRep 59 + ALFRED FEDFUNDS,Pendiente del proveedor,0,"La ruta ALFRED está implementada, pero el servidor cortó la descarga histórica",0,2026-08-23,False
+Déficit fiscal,MinHacienda,"Catalogado, archivo pendiente",0,Historial oficial identificado desde 2025-10-17; el portal bloqueó la descarga automatizada,0,2026-08-23,False
+Dólar amplio,ALFRED DTWEXBGS,Pendiente del proveedor,0,"La ruta ALFRED está implementada, pero el servidor cortó la descarga histórica",0,2026-08-23,False
+VIX,ALFRED VIXCLS,Pendiente del proveedor,0,"La ruta ALFRED está implementada, pero el servidor cortó la descarga histórica",0,2026-08-23,False
+Riesgo soberano EMBIG Colombia,BCRPData PD04715XD,No disponible,0,Archivo hacia adelante,0,2026-08-23,False
+Reservas internacionales,BanRep 15053,No disponible,0,Archivo hacia adelante,0,2026-08-23,False
+Balanza comercial cambiaria,BanRep 16702,No disponible,0,Archivo hacia adelante,0,2026-08-23,False
+Flujos netos de capital,BanRep 16706,No disponible,0,Archivo hacia adelante,0,2026-08-23,False
+Diferencial de compensación inflacionaria 5 años,BanRep 15273/15276 + Fed GSW BKEVEN05,No disponible,0,Sin vintage completo de ambos componentes,0,2026-08-23,False
+Monedas regionales,ALFRED BRL/CLP/MXN,Pendiente del proveedor,0,Factor de tres monedas; ruta histórica implementada y aún no completada,0,2026-08-23,False

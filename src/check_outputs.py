@@ -13,6 +13,7 @@ from openpyxl import load_workbook
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS = ROOT / "results"
 DATA = ROOT / "data"
+VINTAGES = DATA / "vintages"
 EXCEL = ROOT / "deliverables" / "modelo_trm_colombia.xlsx"
 
 
@@ -51,6 +52,88 @@ def main() -> None:
         weights["shapley_r2"].sum(), weights["r2_incremental"].iloc[0], atol=1e-10
     ):
         raise AssertionError("Los aportes Shapley no cierran contra el R² incremental.")
+
+    bootstrap = pd.read_csv(RESULTS / "intervalos_bootstrap_pesos_shapley.csv")
+    if set(bootstrap["factor"]) != set(weights["factor"]) or len(bootstrap) != 12:
+        raise AssertionError("Los intervalos bootstrap no cubren los 12 factores Shapley.")
+    if not bootstrap["replicas_validas"].eq(200).all():
+        raise AssertionError("Los intervalos Shapley deben usar 200 réplicas válidas.")
+    if not bootstrap["bloque_meses"].eq(12).all():
+        raise AssertionError("El bootstrap Shapley debe conservar bloques de 12 meses.")
+    if not bootstrap["probabilidad_top3_pct"].between(0, 100).all():
+        raise AssertionError("Una probabilidad top 3 quedó fuera de [0, 100].")
+    if not np.isclose(bootstrap["probabilidad_top3_pct"].sum(), 300.0, atol=1e-8):
+        raise AssertionError("Las probabilidades top 3 no suman tres posiciones.")
+    bootstrap_by_factor = bootstrap.set_index("factor")
+    weights_by_factor = weights.set_index("factor")
+    if not np.allclose(
+        bootstrap_by_factor.loc[weights_by_factor.index, "peso_puntual_pct"],
+        weights_by_factor["peso_entre_factores_pct"],
+        rtol=0.0,
+        atol=1e-10,
+    ):
+        raise AssertionError("Los pesos puntuales del bootstrap no concilian con Shapley exacto.")
+
+    stability_detail = pd.read_csv(
+        RESULTS / "estabilidad_submuestras_modelo_ampliado.csv"
+    )
+    stability_summary = pd.read_csv(RESULTS / "estabilidad_submuestras_resumen.csv")
+    expected_subsamples = {
+        "Muestra completa",
+        "Primera mitad",
+        "Segunda mitad",
+        "Prepandemia",
+        "2020 en adelante",
+    }
+    if set(stability_summary["submuestra"]) != expected_subsamples:
+        raise AssertionError("Faltan cortes de estabilidad en el resumen.")
+    if len(stability_detail) != 60 or not stability_detail.groupby("submuestra").size().eq(12).all():
+        raise AssertionError("La estabilidad detallada debe tener 12 factores en cinco cortes.")
+    if not stability_summary["correlacion_spearman_rangos_vs_completa"].between(-1, 1).all():
+        raise AssertionError("Una correlación de rangos de estabilidad quedó fuera de [-1, 1].")
+
+    baseline_manifest = json.loads(
+        (VINTAGES / "2026-08-23" / "manifest.json").read_text(encoding="utf-8")
+    )
+    if baseline_manifest["origin_date"] != "2026-08-23" or not baseline_manifest["immutable"]:
+        raise AssertionError("El baseline de vintages no está marcado como inmutable.")
+    for record in baseline_manifest["files"]:
+        path = ROOT / record["raw_path"]
+        if sha256_file(path) != record["sha256"]:
+            raise AssertionError(f"No concilia el baseline de vintages: {record['id']}.")
+
+    alfred_manifest_path = (
+        VINTAGES / "historical" / "alfred_factores_pronostico.manifest.json"
+    )
+    if alfred_manifest_path.exists():
+        alfred_manifest = json.loads(alfred_manifest_path.read_text(encoding="utf-8"))
+        alfred_path = ROOT / alfred_manifest["path"]
+        if sha256_file(alfred_path) != alfred_manifest["sha256"]:
+            raise AssertionError("No concilia la huella del histórico ALFRED.")
+        alfred = pd.read_csv(alfred_path)
+        if alfred["origen_vintage"].nunique() != 48 or alfred["serie_id"].nunique() != 6:
+            raise AssertionError("El histórico ALFRED no cubre 48 orígenes y seis series.")
+        alfred["origen_vintage"] = pd.to_datetime(alfred["origen_vintage"])
+        alfred["fecha_observacion"] = pd.to_datetime(alfred["fecha_observacion"])
+        if (alfred["fecha_observacion"] >= alfred["origen_vintage"]).any():
+            raise AssertionError("El histórico ALFRED contiene observaciones futuras al origen.")
+
+    fiscal_history = json.loads(
+        (VINTAGES / "historical" / "minhacienda" / "version_history.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    if len(fiscal_history["versions"]) != 8:
+        raise AssertionError("El catálogo fiscal no contiene las ocho versiones verificadas.")
+
+    vintage_coverage = pd.read_csv(RESULTS / "cobertura_vintages_pronostico.csv")
+    if len(vintage_coverage) != 12:
+        raise AssertionError("La cobertura de vintages debe reportar los 12 factores.")
+    complete_vintage = vintage_coverage["apto_backtest_genuino"].astype("string").str.lower().eq("true")
+    if complete_vintage.sum() != 0:
+        raise AssertionError("Ningún factor debe marcarse completo sin vintages versionados.")
+    if bool(metadata["backtest_genuino_disponible"]):
+        raise AssertionError("El backtest no puede rotularse como genuino con cobertura parcial.")
 
     comparison = pd.read_csv(RESULTS / "comparacion_modelos.csv")
     if set(comparison["modelo"]) != {"Base", "Ampliado historico"}:
@@ -259,6 +342,7 @@ def main() -> None:
         "Modelo_principal",
         "Modelo_ampliado",
         "Pesos_explicativos",
+        "Robustez",
         "Validacion",
         "Pronostico",
         "ECM_exploratorio",
@@ -308,6 +392,43 @@ def main() -> None:
             record["peso_r2_total_pct"] / 100.0,
             f"Peso total de {record['factor']}",
         )
+
+    robustness_sheet = workbook["Robustez"]
+    bootstrap_header = next(
+        (
+            row
+            for row in range(1, robustness_sheet.max_row + 1)
+            if robustness_sheet.cell(row, 1).value == "Factor"
+            and robustness_sheet.cell(row, 2).value == "Peso puntual"
+        ),
+        None,
+    )
+    if bootstrap_header is None:
+        raise AssertionError("No se encontró la tabla bootstrap en Robustez.")
+    excel_bootstrap = {
+        str(robustness_sheet.cell(row, 1).value): [
+            robustness_sheet.cell(row, column).value for column in range(2, 8)
+        ]
+        for row in range(bootstrap_header + 1, bootstrap_header + 1 + len(bootstrap))
+    }
+    for record in bootstrap.to_dict("records"):
+        values = excel_bootstrap.get(record["factor"])
+        if values is None:
+            raise AssertionError(f"Falta {record['factor']} en Robustez.")
+        expected = [
+            record["peso_puntual_pct"] / 100.0,
+            record["peso_bootstrap_mediana_pct"] / 100.0,
+            record["ic_95_inferior_pct"] / 100.0,
+            record["ic_95_superior_pct"] / 100.0,
+            (record["ic_95_superior_pct"] - record["ic_95_inferior_pct"]) / 100.0,
+            record["probabilidad_top3_pct"] / 100.0,
+        ]
+        for label, actual, expected_value in zip(
+            ["peso", "mediana", "límite inferior", "límite superior", "ancho", "top 3"],
+            values,
+            expected,
+        ):
+            assert_close(actual, expected_value, f"Robustez {record['factor']} — {label}")
 
     summary = workbook["Resumen"]
     comparison_header = next(
@@ -397,7 +518,7 @@ def main() -> None:
                 )
 
     print(
-        "OK: PEN, factores regionales 3/4, pronóstico rezagado, 12 factores y archivo Excel sincronizado."
+        "OK: vintages, bootstrap Shapley, submuestras, pronóstico rezagado y archivo Excel sincronizado."
     )
 
 
