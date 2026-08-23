@@ -90,6 +90,27 @@ def main() -> None:
     predictions["LightGBM"] = pred_lgbm
     results.append(evaluate_forecast(y_test.values, pred_lgbm, "LightGBM"))
 
+    # --- Redes neuronales recurrentes ---
+    try:
+        from forecast_daily.rnn_models import fit_lstm, fit_gru, fit_lstm_attention
+
+        print("  LSTM...")
+        pred_lstm = fit_lstm(X_train, y_train, X_test)
+        predictions["LSTM"] = pred_lstm
+        results.append(evaluate_forecast(y_test.values, pred_lstm, "LSTM (hidden=32, seq=22)"))
+
+        print("  GRU...")
+        pred_gru = fit_gru(X_train, y_train, X_test)
+        predictions["GRU"] = pred_gru
+        results.append(evaluate_forecast(y_test.values, pred_gru, "GRU (hidden=32, seq=22)"))
+
+        print("  LSTM + Atención...")
+        pred_attn = fit_lstm_attention(X_train, y_train, X_test)
+        predictions["LSTM+Attn"] = pred_attn
+        results.append(evaluate_forecast(y_test.values, pred_attn, "LSTM + Atención temporal"))
+    except ImportError as e:
+        print(f"  SKIP RNN: {e}")
+
     # --- Combinaciones ---
     print("  Combinación óptima...")
     pred_combo = fit_combination(predictions, y_test.values)
