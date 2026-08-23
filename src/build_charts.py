@@ -26,21 +26,21 @@ RESULTS = ROOT / "results"
 CHARTS = ROOT / "graficos"
 
 SOURCE_FILES = [
-    RESULTS / "pesos_explicativos_modelo_ampliado.csv",
-    RESULTS / "intervalos_bootstrap_pesos_shapley.csv",
-    RESULTS / "estabilidad_submuestras_resumen.csv",
-    RESULTS / "comparacion_modelos.csv",
-    RESULTS / "validacion_metricas_modelo_ampliado.csv",
-    RESULTS / "validacion_predicciones_modelo_principal.csv",
-    RESULTS / "validacion_predicciones_modelo_ampliado.csv",
-    RESULTS / "validacion_metricas_pronostico.csv",
-    RESULTS / "validacion_predicciones_pronostico.csv",
-    RESULTS / "comparacion_factor_regional.csv",
-    RESULTS / "coeficientes_modelo_ampliado.csv",
-    RESULTS / "contribuciones_modelo_ampliado.csv",
-    RESULTS / "coeficientes_corto_plazo_ecm.csv",
-    RESULTS / "coeficientes_largo_plazo_ecm.csv",
-    RESULTS / "bounds_resumen.csv",
+    RESULTS / "explicacion/pesos_explicativos_modelo_ampliado.csv",
+    RESULTS / "explicacion/intervalos_bootstrap_pesos_shapley.csv",
+    RESULTS / "explicacion/estabilidad_submuestras_resumen.csv",
+    RESULTS / "explicacion/comparacion_modelos.csv",
+    RESULTS / "explicacion/validacion_metricas_modelo_ampliado.csv",
+    RESULTS / "explicacion/validacion_predicciones_modelo_principal.csv",
+    RESULTS / "explicacion/validacion_predicciones_modelo_ampliado.csv",
+    RESULTS / "pronostico/validacion_metricas_pronostico.csv",
+    RESULTS / "pronostico/validacion_predicciones_pronostico.csv",
+    RESULTS / "explicacion/comparacion_factor_regional.csv",
+    RESULTS / "explicacion/coeficientes_modelo_ampliado.csv",
+    RESULTS / "explicacion/contribuciones_modelo_ampliado.csv",
+    RESULTS / "robustez/coeficientes_corto_plazo_ecm.csv",
+    RESULTS / "robustez/coeficientes_largo_plazo_ecm.csv",
+    RESULTS / "robustez/bounds_resumen.csv",
 ]
 
 IMAGE_FILES = [
@@ -865,26 +865,26 @@ def chart_ecm(
 
 def main() -> None:
     CHARTS.mkdir(parents=True, exist_ok=True)
-    weights = pd.read_csv(RESULTS / "pesos_explicativos_modelo_ampliado.csv")
+    weights = pd.read_csv(RESULTS / "explicacion/pesos_explicativos_modelo_ampliado.csv")
     shapley_intervals = pd.read_csv(
-        RESULTS / "intervalos_bootstrap_pesos_shapley.csv"
+        RESULTS / "explicacion/intervalos_bootstrap_pesos_shapley.csv"
     )
-    comparison = pd.read_csv(RESULTS / "comparacion_modelos.csv")
-    validation = pd.read_csv(RESULTS / "validacion_metricas_modelo_ampliado.csv")
-    base_predictions = pd.read_csv(RESULTS / "validacion_predicciones_modelo_principal.csv")
+    comparison = pd.read_csv(RESULTS / "explicacion/comparacion_modelos.csv")
+    validation = pd.read_csv(RESULTS / "explicacion/validacion_metricas_modelo_ampliado.csv")
+    base_predictions = pd.read_csv(RESULTS / "explicacion/validacion_predicciones_modelo_principal.csv")
     expanded_predictions = pd.read_csv(
-        RESULTS / "validacion_predicciones_modelo_ampliado.csv"
+        RESULTS / "explicacion/validacion_predicciones_modelo_ampliado.csv"
     )
-    forecast_validation = pd.read_csv(RESULTS / "validacion_metricas_pronostico.csv")
+    forecast_validation = pd.read_csv(RESULTS / "pronostico/validacion_metricas_pronostico.csv")
     forecast_predictions = pd.read_csv(
-        RESULTS / "validacion_predicciones_pronostico.csv"
+        RESULTS / "pronostico/validacion_predicciones_pronostico.csv"
     )
-    regional_comparison = pd.read_csv(RESULTS / "comparacion_factor_regional.csv")
-    coefficients = pd.read_csv(RESULTS / "coeficientes_modelo_ampliado.csv")
-    contributions = pd.read_csv(RESULTS / "contribuciones_modelo_ampliado.csv")
-    ecm_short = pd.read_csv(RESULTS / "coeficientes_corto_plazo_ecm.csv")
-    ecm_long = pd.read_csv(RESULTS / "coeficientes_largo_plazo_ecm.csv")
-    bounds = pd.read_csv(RESULTS / "bounds_resumen.csv")
+    regional_comparison = pd.read_csv(RESULTS / "explicacion/comparacion_factor_regional.csv")
+    coefficients = pd.read_csv(RESULTS / "explicacion/coeficientes_modelo_ampliado.csv")
+    contributions = pd.read_csv(RESULTS / "explicacion/contribuciones_modelo_ampliado.csv")
+    ecm_short = pd.read_csv(RESULTS / "robustez/coeficientes_corto_plazo_ecm.csv")
+    ecm_long = pd.read_csv(RESULTS / "robustez/coeficientes_largo_plazo_ecm.csv")
+    bounds = pd.read_csv(RESULTS / "robustez/bounds_resumen.csv")
 
     configure_style()
     chart_weights(weights, shapley_intervals)

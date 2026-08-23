@@ -1874,6 +1874,9 @@ def estimate_forecast(
 
 def main() -> None:
     RESULTS.mkdir(parents=True, exist_ok=True)
+    (RESULTS / "explicacion").mkdir(exist_ok=True)
+    (RESULTS / "pronostico").mkdir(exist_ok=True)
+    (RESULTS / "robustez").mkdir(exist_ok=True)
     DATA.mkdir(parents=True, exist_ok=True)
 
     data = build_dataset()
@@ -2146,136 +2149,136 @@ def main() -> None:
         "dias_comunes",
     ]
     data.loc[SAMPLE_START:SAMPLE_END, bei_aggregation_columns].to_csv(
-        RESULTS / "comparacion_agregacion_bei_5y.csv",
+        RESULTS / "robustez/comparacion_agregacion_bei_5y.csv",
         encoding="utf-8-sig",
         float_format="%.10g",
     )
     bei_stationarity.to_csv(
-        RESULTS / "pruebas_estacionariedad_bei_5y.csv",
+        RESULTS / "robustez/pruebas_estacionariedad_bei_5y.csv",
         index=False,
         encoding="utf-8-sig",
         float_format="%.10g",
     )
     bei_trend_breaks.to_csv(
-        RESULTS / "tendencias_quiebres_bei_5y.csv",
+        RESULTS / "robustez/tendencias_quiebres_bei_5y.csv",
         index=False,
         encoding="utf-8-sig",
         float_format="%.10g",
     )
     bei_model_comparison.to_csv(
-        RESULTS / "comparacion_especificaciones_bei_5y.csv",
+        RESULTS / "robustez/comparacion_especificaciones_bei_5y.csv",
         index=False,
         encoding="utf-8-sig",
         float_format="%.10g",
     )
     lag_grid_diff.to_csv(
-        RESULTS / "seleccion_rezagos_adl_diferencias.csv", index=False, encoding="utf-8-sig"
+        RESULTS / "explicacion/seleccion_rezagos_adl_diferencias.csv", index=False, encoding="utf-8-sig"
     )
     coefficients_diff.to_csv(
-        RESULTS / "coeficientes_modelo_principal.csv", index=False, encoding="utf-8-sig"
+        RESULTS / "explicacion/coeficientes_modelo_principal.csv", index=False, encoding="utf-8-sig"
     )
     diagnostics_diff.to_csv(
-        RESULTS / "diagnosticos_modelo_principal.csv", index=False, encoding="utf-8-sig"
+        RESULTS / "explicacion/diagnosticos_modelo_principal.csv", index=False, encoding="utf-8-sig"
     )
     fitted_diff.to_csv(
-        RESULTS / "ajuste_historico_modelo_principal.csv", encoding="utf-8-sig"
+        RESULTS / "explicacion/ajuste_historico_modelo_principal.csv", encoding="utf-8-sig"
     )
     contributions_diff.to_csv(
-        RESULTS / "contribuciones_modelo_principal.csv", encoding="utf-8-sig"
+        RESULTS / "explicacion/contribuciones_modelo_principal.csv", encoding="utf-8-sig"
     )
     lag_grid_expanded.to_csv(
-        RESULTS / "seleccion_rezagos_modelo_ampliado.csv",
+        RESULTS / "explicacion/seleccion_rezagos_modelo_ampliado.csv",
         index=False,
         encoding="utf-8-sig",
     )
     coefficients_expanded.to_csv(
-        RESULTS / "coeficientes_modelo_ampliado.csv", index=False, encoding="utf-8-sig"
+        RESULTS / "explicacion/coeficientes_modelo_ampliado.csv", index=False, encoding="utf-8-sig"
     )
     diagnostics_expanded.to_csv(
-        RESULTS / "diagnosticos_modelo_ampliado.csv", index=False, encoding="utf-8-sig"
+        RESULTS / "explicacion/diagnosticos_modelo_ampliado.csv", index=False, encoding="utf-8-sig"
     )
     fitted_expanded.to_csv(
-        RESULTS / "ajuste_historico_modelo_ampliado.csv", encoding="utf-8-sig"
+        RESULTS / "explicacion/ajuste_historico_modelo_ampliado.csv", encoding="utf-8-sig"
     )
     contributions_expanded.to_csv(
-        RESULTS / "contribuciones_modelo_ampliado.csv", encoding="utf-8-sig"
+        RESULTS / "explicacion/contribuciones_modelo_ampliado.csv", encoding="utf-8-sig"
     )
     shapley_expanded.to_csv(
-        RESULTS / "pesos_explicativos_modelo_ampliado.csv",
+        RESULTS / "explicacion/pesos_explicativos_modelo_ampliado.csv",
         index=False,
         encoding="utf-8-sig",
     )
     shapley_bootstrap.to_csv(
-        RESULTS / "intervalos_bootstrap_pesos_shapley.csv",
+        RESULTS / "explicacion/intervalos_bootstrap_pesos_shapley.csv",
         index=False,
         encoding="utf-8-sig",
     )
     stability_detail.to_csv(
-        RESULTS / "estabilidad_submuestras_modelo_ampliado.csv",
+        RESULTS / "explicacion/estabilidad_submuestras_modelo_ampliado.csv",
         index=False,
         encoding="utf-8-sig",
     )
     stability_summary.to_csv(
-        RESULTS / "estabilidad_submuestras_resumen.csv",
+        RESULTS / "explicacion/estabilidad_submuestras_resumen.csv",
         index=False,
         encoding="utf-8-sig",
     )
     comparison.to_csv(
-        RESULTS / "comparacion_modelos.csv", index=False, encoding="utf-8-sig"
+        RESULTS / "explicacion/comparacion_modelos.csv", index=False, encoding="utf-8-sig"
     )
     regional_comparison.to_csv(
-        RESULTS / "comparacion_factor_regional.csv", index=False, encoding="utf-8-sig"
+        RESULTS / "explicacion/comparacion_factor_regional.csv", index=False, encoding="utf-8-sig"
     )
     availability.to_csv(
-        RESULTS / "calendario_disponibilidad_pronostico.csv",
+        RESULTS / "pronostico/calendario_disponibilidad_pronostico.csv",
         index=False,
         encoding="utf-8-sig",
     )
     lag_grid_forecast.to_csv(
-        RESULTS / "seleccion_rezagos_modelo_pronostico.csv",
+        RESULTS / "pronostico/seleccion_rezagos_modelo_pronostico.csv",
         index=False,
         encoding="utf-8-sig",
     )
     coefficients_forecast.to_csv(
-        RESULTS / "coeficientes_modelo_pronostico.csv",
+        RESULTS / "pronostico/coeficientes_modelo_pronostico.csv",
         index=False,
         encoding="utf-8-sig",
     )
     diagnostics_forecast.to_csv(
-        RESULTS / "diagnosticos_modelo_pronostico.csv",
+        RESULTS / "pronostico/diagnosticos_modelo_pronostico.csv",
         index=False,
         encoding="utf-8-sig",
     )
     predictions_forecast.to_csv(
-        RESULTS / "validacion_predicciones_pronostico.csv", encoding="utf-8-sig"
+        RESULTS / "pronostico/validacion_predicciones_pronostico.csv", encoding="utf-8-sig"
     )
     validation_forecast.to_csv(
-        RESULTS / "validacion_metricas_pronostico.csv",
+        RESULTS / "pronostico/validacion_metricas_pronostico.csv",
         index=False,
         encoding="utf-8-sig",
     )
     lag_grid_ecm.to_csv(
-        RESULTS / "seleccion_rezagos_ecm.csv", index=False, encoding="utf-8-sig"
+        RESULTS / "robustez/seleccion_rezagos_ecm.csv", index=False, encoding="utf-8-sig"
     )
-    tests.to_csv(RESULTS / "pruebas_integracion.csv", index=False, encoding="utf-8-sig")
+    tests.to_csv(RESULTS / "explicacion/pruebas_integracion.csv", index=False, encoding="utf-8-sig")
     short_run_ecm.to_csv(
-        RESULTS / "coeficientes_corto_plazo_ecm.csv", index=False, encoding="utf-8-sig"
+        RESULTS / "robustez/coeficientes_corto_plazo_ecm.csv", index=False, encoding="utf-8-sig"
     )
     long_run_ecm.to_csv(
-        RESULTS / "coeficientes_largo_plazo_ecm.csv", index=False, encoding="utf-8-sig"
+        RESULTS / "robustez/coeficientes_largo_plazo_ecm.csv", index=False, encoding="utf-8-sig"
     )
-    bounds_summary.to_csv(RESULTS / "bounds_resumen.csv", index=False, encoding="utf-8-sig")
-    bounds_critical.to_csv(RESULTS / "bounds_criticos.csv", index=False, encoding="utf-8-sig")
+    bounds_summary.to_csv(RESULTS / "robustez/bounds_resumen.csv", index=False, encoding="utf-8-sig")
+    bounds_critical.to_csv(RESULTS / "robustez/bounds_criticos.csv", index=False, encoding="utf-8-sig")
     diagnostics_ecm.to_csv(
-        RESULTS / "diagnosticos_ecm.csv", index=False, encoding="utf-8-sig"
+        RESULTS / "robustez/diagnosticos_ecm.csv", index=False, encoding="utf-8-sig"
     )
-    predictions.to_csv(RESULTS / "validacion_predicciones_modelo_principal.csv", encoding="utf-8-sig")
-    validation.to_csv(RESULTS / "validacion_metricas_modelo_principal.csv", index=False, encoding="utf-8-sig")
+    predictions.to_csv(RESULTS / "explicacion/validacion_predicciones_modelo_principal.csv", encoding="utf-8-sig")
+    validation.to_csv(RESULTS / "explicacion/validacion_metricas_modelo_principal.csv", index=False, encoding="utf-8-sig")
     predictions_expanded.to_csv(
-        RESULTS / "validacion_predicciones_modelo_ampliado.csv", encoding="utf-8-sig"
+        RESULTS / "explicacion/validacion_predicciones_modelo_ampliado.csv", encoding="utf-8-sig"
     )
     validation_expanded.to_csv(
-        RESULTS / "validacion_metricas_modelo_ampliado.csv",
+        RESULTS / "explicacion/validacion_metricas_modelo_ampliado.csv",
         index=False,
         encoding="utf-8-sig",
     )
@@ -2293,7 +2296,7 @@ def main() -> None:
     else:
         cointegration_5pct = "no concluyente"
 
-    vintage_coverage = pd.read_csv(RESULTS / "cobertura_vintages_pronostico.csv")
+    vintage_coverage = pd.read_csv(RESULTS / "pronostico/cobertura_vintages_pronostico.csv")
     complete_vintage_factors = int(
         vintage_coverage["apto_backtest_genuino"].astype("string").str.lower().eq("true").sum()
     )

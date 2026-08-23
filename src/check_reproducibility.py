@@ -29,6 +29,9 @@ def tracked_outputs() -> list[Path]:
         "data/modelo_trm_datos_mensuales.csv",
         "data/modelo_trm_muestra_estimacion.csv",
         "results/*.csv",
+        "results/explicacion/*.csv",
+        "results/pronostico/*.csv",
+        "results/robustez/*.csv",
         "results/metadata.json",
         "graficos/metadata.json",
     ).decode("utf-8").splitlines()

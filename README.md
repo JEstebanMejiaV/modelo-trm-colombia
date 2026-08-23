@@ -157,7 +157,7 @@ Esta ecuación pronostica la TRM promedio del mes `t` al inicio de `t`. No usa f
 La validación expansiva de 48 meses obtiene MAPE de **2,63%**, acierto de dirección de **52,08%** y R² frente a la caminata aleatoria de **−10,98%**. La caminata obtiene MAPE de **2,39%**. Es decir, la ecuación explicativa no se convierte automáticamente en un buen pronóstico y, con esta información, el benchmark simple sigue siendo superior.
 <!-- /AUTO:metricas_pronostico -->
 
-La evaluación es **pseudo-tiempo-real**: respeta el calendario de publicación, pero usa la última versión disponible de cada serie. El repositorio ahora archiva descargas por fecha de origen y deja implementada una recuperación ALFRED reanudable; sin embargo, el proveedor cortó las conexiones individuales y el paquete multiserie se descartó por contener datos posteriores al origen. Por ello **0 de 12 factores** tienen todavía cobertura versionada completa para los 48 orígenes. Las series de BanRep y BCRPData también carecen aquí de una historia integral de revisiones. La matriz de cobertura está en `results/cobertura_vintages_pronostico.csv`.
+La evaluación es **pseudo-tiempo-real**: respeta el calendario de publicación, pero usa la última versión disponible de cada serie. El repositorio ahora archiva descargas por fecha de origen y deja implementada una recuperación ALFRED reanudable; sin embargo, el proveedor cortó las conexiones individuales y el paquete multiserie se descartó por contener datos posteriores al origen. Por ello **0 de 12 factores** tienen todavía cobertura versionada completa para los 48 orígenes. Las series de BanRep y BCRPData también carecen aquí de una historia integral de revisiones. La matriz de cobertura está en `results/pronostico/cobertura_vintages_pronostico.csv`.
 
 ## Corto y largo plazo: ECM exploratorio
 
@@ -198,7 +198,7 @@ La TRM está expresada como COP por USD: un aumento significa depreciación del 
 - Se guardan factores regionales de tres monedas —BRL, CLP y MXN— y cuatro —las anteriores más PEN—. Ambos son promedios de `z(Δln)` con parámetros calibrados en 2006–2019.
 - Variables contemporáneas del ampliado: términos de intercambio, dólar amplio, VIX, EMBIG Colombia y monedas regionales.
 - Variables rezagadas un mes: remesas, diferencial de tasas, déficit fiscal, reservas, balanza comercial, movimientos de capital y Diferencial de compensación inflacionaria 5 años.
-- El pronóstico usa solo rezagos de uno a tres meses según el calendario de disponibilidad documentado en `results/calendario_disponibilidad_pronostico.csv`.
+- El pronóstico usa solo rezagos de uno a tres meses según el calendario de disponibilidad documentado en `results/pronostico/calendario_disponibilidad_pronostico.csv`.
 
 El modelo histórico y el pronóstico son productos distintos. El primero explica con realizaciones contemporáneas; el segundo evita esa anticipación, aunque todavía necesita archivos de *vintages* para una validación genuina en tiempo real. El diccionario completo está en [`data/README.md`](data/README.md).
 
@@ -222,11 +222,13 @@ Los siguientes archivos se conservan únicamente como instantáneas *raw* hereda
 - `graficos/`: imágenes explicativas y guía de lectura.
 - `data/vintages/`: manifiestos fechados, catálogo histórico verificado y reglas del archivo hacia adelante.
 - `data/modelo_trm_datos_mensuales.csv`: base mensual consolidada.
-- `results/pesos_explicativos_modelo_ampliado.csv`: descomposición Shapley exacta.
-- `results/intervalos_bootstrap_pesos_shapley.csv`: intervalos de los pesos mediante bloques mensuales.
-- `results/estabilidad_submuestras_resumen.csv`: estabilidad de rangos, pesos y signos por corte temporal.
-- `results/comparacion_modelos.csv`: comparación principal–ampliado sobre la misma muestra.
-- `results/`: coeficientes, diagnósticos, pruebas, contribuciones y validación.
+- `results/explicacion/pesos_explicativos_modelo_ampliado.csv`: descomposición Shapley exacta.
+- `results/explicacion/intervalos_bootstrap_pesos_shapley.csv`: intervalos de los pesos mediante bloques mensuales.
+- `results/explicacion/estabilidad_submuestras_resumen.csv`: estabilidad de rangos, pesos y signos por corte temporal.
+- `results/explicacion/comparacion_modelos.csv`: comparación principal–ampliado sobre la misma muestra.
+- `results/pronostico/`: coeficientes, validación y cobertura del pronóstico con rezagos.
+- `results/robustez/`: ECM exploratorio, pruebas BEI y contraste de especificaciones.
+- `results/`: metadatos de conciliación y control.
 
 ## Documentación por carpeta
 
