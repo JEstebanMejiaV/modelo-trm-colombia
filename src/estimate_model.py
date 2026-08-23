@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import warnings
@@ -12,7 +13,7 @@ import statsmodels.api as sm
 from openpyxl import load_workbook
 from scipy import stats
 from statsmodels.stats.diagnostic import (
-    acorr_lm,
+    acorr_breusch_godfrey,
     acorr_ljungbox,
     breaks_cusumolsresid,
     het_arch,
@@ -27,10 +28,36 @@ ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data" / "raw"
 RESULTS = ROOT / "results"
 DATA = ROOT / "data"
+SAMPLE_START = pd.Timestamp("2006-01-01")
+SAMPLE_END = pd.Timestamp("2026-04-01")
+
+MONTH_NUMBERS_ES = {
+    "Ene": 1,
+    "Feb": 2,
+    "Mar": 3,
+    "Abr": 4,
+    "May": 5,
+    "Jun": 6,
+    "Jul": 7,
+    "Ago": 8,
+    "Sep": 9,
+    "Set": 9,
+    "Oct": 10,
+    "Nov": 11,
+    "Dic": 12,
+}
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 ECM_LEVEL_VARIABLES = [
-    "ln_brent",
+    "ln_terminos_intercambio",
     "ln_remesas_12m",
     "diferencial_tasas_pp",
     "deficit_fiscal_12m_pct_pib",
@@ -41,9 +68,9 @@ ECM_LEVEL_VARIABLES = [
 # Cada factor es un jugador de la descomposicion Shapley. Todos sus terminos
 # (transformaciones y rezagos) entran o salen juntos al calcular el R2 marginal.
 BASE_FACTOR_SPECS = {
-    "Petróleo Brent": {
-        "grupo": "Global",
-        "terminos": [("D.ln_brent", 0)],
+    "Términos de intercambio": {
+        "grupo": "Sector externo Colombia",
+        "terminos": [("D.ln_terminos_intercambio", 0)],
     },
     "Remesas": {
         "grupo": "Sector externo Colombia",
@@ -68,12 +95,13 @@ BASE_FACTOR_SPECS = {
 }
 
 
-EXPANDED_FACTOR_SPECS = {
+def expanded_factor_specs(regional_component: str) -> dict[str, dict[str, object]]:
+    return {
     **BASE_FACTOR_SPECS,
-    "Spread TES-Treasury 10 años": {
+    "Riesgo soberano EMBIG Colombia": {
         "grupo": "Riesgo local",
         # Contemporaneo: esta version es contabilidad historica/nowcast, no causal.
-        "terminos": [("D.spread_tes_ust_10y_pp", 0)],
+        "terminos": [("D.embig_colombia_pp", 0)],
     },
     "Reservas internacionales": {
         "grupo": "Sector externo Colombia",
@@ -87,25 +115,104 @@ EXPANDED_FACTOR_SPECS = {
         "grupo": "Sector externo Colombia",
         "terminos": [("D.asinh_flujos_capital", 1)],
     },
-    "Diferencial de inflación": {
+    "Diferencial de compensación inflacionaria 5 años": {
         "grupo": "Política doméstica",
-        "terminos": [("diferencial_inflacion_pp", 1)],
+        "terminos": [("diferencial_bei_5y_pp", 1)],
     },
     "Monedas regionales": {
         "grupo": "Regional",
-        "terminos": [("factor_monedas_regionales", 0)],
+        "terminos": [(regional_component, 0)],
     },
 }
 
 
+EXPANDED_FACTOR_SPECS_3 = expanded_factor_specs("factor_monedas_regionales_3")
+EXPANDED_FACTOR_SPECS_4 = expanded_factor_specs("factor_monedas_regionales_4")
+EXPANDED_FACTOR_SPECS = EXPANDED_FACTOR_SPECS_4
+
+
+def forecast_factor_specs(regional_component: str) -> dict[str, dict[str, object]]:
+    """Especificación ex ante: ninguna variable del mes objetivo entra contemporánea."""
+    return {
+        "Términos de intercambio": {
+            "grupo": "Sector externo Colombia",
+            "terminos": [("D.ln_terminos_intercambio", 3)],
+        },
+        "Remesas": {
+            "grupo": "Sector externo Colombia",
+            "terminos": [("D.ln_remesas_12m", 2)],
+        },
+        "Diferencial de tasas": {
+            "grupo": "Política doméstica",
+            "terminos": [("D.diferencial_tasas_pp", 1)],
+        },
+        "Déficit fiscal": {
+            "grupo": "Política doméstica",
+            "terminos": [("D.deficit_fiscal_12m_pct_pib", 3)],
+        },
+        "Dólar amplio": {
+            "grupo": "Global",
+            "terminos": [("D.ln_dolar_amplio", 1)],
+        },
+        "VIX": {
+            "grupo": "Global",
+            "terminos": [("D.ln_vix", 1)],
+        },
+        "Riesgo soberano EMBIG Colombia": {
+            "grupo": "Riesgo local",
+            "terminos": [("D.embig_colombia_pp", 1)],
+        },
+        "Reservas internacionales": {
+            "grupo": "Sector externo Colombia",
+            "terminos": [("D.ln_reservas_netas_sin_flar", 2)],
+        },
+        "Balanza comercial cambiaria": {
+            "grupo": "Sector externo Colombia",
+            "terminos": [("D.asinh_balanza_comercial", 2)],
+        },
+        "Flujos netos de capital": {
+            "grupo": "Sector externo Colombia",
+            "terminos": [("D.asinh_flujos_capital", 2)],
+        },
+        "Diferencial de compensación inflacionaria 5 años": {
+            "grupo": "Política doméstica",
+            "terminos": [("diferencial_bei_5y_pp", 1)],
+        },
+        "Monedas regionales": {
+            "grupo": "Regional",
+            "terminos": [(regional_component, 1)],
+        },
+    }
+
+
+FORECAST_FACTOR_SPECS_3 = forecast_factor_specs("factor_monedas_regionales_3")
+FORECAST_FACTOR_SPECS_4 = forecast_factor_specs("factor_monedas_regionales_4")
+
+
+FORECAST_AVAILABILITY = [
+    ("Términos de intercambio", 3, "Mensual; publicación aproximada t+2", "Último cambio utilizable al inicio de t: t-3"),
+    ("Remesas", 2, "Mensual; publicación posterior al mes de referencia", "Supuesto conservador: t-2"),
+    ("Diferencial de tasas", 1, "Tasas observables durante el mes", "Promedios completos conocidos para t-1"),
+    ("Déficit fiscal", 3, "Mensual con rezago y posibles revisiones", "Supuesto conservador: t-3"),
+    ("Dólar amplio", 1, "Diaria", "Promedio completo conocido para t-1"),
+    ("VIX", 1, "Diaria", "Promedio completo conocido para t-1"),
+    ("Riesgo soberano EMBIG Colombia", 1, "Diaria", "Promedio completo conocido para t-1"),
+    ("Reservas internacionales", 2, "Mensual; publicación posterior al cierre", "Supuesto conservador: t-2"),
+    ("Balanza comercial cambiaria", 2, "Mensual; publicación posterior al cierre", "Supuesto conservador: t-2"),
+    ("Flujos netos de capital", 2, "Mensual; publicación posterior al cierre", "Supuesto conservador: t-2"),
+    ("Diferencial de compensación inflacionaria 5 años", 1, "Curvas diarias", "Promedios completos conocidos para t-1"),
+    ("Monedas regionales", 1, "Tipos de cambio mensuales", "Promedios completos conocidos para t-1"),
+]
+
+
 DIFFERENCED_COMPONENTS = [
-    "ln_brent",
+    "ln_terminos_intercambio",
     "ln_remesas_12m",
     "diferencial_tasas_pp",
     "deficit_fiscal_12m_pct_pib",
     "ln_dolar_amplio",
     "ln_vix",
-    "spread_tes_ust_10y_pp",
+    "embig_colombia_pp",
     "ln_reservas_netas_sin_flar",
     "asinh_balanza_comercial",
     "asinh_flujos_capital",
@@ -113,8 +220,9 @@ DIFFERENCED_COMPONENTS = [
 
 
 LEVEL_COMPONENTS = [
-    "diferencial_inflacion_pp",
-    "factor_monedas_regionales",
+    "diferencial_bei_5y_pp",
+    "factor_monedas_regionales_3",
+    "factor_monedas_regionales_4",
 ]
 
 
@@ -156,6 +264,25 @@ def read_fred(path: Path, output_name: str, daily: bool = False) -> pd.Series:
     return series
 
 
+def load_fed_gsw_breakeven(path: Path) -> pd.Series:
+    """Lee BKEVEN05 del archivo diario Gürkaynak-Sack-Wright del Federal Reserve Board."""
+    raw = pd.read_csv(
+        path,
+        skiprows=18,
+        usecols=["Date", "BKEVEN05"],
+        na_values=["NA"],
+    )
+    frame = pd.DataFrame(
+        {
+            "fecha": pd.to_datetime(raw["Date"], errors="coerce"),
+            "bei_eeuu_5y_pct": pd.to_numeric(raw["BKEVEN05"], errors="coerce"),
+        }
+    ).dropna()
+    series = frame.set_index("fecha")["bei_eeuu_5y_pct"].sort_index().resample("MS").mean()
+    series.name = "bei_eeuu_5y_pct"
+    return series
+
+
 def load_banrep_series(path: Path, output_name: str, daily: bool = False) -> pd.Series:
     """Lee el JSON publico del graficador de BanRep y lo lleva a frecuencia mensual."""
     payload = json.loads(path.read_text(encoding="utf-8"))
@@ -193,6 +320,61 @@ def load_terms_of_trade(path: Path) -> pd.Series:
     dates = pd.to_datetime(data.pop("timestamp_ms"), unit="ms", utc=True).dt.tz_convert(None)
     data.index = month_start(dates)
     return data["terminos_intercambio"].astype(float).sort_index()
+
+
+def load_embig_bcrp(path: Path) -> pd.Series:
+    """Lee EMBIG Colombia del JSON público del BCRP y promedia por mes."""
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    rows: list[tuple[pd.Timestamp, float]] = []
+    for observation in payload.get("periods", []):
+        parts = str(observation.get("name", "")).strip().split(".")
+        values = observation.get("values") or []
+        if len(parts) != 3 or not values or parts[1] not in MONTH_NUMBERS_ES:
+            continue
+        year = int(parts[2])
+        year += 2000 if year < 70 else 1900
+        date = pd.Timestamp(year=year, month=MONTH_NUMBERS_ES[parts[1]], day=int(parts[0]))
+        value = pd.to_numeric(str(values[0]).replace(",", "."), errors="coerce")
+        if pd.notna(value):
+            rows.append((date, float(value)))
+    if not rows:
+        raise ValueError(f"No se encontraron observaciones EMBIG válidas en {path}.")
+    daily = pd.Series(
+        (value for _, value in rows),
+        index=pd.DatetimeIndex(date for date, _ in rows),
+        name="embig_colombia_pb",
+    ).sort_index()
+    daily = daily.groupby(level=0).mean()
+    monthly = daily.resample("MS").mean()
+    monthly.name = "embig_colombia_pb"
+    return monthly
+
+
+def load_bcrp_monthly(path: Path, output_name: str) -> pd.Series:
+    """Lee una serie mensual de BCRPData con periodos como Ene.2006."""
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    rows: list[tuple[pd.Timestamp, float]] = []
+    for observation in payload.get("periods", []):
+        parts = str(observation.get("name", "")).strip().split(".")
+        values = observation.get("values") or []
+        if len(parts) != 2 or not values or parts[0] not in MONTH_NUMBERS_ES:
+            continue
+        value = pd.to_numeric(str(values[0]).replace(",", "."), errors="coerce")
+        if pd.notna(value):
+            rows.append(
+                (
+                    pd.Timestamp(year=int(parts[1]), month=MONTH_NUMBERS_ES[parts[0]], day=1),
+                    float(value),
+                )
+            )
+    if not rows:
+        raise ValueError(f"No se encontraron observaciones mensuales válidas en {path}.")
+    series = pd.Series(
+        (value for _, value in rows),
+        index=pd.DatetimeIndex(date for date, _ in rows),
+        name=output_name,
+    ).sort_index()
+    return series.groupby(level=0).mean()
 
 
 def _row_values(ws, row_number: int) -> tuple[list[object], list[object]]:
@@ -252,7 +434,6 @@ def load_fiscal(path: Path) -> pd.DataFrame:
 def build_dataset() -> pd.DataFrame:
     series = [
         load_banrep_daily(RAW / "trm_diaria_banrep.json", "trm_cop_usd"),
-        read_fred(RAW / "brent_diario_fred.csv", "brent_usd_barril", daily=True),
         load_banrep_daily(
             RAW / "tasa_politica_diaria_banrep.json", "tasa_politica_colombia_pct"
         ),
@@ -266,13 +447,17 @@ def build_dataset() -> pd.DataFrame:
             "reservas_netas_sin_flar_usd_millones",
         ),
         load_banrep_series(
-            RAW / "tes_10y_banrep.json", "tes_10y_colombia_pct", daily=True
-        ),
-        read_fred(
-            RAW / "treasury_10y_diario_fred.csv",
-            "treasury_10y_eeuu_pct",
+            RAW / "tes_5y_pesos_banrep.json",
+            "tes_5y_pesos_colombia_pct",
             daily=True,
         ),
+        load_banrep_series(
+            RAW / "tes_5y_uvr_banrep.json",
+            "tes_5y_uvr_colombia_pct",
+            daily=True,
+        ),
+        load_fed_gsw_breakeven(RAW / "bei_5y_eeuu_diario_fed.csv"),
+        load_embig_bcrp(RAW / "embig_colombia_diario_bcrp.json"),
         load_banrep_series(
             RAW / "balanza_comercial_cambiaria_banrep.json",
             "balanza_comercial_cambiaria_usd_millones",
@@ -281,11 +466,10 @@ def build_dataset() -> pd.DataFrame:
             RAW / "flujos_capital_totales_banrep.json",
             "flujos_capital_usd_millones",
         ),
-        load_banrep_series(RAW / "ipc_colombia_banrep.json", "ipc_colombia"),
-        read_fred(RAW / "ipc_eeuu_mensual_fred.csv", "ipc_eeuu"),
         read_fred(RAW / "brl_usd_mensual_fred.csv", "brl_por_usd"),
         read_fred(RAW / "clp_usd_mensual_fred.csv", "clp_por_usd"),
         read_fred(RAW / "mxn_usd_mensual_fred.csv", "mxn_por_usd"),
+        load_bcrp_monthly(RAW / "pen_usd_mensual_bcrp.json", "pen_por_usd"),
     ]
     data = pd.concat(series, axis=1, sort=True).sort_index()
     data = data.join(load_fiscal(RAW / "balance_fiscal_gnc_mensual_trimestral.xlsx"), how="outer")
@@ -296,27 +480,12 @@ def build_dataset() -> pd.DataFrame:
     data["diferencial_tasas_pp"] = (
         data["tasa_politica_colombia_pct"] - data["fed_funds_eeuu_pct"]
     )
-    data["spread_tes_ust_10y_pp"] = (
-        data["tes_10y_colombia_pct"] - data["treasury_10y_eeuu_pct"]
+    data["embig_colombia_pp"] = data["embig_colombia_pb"] / 100.0
+    data["bei_colombia_5y_pct"] = (
+        data["tes_5y_pesos_colombia_pct"] - data["tes_5y_uvr_colombia_pct"]
     )
-
-    # CPIAUCNS no publico octubre de 2025. Se interpola solamente ese hueco
-    # interno para poder formar la inflacion interanual sin cortar la muestra.
-    ipc_eeuu_original = data["ipc_eeuu"].copy()
-    ipc_eeuu_completo = ipc_eeuu_original.interpolate(limit=1, limit_area="inside")
-    data["ipc_eeuu_interpolado"] = (
-        ipc_eeuu_original.isna() & ipc_eeuu_completo.notna()
-    ).astype(int)
-    data["ipc_eeuu"] = ipc_eeuu_completo
-    data["inflacion_colombia_interanual_pct"] = 100.0 * (
-        data["ipc_colombia"] / data["ipc_colombia"].shift(12) - 1.0
-    )
-    data["inflacion_eeuu_interanual_pct"] = 100.0 * (
-        data["ipc_eeuu"] / data["ipc_eeuu"].shift(12) - 1.0
-    )
-    data["diferencial_inflacion_pp"] = (
-        data["inflacion_colombia_interanual_pct"]
-        - data["inflacion_eeuu_interanual_pct"]
+    data["diferencial_bei_5y_pp"] = (
+        data["bei_colombia_5y_pct"] - data["bei_eeuu_5y_pct"]
     )
 
     data["asinh_balanza_comercial"] = np.arcsinh(
@@ -329,16 +498,22 @@ def build_dataset() -> pd.DataFrame:
     regional_returns = pd.DataFrame(
         {
             currency: np.log(data[currency].where(data[currency] > 0)).diff()
-            for currency in ["brl_por_usd", "clp_por_usd", "mxn_por_usd"]
+            for currency in ["brl_por_usd", "clp_por_usd", "mxn_por_usd", "pen_por_usd"]
         }
     )
     calibration = regional_returns.loc["2006-01-01":"2019-12-01"]
     regional_z = (regional_returns - calibration.mean()) / calibration.std(ddof=0)
-    data["factor_monedas_regionales"] = regional_z.mean(axis=1, skipna=False)
+    data["factor_monedas_regionales_3"] = regional_z[
+        ["brl_por_usd", "clp_por_usd", "mxn_por_usd"]
+    ].mean(axis=1, skipna=False)
+    data["factor_monedas_regionales_4"] = regional_z[
+        ["brl_por_usd", "clp_por_usd", "mxn_por_usd", "pen_por_usd"]
+    ].mean(axis=1, skipna=False)
+    # Alias explícito del modelo ampliado activo: composición de cuatro monedas.
+    data["factor_monedas_regionales"] = data["factor_monedas_regionales_4"]
 
     positive_logs = {
         "ln_trm": "trm_cop_usd",
-        "ln_brent": "brent_usd_barril",
         "ln_remesas_12m": "remesas_12m_usd_millones",
         "ln_dolar_amplio": "indice_dolar_amplio",
         "ln_vix": "vix",
@@ -584,13 +759,13 @@ def tidy_long_run(result) -> pd.DataFrame:
 def diagnostics(result) -> pd.DataFrame:
     residuals = pd.Series(result.resid).dropna()
     lb = acorr_ljungbox(residuals, lags=[6, 12], return_df=True)
-    bg = acorr_lm(residuals, nlags=12)
     arch = het_arch(residuals, nlags=12)
     jb = jarque_bera(residuals)
     if hasattr(result.model, "_y") and hasattr(result.model, "_x"):
         ols_proxy = sm.OLS(result.model._y, result.model._x).fit()
     else:
         ols_proxy = result
+    bg = acorr_breusch_godfrey(ols_proxy, nlags=12)
     reset = linear_reset(ols_proxy, power=2, use_f=True)
     cusum = breaks_cusumolsresid(residuals, ddof=int(result.df_model) + 1)
     return pd.DataFrame(
@@ -874,16 +1049,23 @@ def main() -> None:
         *ECM_LEVEL_VARIABLES,
         "ln_vix",
         "dln_vix",
-        "spread_tes_ust_10y_pp",
+        "embig_colombia_pp",
         "ln_reservas_netas_sin_flar",
         "asinh_balanza_comercial",
         "asinh_flujos_capital",
         *LEVEL_COMPONENTS,
         "dummy_pandemia_2020",
     ]
-    model_data = data.loc[pd.Timestamp("2006-01-01") :, model_columns].dropna().copy().asfreq("MS")
+    expected_index = pd.date_range(SAMPLE_START, SAMPLE_END, freq="MS")
+    model_data = data.reindex(expected_index)[model_columns].copy()
     if model_data.isna().any().any():
-        raise ValueError("La muestra balanceada contiene meses faltantes.")
+        missing = {
+            column: model_data.index[model_data[column].isna()].strftime("%Y-%m").tolist()
+            for column in model_data.columns
+            if model_data[column].isna().any()
+        }
+        raise ValueError(f"La muestra balanceada contiene meses faltantes: {missing}")
+    model_data.index.name = "fecha"
 
     components = difference_components(model_data)
     common_index = make_timed_difference_design(
@@ -902,8 +1084,16 @@ def main() -> None:
         model_data, selected_diff
     )
 
+    selected_expanded_3, _ = select_timed_difference_model(
+        model_data, EXPANDED_FACTOR_SPECS_3, common_index=common_index
+    )
+    _, coefficients_expanded_3 = tidy_robust_ols(selected_expanded_3.result, maxlags=6)
+    predictions_expanded_3, validation_expanded_3 = difference_validation(
+        model_data, selected_expanded_3, holdout=min(48, len(selected_expanded_3.y) // 4)
+    )
+
     selected_expanded, lag_grid_expanded = select_timed_difference_model(
-        model_data, EXPANDED_FACTOR_SPECS, common_index=common_index
+        model_data, EXPANDED_FACTOR_SPECS_4, common_index=common_index
     )
     _, coefficients_expanded = tidy_robust_ols(selected_expanded.result, maxlags=6)
     diagnostics_expanded = diagnostics(selected_expanded.result)
@@ -914,12 +1104,55 @@ def main() -> None:
         model_data, selected_expanded
     )
     shapley_expanded = exact_shapley_r2(
-        selected_expanded, EXPANDED_FACTOR_SPECS, coefficients_expanded
+        selected_expanded, EXPANDED_FACTOR_SPECS_4, coefficients_expanded
     )
 
-    def out_of_sample_r2(predictions_frame: pd.DataFrame) -> float:
+    forecast_common_index = make_timed_difference_design(
+        components, p=3, factor_specs=FORECAST_FACTOR_SPECS_4
+    )[0].index
+    selected_forecast_3, lag_grid_forecast_3 = select_timed_difference_model(
+        model_data, FORECAST_FACTOR_SPECS_3, common_index=forecast_common_index
+    )
+    _, coefficients_forecast_3 = tidy_robust_ols(selected_forecast_3.result, maxlags=6)
+    diagnostics_forecast_3 = diagnostics(selected_forecast_3.result)
+    predictions_forecast_3, validation_forecast_3 = difference_validation(
+        model_data, selected_forecast_3, holdout=min(48, len(selected_forecast_3.y) // 4)
+    )
+
+    selected_forecast_4, lag_grid_forecast_4 = select_timed_difference_model(
+        model_data, FORECAST_FACTOR_SPECS_4, common_index=forecast_common_index
+    )
+    _, coefficients_forecast_4 = tidy_robust_ols(selected_forecast_4.result, maxlags=6)
+    diagnostics_forecast_4 = diagnostics(selected_forecast_4.result)
+    predictions_forecast_4, validation_forecast_4 = difference_validation(
+        model_data, selected_forecast_4, holdout=min(48, len(selected_forecast_4.y) // 4)
+    )
+
+    # La composición del pronóstico se elige por BIC, antes de mirar la métrica
+    # de la ventana de validación. La explicación histórica conserva cuatro monedas.
+    if selected_forecast_3.result.bic <= selected_forecast_4.result.bic:
+        forecast_currencies = "BRL, CLP y MXN"
+        selected_forecast = selected_forecast_3
+        lag_grid_forecast = lag_grid_forecast_3
+        coefficients_forecast = coefficients_forecast_3
+        diagnostics_forecast = diagnostics_forecast_3
+        predictions_forecast = predictions_forecast_3.copy()
+        validation_forecast = validation_forecast_3.copy()
+    else:
+        forecast_currencies = "BRL, CLP, MXN y PEN"
+        selected_forecast = selected_forecast_4
+        lag_grid_forecast = lag_grid_forecast_4
+        coefficients_forecast = coefficients_forecast_4
+        diagnostics_forecast = diagnostics_forecast_4
+        predictions_forecast = predictions_forecast_4.copy()
+        validation_forecast = validation_forecast_4.copy()
+
+    def out_of_sample_r2(
+        predictions_frame: pd.DataFrame,
+        forecast_column: str = "ln_trm_modelo_condicional",
+    ) -> float:
         model_error = (
-            predictions_frame["ln_trm_modelo_condicional"]
+            predictions_frame[forecast_column]
             - predictions_frame["ln_trm_observada"]
         )
         benchmark_error = (
@@ -965,6 +1198,103 @@ def main() -> None:
         ]
     )
 
+    regional_correlation = float(
+        model_data["factor_monedas_regionales_3"].corr(
+            model_data["factor_monedas_regionales_4"]
+        )
+    )
+
+    def coefficient_value(table: pd.DataFrame, term: str, column: str) -> float:
+        return float(table.loc[table["termino"].eq(term), column].iloc[0])
+
+    regional_comparison_rows: list[dict[str, object]] = []
+    regional_variants = [
+        (
+            "Explicación histórica",
+            "BRL, CLP y MXN",
+            selected_expanded_3,
+            coefficients_expanded_3,
+            predictions_expanded_3,
+            validation_expanded_3,
+            "factor_monedas_regionales_3.L0",
+        ),
+        (
+            "Explicación histórica",
+            "BRL, CLP, MXN y PEN",
+            selected_expanded,
+            coefficients_expanded,
+            predictions_expanded,
+            validation_expanded,
+            "factor_monedas_regionales_4.L0",
+        ),
+        (
+            "Pronóstico con rezagos de publicación",
+            "BRL, CLP y MXN",
+            selected_forecast_3,
+            coefficients_forecast_3,
+            predictions_forecast_3,
+            validation_forecast_3,
+            "factor_monedas_regionales_3.L1",
+        ),
+        (
+            "Pronóstico con rezagos de publicación",
+            "BRL, CLP, MXN y PEN",
+            selected_forecast_4,
+            coefficients_forecast_4,
+            predictions_forecast_4,
+            validation_forecast_4,
+            "factor_monedas_regionales_4.L1",
+        ),
+    ]
+    for use, currencies, selected_variant, coefficient_table, predictions_variant, validation_variant, term in regional_variants:
+        metric = validation_variant.loc[
+            ~validation_variant["modelo"].str.contains("Caminata", case=False)
+        ].iloc[0]
+        regional_comparison_rows.append(
+            {
+                "uso": use,
+                "monedas": currencies,
+                "observaciones": int(selected_variant.result.nobs),
+                "p_cambio_trm": int(selected_variant.p),
+                "r_cuadrado": float(selected_variant.result.rsquared),
+                "r_cuadrado_ajustado": float(selected_variant.result.rsquared_adj),
+                "aic": float(selected_variant.result.aic),
+                "bic": float(selected_variant.result.bic),
+                "mape_pct": float(metric["mape_pct"]),
+                "acierto_direccion_pct": float(metric["acierto_direccion_pct"]),
+                "r2_validacion_vs_caminata": out_of_sample_r2(predictions_variant),
+                "coeficiente_factor_regional": coefficient_value(
+                    coefficient_table, term, "coeficiente"
+                ),
+                "p_valor_hac_factor_regional": coefficient_value(
+                    coefficient_table, term, "p_valor"
+                ),
+                "correlacion_factores_3_4": regional_correlation,
+            }
+        )
+    regional_comparison = pd.DataFrame(regional_comparison_rows)
+
+    availability = pd.DataFrame(
+        FORECAST_AVAILABILITY,
+        columns=[
+            "factor",
+            "rezago_meses_modelo",
+            "frecuencia_y_publicacion",
+            "regla_disponibilidad_al_inicio_del_mes_t",
+        ],
+    )
+
+    validation_forecast.loc[
+        ~validation_forecast["modelo"].str.contains("Caminata", case=False), "modelo"
+    ] = "Pronóstico con rezagos de publicación"
+    predictions_forecast = predictions_forecast.rename(
+        columns={
+            "ln_trm_modelo_condicional": "ln_trm_pronostico_publicacion",
+            "cambio_log_modelo": "cambio_log_pronostico",
+            "trm_modelo_condicional": "trm_pronostico_publicacion",
+        }
+    )
+
     y = model_data["ln_trm"]
     exog = model_data[ECM_LEVEL_VARIABLES]
     fixed = model_data[["dln_vix", "dummy_pandemia_2020"]]
@@ -982,11 +1312,11 @@ def main() -> None:
             "ln_trm",
             *ECM_LEVEL_VARIABLES,
             "ln_vix",
-            "spread_tes_ust_10y_pp",
+            "embig_colombia_pp",
             "ln_reservas_netas_sin_flar",
             "asinh_balanza_comercial",
             "asinh_flujos_capital",
-            "diferencial_inflacion_pp",
+            "diferencial_bei_5y_pp",
         ],
     )
     short_run_ecm = tidy_result(uecm_result)
@@ -1035,6 +1365,37 @@ def main() -> None:
     comparison.to_csv(
         RESULTS / "comparacion_modelos.csv", index=False, encoding="utf-8-sig"
     )
+    regional_comparison.to_csv(
+        RESULTS / "comparacion_factor_regional.csv", index=False, encoding="utf-8-sig"
+    )
+    availability.to_csv(
+        RESULTS / "calendario_disponibilidad_pronostico.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
+    lag_grid_forecast.to_csv(
+        RESULTS / "seleccion_rezagos_modelo_pronostico.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
+    coefficients_forecast.to_csv(
+        RESULTS / "coeficientes_modelo_pronostico.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
+    diagnostics_forecast.to_csv(
+        RESULTS / "diagnosticos_modelo_pronostico.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
+    predictions_forecast.to_csv(
+        RESULTS / "validacion_predicciones_pronostico.csv", encoding="utf-8-sig"
+    )
+    validation_forecast.to_csv(
+        RESULTS / "validacion_metricas_pronostico.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
     lag_grid_ecm.to_csv(
         RESULTS / "seleccion_rezagos_ecm.csv", index=False, encoding="utf-8-sig"
     )
@@ -1061,19 +1422,32 @@ def main() -> None:
         encoding="utf-8-sig",
     )
 
+    bei_level_test = tests.loc[
+        (tests["variable"] == "diferencial_bei_5y_pp")
+        & (tests["transformacion"] == "nivel")
+    ].iloc[0]
+    bounds_p_i0 = float(bounds.p_values.loc["lower"])
+    bounds_p_i1 = float(bounds.p_values.loc["upper"])
+    if bounds_p_i1 < 0.05:
+        cointegration_5pct = "evidencia de cointegracion"
+    elif bounds_p_i0 > 0.05:
+        cointegration_5pct = "sin evidencia de cointegracion"
+    else:
+        cointegration_5pct = "no concluyente"
+
     metadata = {
         "muestra_inicio": model_data.index.min().strftime("%Y-%m-%d"),
         "muestra_fin": model_data.index.max().strftime("%Y-%m-%d"),
         "observaciones": int(model_data.shape[0]),
         "modelo_principal": "Modelo mensual en primeras diferencias con temporización económica y errores HAC",
         "adl_p_cambio_trm": selected_diff.p,
-        "temporizacion": "Brent, dólar amplio y VIX contemporáneos; remesas, diferencial de tasas y déficit rezagados un mes",
+        "temporizacion": "Términos de intercambio, dólar amplio y VIX contemporáneos; remesas, diferencial de tasas y déficit rezagados un mes",
         "adl_observaciones": int(selected_diff.result.nobs),
         "adl_aic": float(selected_diff.result.aic),
         "adl_bic": float(selected_diff.result.bic),
         "adl_r_cuadrado": float(selected_diff.result.rsquared),
         "adl_r_cuadrado_ajustado": float(selected_diff.result.rsquared_adj),
-        "modelo_ampliado": "Contabilidad historica mensual en primeras diferencias con 12 factores y errores HAC",
+        "modelo_ampliado": "Contabilidad historica mensual en primeras diferencias con 12 factores, cuatro monedas regionales y errores HAC",
         "ampliado_p_cambio_trm": selected_expanded.p,
         "ampliado_observaciones": int(selected_expanded.result.nobs),
         "ampliado_aic": float(selected_expanded.result.aic),
@@ -1082,7 +1456,7 @@ def main() -> None:
         "ampliado_r_cuadrado_ajustado": float(
             selected_expanded.result.rsquared_adj
         ),
-        "ampliado_temporizacion": "Brent, dolar amplio, VIX, spread TES-Treasury y monedas regionales contemporaneos; variables colombianas de publicacion lenta rezagadas un mes",
+        "ampliado_temporizacion": "Términos de intercambio, dólar amplio, VIX, EMBIG Colombia y monedas regionales contemporáneos; remesas, diferencial de tasas, déficit, reservas, balanza, flujos de capital y diferencial BEI rezagados un mes",
         "pesos_metodo": "Shapley/LMG exacto del incremento del R2 sobre intercepto, dinamica de TRM y dummy de pandemia",
         "pesos_suma_pct": float(shapley_expanded["peso_entre_factores_pct"].sum()),
         "shapley_r2_base": float(shapley_expanded["r2_base"].iloc[0]),
@@ -1090,8 +1464,44 @@ def main() -> None:
         "shapley_r2_incremental": float(
             shapley_expanded["r2_incremental"].iloc[0]
         ),
-        "factor_regional": "Promedio de cambios log estandarizados de BRL, CLP y MXN por USD; parametros calibrados 2006-2019",
-        "ipc_eeuu": "CPIAUCNS; octubre de 2025 interpolado linealmente por ausencia de dato oficial",
+        "factor_regional": "Modelo activo: promedio de cambios log estandarizados de BRL, CLP, MXN y PEN por USD; comparación contra BRL, CLP y MXN; parámetros calibrados 2006-2019",
+        "factor_regional_correlacion_3_4": regional_correlation,
+        "pronostico_modelo": f"Modelo mensual de un paso con todos los factores rezagados conforme a un calendario conservador de disponibilidad al inicio del mes objetivo; composición regional seleccionada por BIC: {forecast_currencies}",
+        "pronostico_factor_regional_monedas": forecast_currencies,
+        "pronostico_advertencia_vintages": "El backtest respeta rezagos de publicación, pero usa la última versión disponible de las series. Es pseudo-tiempo-real hasta contar con vintages históricos archivados; no debe rotularse como backtest genuino en tiempo real.",
+        "pronostico_p_cambio_trm": selected_forecast.p,
+        "pronostico_observaciones": int(selected_forecast.result.nobs),
+        "pronostico_r_cuadrado": float(selected_forecast.result.rsquared),
+        "pronostico_r_cuadrado_ajustado": float(selected_forecast.result.rsquared_adj),
+        "pronostico_aic": float(selected_forecast.result.aic),
+        "pronostico_bic": float(selected_forecast.result.bic),
+        "pronostico_mape_pct": float(validation_forecast.iloc[0]["mape_pct"]),
+        "pronostico_acierto_direccion_pct": float(
+            validation_forecast.iloc[0]["acierto_direccion_pct"]
+        ),
+        "pronostico_r2_vs_caminata": out_of_sample_r2(
+            predictions_forecast, "ln_trm_pronostico_publicacion"
+        ),
+        "terminos_intercambio": "BanRep serie 15360; índice encadenado mensual, base geométrica 2000=100",
+        "riesgo_soberano": "EMBIG Colombia del BCRP; promedio mensual de puntos base y conversión a puntos porcentuales",
+        "bei_colombia_5y": "Diferencia entre promedios mensuales separados de TES COP 5 años BanRep 15273 y TES UVR 5 años BanRep 15276",
+        "bei_eeuu_5y": "Federal Reserve Board Gürkaynak-Sack-Wright BKEVEN05; compensación inflacionaria cero cupón a 5 años, capitalización continua, promedio mensual",
+        "bei_advertencia": "El BEI es compensación inflacionaria y no una expectativa pura: incorpora primas de riesgo de inflación y diferencias de liquidez",
+        "proxies_snapshot_fecha_descarga": "2026-08-23",
+        "proxies_snapshot_sha256": {
+            filename: sha256_file(RAW / filename)
+            for filename in [
+                "embig_colombia_diario_bcrp.json",
+                "tes_5y_pesos_banrep.json",
+                "tes_5y_uvr_banrep.json",
+                "bei_5y_eeuu_diario_fed.csv",
+                "pen_usd_mensual_bcrp.json",
+            ]
+        },
+        "diferencial_bei_5y_transformacion": "Nivel rezagado un mes; bajo especificación con constante y rezagos BIC, ADF rechaza raíz unitaria y KPSS no rechaza estacionariedad",
+        "diferencial_bei_5y_advertencia_estacionariedad": "Conclusión sensible a tendencia y selección de rezagos; interpretar como evidencia favorable, no como estacionariedad definitiva",
+        "diferencial_bei_5y_adf_p_nivel": float(bei_level_test["adf_p"]),
+        "diferencial_bei_5y_kpss_p_nivel": float(bei_level_test["kpss_p"]),
         "flujos_capital": "Movimientos netos de capital de la balanza cambiaria, BanRep serie 16706",
         "validacion_base_mape_pct": float(base_validation_row["mape_pct"]),
         "validacion_ampliado_mape_pct": float(expanded_validation_row["mape_pct"]),
@@ -1104,9 +1514,9 @@ def main() -> None:
         "ecm_p": selected_ecm.p,
         "ecm_q_comun": selected_ecm.q,
         "bounds_f": float(bounds.stat),
-        "bounds_p_i0": float(bounds.p_values.loc["lower"]),
-        "bounds_p_i1": float(bounds.p_values.loc["upper"]),
-        "cointegracion_5pct": "no concluyente",
+        "bounds_p_i0": bounds_p_i0,
+        "bounds_p_i1": bounds_p_i1,
+        "cointegracion_5pct": cointegration_5pct,
         "velocidad_ajuste": float(uecm_result.params.get("ln_trm.L1", np.nan)),
     }
     (RESULTS / "metadata.json").write_text(
@@ -1128,6 +1538,10 @@ def main() -> None:
             ["factor", "grupo", "shapley_r2", "peso_entre_factores_pct"]
         ].to_string(index=False)
     )
+    print("\nComparación del factor regional de tres y cuatro monedas")
+    print(regional_comparison.to_string(index=False))
+    print("\nValidación del pronóstico con rezagos de publicación")
+    print(validation_forecast.to_string(index=False))
     print("\nECM exploratorio: coeficientes de largo plazo")
     print(long_run_ecm.to_string(index=False))
 

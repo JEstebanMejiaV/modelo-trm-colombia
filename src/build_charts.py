@@ -31,6 +31,9 @@ SOURCE_FILES = [
     RESULTS / "validacion_metricas_modelo_ampliado.csv",
     RESULTS / "validacion_predicciones.csv",
     RESULTS / "validacion_predicciones_modelo_ampliado.csv",
+    RESULTS / "validacion_metricas_pronostico.csv",
+    RESULTS / "validacion_predicciones_pronostico.csv",
+    RESULTS / "comparacion_factor_regional.csv",
     RESULTS / "coeficientes_modelo_ampliado.csv",
     RESULTS / "contribuciones_modelo_ampliado.csv",
     RESULTS / "coeficientes_corto_plazo_ecm.csv",
@@ -53,6 +56,7 @@ GRID = "#DCE3EA"
 BASE = "#2D6FA3"
 EXPANDED = "#23866F"
 RANDOM_WALK = "#7B8794"
+FORECAST = "#C95D3A"
 POSITIVE = "#C95D3A"
 NEGATIVE = "#277DA1"
 
@@ -67,14 +71,16 @@ GROUP_COLORS = {
 LABELS = {
     "Monedas regionales": "Monedas regionales",
     "Dólar amplio": "Dólar amplio",
-    "Spread TES-Treasury 10 años": "Spread TES–Treasury\n10 años",
-    "Petróleo Brent": "Petróleo Brent",
+    "Riesgo soberano EMBIG Colombia": "Riesgo soberano\nEMBIG Colombia",
+    "Términos de intercambio": "Términos de\nintercambio",
     "VIX": "VIX",
     "Balanza comercial cambiaria": "Balanza comercial\ncambiaria",
     "Flujos netos de capital": "Flujos netos\nde capital",
     "Reservas internacionales": "Reservas\ninternacionales",
     "Remesas": "Remesas",
-    "Diferencial de inflación": "Diferencial de\ninflación",
+    "Diferencial de compensación inflacionaria 5 años": (
+        "Diferencial BEI\nde inflación · 5 años"
+    ),
     "Diferencial de tasas": "Diferencial de tasas",
     "Déficit fiscal": "Déficit fiscal",
 }
@@ -236,31 +242,49 @@ def add_panel_bars(
     positions = np.arange(len(names))
     bars = ax.bar(positions, values, color=colors, width=0.58)
     ax.set_xticks(positions, names)
-    maximum = max(values) if values else 1.0
-    ax.set_ylim(0, maximum * 1.28 if maximum > 0 else 1.0)
+    maximum = max(max(values), 0.0) if values else 1.0
+    minimum = min(min(values), 0.0) if values else 0.0
+    span = maximum - minimum
+    if span <= 0:
+        span = 1.0
+    ax.set_ylim(minimum - span * 0.22, maximum + span * 0.28)
+    if minimum < 0:
+        ax.axhline(0, color=GRID, linewidth=1.0)
     ax.set_title(title, loc="left", fontweight="bold", pad=12)
     ax.tick_params(axis="x", length=0)
     clean_axis(ax, grid_axis="y")
     for bar, value in zip(bars, values):
         ax.text(
             bar.get_x() + bar.get_width() / 2,
-            bar.get_height() + maximum * 0.035,
+            value + (span * 0.04 if value >= 0 else -span * 0.04),
             f"{es(value, digits)}{suffix}",
             ha="center",
-            va="bottom",
+            va="bottom" if value >= 0 else "top",
             fontweight="bold",
         )
 
 
-def chart_performance(comparison: pd.DataFrame, validation: pd.DataFrame) -> None:
+def chart_performance(
+    comparison: pd.DataFrame,
+    validation: pd.DataFrame,
+    forecast_validation: pd.DataFrame,
+    regional_comparison: pd.DataFrame,
+) -> None:
     by_model = comparison.set_index("modelo")
     base = by_model.loc["Base"]
     expanded = by_model.loc["Ampliado historico"]
     walk = validation.loc[validation["modelo"].eq("Caminata aleatoria")].iloc[0]
+    forecast = regional_comparison.loc[
+        regional_comparison["uso"].str.startswith("Pronóstico")
+        & regional_comparison["monedas"].eq("BRL, CLP y MXN")
+    ].iloc[0]
+    forecast_metric = forecast_validation.loc[
+        ~forecast_validation["modelo"].str.contains("Caminata", case=False)
+    ].iloc[0]
 
     fig, axes = plt.subplots(2, 2, figsize=(12.8, 7.2))
     fig.suptitle(
-        "Cuánto mejora el modelo ampliado",
+        "Explicar no es lo mismo que pronosticar",
         x=0.04,
         y=0.975,
         ha="left",
@@ -270,51 +294,52 @@ def chart_performance(comparison: pd.DataFrame, validation: pd.DataFrame) -> Non
     fig.text(
         0.04,
         0.925,
-        f"El R² ajustado aumenta {es((expanded['r_cuadrado_ajustado'] - base['r_cuadrado_ajustado']) * 100)} p.p. y el MAPE baja {es(base['mape_pct'] - expanded['mape_pct'], 2)} p.p.",
+        f"PEN mejora la explicación histórica; el pronóstico con datos disponibles obtiene MAPE de {es(forecast_metric['mape_pct'], 2)}%, frente a {es(walk['mape_pct'], 2)}% de la caminata.",
         color=MUTED,
         fontsize=12,
     )
 
     add_panel_bars(
         axes[0, 0],
-        ["Principal", "Ampliado"],
-        [base["r_cuadrado_ajustado"] * 100, expanded["r_cuadrado_ajustado"] * 100],
-        [BASE, EXPANDED],
+        ["Principal\nex post", "Ampliado\nex post", "Pronóstico\nrezagado"],
+        [base["r_cuadrado_ajustado"] * 100, expanded["r_cuadrado_ajustado"] * 100, forecast["r_cuadrado_ajustado"] * 100],
+        [BASE, EXPANDED, FORECAST],
         "R² ajustado · más alto es mejor",
         "%",
     )
     add_panel_bars(
         axes[0, 1],
-        ["Principal", "Ampliado", "Caminata"],
-        [base["mape_pct"], expanded["mape_pct"], walk["mape_pct"]],
-        [BASE, EXPANDED, RANDOM_WALK],
-        "MAPE condicional · más bajo es mejor",
+        ["Principal\ncond.", "Ampliado\ncond.", "Pronóstico\nrezagado", "Caminata"],
+        [base["mape_pct"], expanded["mape_pct"], forecast_metric["mape_pct"], walk["mape_pct"]],
+        [BASE, EXPANDED, FORECAST, RANDOM_WALK],
+        "MAPE de validación · más bajo es mejor",
         "%",
         digits=2,
     )
     add_panel_bars(
         axes[1, 0],
-        ["Principal", "Ampliado"],
+        ["Principal\ncond.", "Ampliado\ncond.", "Pronóstico\nrezagado"],
         [
             base["r2_validacion_condicional_vs_caminata"] * 100,
             expanded["r2_validacion_condicional_vs_caminata"] * 100,
+            forecast["r2_validacion_vs_caminata"] * 100,
         ],
-        [BASE, EXPANDED],
-        "R² condicional frente a caminata · más alto es mejor",
+        [BASE, EXPANDED, FORECAST],
+        "R² frente a caminata · negativo es peor",
         "%",
     )
     add_panel_bars(
         axes[1, 1],
-        ["Principal", "Ampliado"],
-        [base["acierto_direccion_pct"], expanded["acierto_direccion_pct"]],
-        [BASE, EXPANDED],
+        ["Principal\ncond.", "Ampliado\ncond.", "Pronóstico\nrezagado"],
+        [base["acierto_direccion_pct"], expanded["acierto_direccion_pct"], forecast_metric["acierto_direccion_pct"]],
+        [BASE, EXPANDED, FORECAST],
         "Acierto de dirección mensual",
         "%",
     )
     fig.text(
         0.04,
         0.018,
-        "Validación expansiva de 48 meses. Es condicional y pseudo-fuera de muestra: usa varios predictores contemporáneos ya realizados.",
+        "Ventana expansiva de 48 meses. Los modelos ex post usan realizaciones contemporáneas; el pronóstico usa rezagos de publicación, pero el último vintage de cada serie.",
         color=MUTED,
         fontsize=9.5,
     )
@@ -323,17 +348,27 @@ def chart_performance(comparison: pd.DataFrame, validation: pd.DataFrame) -> Non
 
 
 def chart_validation(
-    base_predictions: pd.DataFrame, expanded_predictions: pd.DataFrame
+    base_predictions: pd.DataFrame,
+    expanded_predictions: pd.DataFrame,
+    forecast_predictions: pd.DataFrame,
 ) -> None:
     base = base_predictions.copy()
     expanded = expanded_predictions.copy()
     base["fecha"] = pd.to_datetime(base["fecha"])
     expanded["fecha"] = pd.to_datetime(expanded["fecha"])
+    forecast = forecast_predictions.copy()
+    forecast["fecha"] = pd.to_datetime(forecast["fecha"])
     data = base.merge(
         expanded[["fecha", "trm_modelo_condicional"]],
         on="fecha",
         how="inner",
         suffixes=("_principal", "_ampliado"),
+        validate="one_to_one",
+    )
+    data = data.merge(
+        forecast[["fecha", "trm_pronostico_publicacion"]],
+        on="fecha",
+        how="inner",
         validate="one_to_one",
     )
 
@@ -372,6 +407,15 @@ def chart_validation(
         label="Caminata aleatoria",
         zorder=1,
     )
+    ax.plot(
+        data["fecha"],
+        data["trm_pronostico_publicacion"],
+        color=FORECAST,
+        linewidth=2.0,
+        linestyle="-.",
+        label="Pronóstico con rezagos",
+        zorder=2,
+    )
     ax.set_ylabel("COP por USD")
     ax.set_xlabel("Mes de validación")
     ax.yaxis.set_major_formatter(
@@ -389,7 +433,7 @@ def chart_validation(
     ax.legend(loc="upper right", ncol=2, frameon=False)
 
     fig.suptitle(
-        "TRM observada frente a los modelos",
+        "Explicación condicional y pronóstico frente a la TRM",
         x=0.04,
         y=0.975,
         ha="left",
@@ -399,14 +443,14 @@ def chart_validation(
     fig.text(
         0.04,
         0.925,
-        "El modelo ampliado sigue mejor varios giros de la TRM, aunque ninguno reproduce por completo los meses extremos.",
+        "El ajuste ex post sigue mejor los giros; al imponer disponibilidad de datos, la ventaja frente a la caminata desaparece.",
         color=MUTED,
         fontsize=12,
     )
     fig.text(
         0.04,
         0.018,
-        "Ventana mayo de 2022–abril de 2026. Comparación condicional; no equivale a un pronóstico disponible al inicio de cada mes.",
+        "Ventana mayo de 2022–abril de 2026. Pronóstico a un mes con rezagos de publicación; backtest pseudo-tiempo-real porque no reconstruye vintages históricos.",
         color=MUTED,
         fontsize=9.5,
     )
@@ -639,7 +683,11 @@ def chart_ecm(
     elasticity_specs = [
         ("Dólar amplio", "D.ln_dolar_amplio.L0", "ln_dolar_amplio"),
         ("Remesas 12 meses", "D.ln_remesas_12m.L0", "ln_remesas_12m"),
-        ("Petróleo Brent", "D.ln_brent.L0", "ln_brent"),
+        (
+            "Términos de\nintercambio",
+            "D.ln_terminos_intercambio.L0",
+            "ln_terminos_intercambio",
+        ),
         ("VIX", "dln_vix", None),
     ]
     semi_specs = [
@@ -653,6 +701,14 @@ def chart_ecm(
         raise ValueError("La velocidad de ajuste ECM debe estar entre −1 y 0.")
     half_life = float(np.log(0.5) / np.log(1.0 + alpha))
     bound = bounds.iloc[0]
+    bounds_p_i0 = float(bound["p_valor_i0"])
+    bounds_p_i1 = float(bound["p_valor_i1"])
+    if bounds_p_i1 < 0.05:
+        bounds_reading = "indica cointegración al 5%"
+    elif bounds_p_i0 < 0.05:
+        bounds_reading = "es no concluyente al 5%"
+    else:
+        bounds_reading = "no rechaza ausencia de cointegración al 5%"
 
     fig = plt.figure(figsize=(12.8, 7.2))
     grid = fig.add_gridspec(
@@ -772,7 +828,7 @@ def chart_ecm(
     fig.text(
         0.04,
         0.925,
-        f"Bounds F = {es(float(bound['estadistico_f']), 3)} y p-valor I(1) = {es(float(bound['p_valor_i1']), 3)}: la cointegración no es concluyente al 5%.",
+        f"Bounds F = {es(float(bound['estadistico_f']), 3)} y p-valor I(1) = {es(bounds_p_i1, 3)}: {bounds_reading}.",
         color=MUTED,
         fontsize=12,
     )
@@ -796,6 +852,11 @@ def main() -> None:
     expanded_predictions = pd.read_csv(
         RESULTS / "validacion_predicciones_modelo_ampliado.csv"
     )
+    forecast_validation = pd.read_csv(RESULTS / "validacion_metricas_pronostico.csv")
+    forecast_predictions = pd.read_csv(
+        RESULTS / "validacion_predicciones_pronostico.csv"
+    )
+    regional_comparison = pd.read_csv(RESULTS / "comparacion_factor_regional.csv")
     coefficients = pd.read_csv(RESULTS / "coeficientes_modelo_ampliado.csv")
     contributions = pd.read_csv(RESULTS / "contribuciones_modelo_ampliado.csv")
     ecm_short = pd.read_csv(RESULTS / "coeficientes_corto_plazo_ecm.csv")
@@ -804,8 +865,8 @@ def main() -> None:
 
     configure_style()
     chart_weights(weights)
-    chart_performance(comparison, validation)
-    chart_validation(base_predictions, expanded_predictions)
+    chart_performance(comparison, validation, forecast_validation, regional_comparison)
+    chart_validation(base_predictions, expanded_predictions, forecast_predictions)
     chart_standardized_effects(weights, coefficients, contributions)
     chart_ecm(ecm_short, ecm_long, bounds)
     write_metadata()

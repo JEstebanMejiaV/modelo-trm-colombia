@@ -12,13 +12,13 @@ Ordena los 12 factores por su participación en el R² incremental asignado medi
 
 ![Desempeño de los modelos](02_desempeno_modelos.png)
 
-Compara el modelo principal y el ampliado mediante R² ajustado, MAPE, mejora condicional frente a la caminata aleatoria y acierto de dirección. Cada panel indica si un valor mayor o menor es preferible. La validación sigue siendo condicional y pseudo-fuera de muestra.
+Separa el desempeño de la explicación histórica y el pronóstico con rezagos de publicación. También compara el MAPE del pronóstico con la caminata aleatoria y muestra que el R² de pronóstico frente a ese benchmark es negativo. Cada panel identifica si usa información contemporánea o disponible al origen.
 
 ## 3. TRM observada y comparadores
 
 ![TRM observada frente a modelos](03_validacion_trm.png)
 
-Muestra la TRM observada, las estimaciones condicionales principal y ampliada y la caminata aleatoria durante los 48 meses de validación. Sirve para identificar episodios en los que el modelo acompaña o se aleja del movimiento observado; no representa un pronóstico que hubiera estado disponible al inicio de cada mes.
+Muestra la TRM observada, las estimaciones condicionales principal y ampliada, el pronóstico con información rezagada y la caminata aleatoria durante los 48 meses de validación. Las dos primeras explican con realizaciones contemporáneas; la tercera respeta el calendario de publicación, aunque usa el último *vintage* disponible.
 
 ## 4. Dirección y magnitud típica
 
@@ -37,14 +37,20 @@ Separa tres conceptos que no deben mezclarse:
 - Las variables en logaritmos se muestran como elasticidades: cambio porcentual aproximado de la TRM ante un aumento de 1% del factor.
 - El VIX aparece solo en corto plazo porque el ECM lo incorpora como cambio contemporáneo, no dentro del vector de niveles.
 - El diferencial de tasas y el déficit se muestran como semielasticidades: en corto plazo corresponden a un cambio mensual de 1 punto porcentual y en largo plazo a una diferencia de 1 punto porcentual en el nivel de equilibrio.
-- La curva inferior muestra qué proporción de un desequilibrio inicial permanecería después de cada mes. Con el coeficiente actual se corrige aproximadamente 9,0% por mes y la semivida es cercana a 7,4 meses; la banda transforma el intervalo del 95% de la velocidad de ajuste.
+- La curva inferior muestra qué proporción de un desequilibrio inicial permanecería después de cada mes. La anotación calcula la velocidad de ajuste y la semivida a partir del coeficiente de corrección vigente; la banda transforma su intervalo del 95%.
 
-El CSV de largo plazo contiene el vector cointegrante normalizado con coeficiente 1 para `ln_trm`. Para expresar la respuesta de equilibrio de la TRM, el gráfico invierte el signo de los términos explicativos y también invierte los extremos de sus intervalos. La prueba bounds es no concluyente al 5%; por ello estos valores de largo plazo son exploratorios, no evidencia confirmada de equilibrio.
+El bosque de elasticidades incluye términos de intercambio tanto en corto como en largo plazo. El riesgo soberano EMBIG Colombia y el diferencial de compensación inflacionaria a cinco años pertenecen al modelo ampliado, pero no al vector ECM; por eso aparecen en los gráficos de pesos y efectos típicos, no en este bosque.
+
+El CSV de largo plazo contiene el vector cointegrante normalizado con coeficiente 1 para `ln_trm`. Para expresar la respuesta de equilibrio de la TRM, el gráfico invierte el signo de los términos explicativos y también invierte los extremos de sus intervalos. El subtítulo interpreta la prueba bounds con ambos límites al 5%; salvo que se rechace el límite superior I(1), los valores de largo plazo deben leerse como exploratorios y no como evidencia confirmada de equilibrio.
 
 ## Cautelas comunes
 
 - Los cinco gráficos describen asociaciones estadísticas, no causalidad.
-- Brent, dólar amplio, VIX, spread TES–Treasury y monedas regionales usan información contemporánea realizada.
-- Balanza, capitales, reservas, remesas, tasas y déficit pueden responder a la propia TRM.
+- Términos de intercambio, dólar amplio, VIX, EMBIG Colombia y monedas regionales usan información contemporánea realizada.
+- El factor histórico usa BRL, CLP, MXN y PEN; el pronóstico usa BRL, CLP y MXN porque obtiene menor BIC. PEN mejora el ajuste histórico, no el desempeño ex ante.
+- La evaluación con rezagos es pseudo-tiempo-real: no reconstruye las versiones de los datos que existían en cada fecha histórica.
+- En el modelo ampliado, balanza, capitales, reservas, remesas, tasas, déficit y el diferencial de compensación inflacionaria entran rezagados, pero aun así pueden compartir choques o responder indirectamente a la propia TRM.
+- El diferencial BEI a cinco años se construye con compensaciones de mercado: combina inflación esperada con primas por riesgo inflacionario y diferencias de liquidez entre bonos nominales e indexados; no es una expectativa pura.
+- EMBIG Colombia mide una prima de riesgo soberano de mercado; su coeficiente contemporáneo también puede recoger liquidez y aversión global al riesgo.
 - La balanza comercial tiene signo estimado positivo, contrario al esperado; esto puede reflejar simultaneidad o composición de los flujos.
-- ARCH-LM y Jarque–Bera alertan sobre volatilidad condicional y colas no normales.
+- ARCH-LM y Jarque–Bera alertan sobre volatilidad condicional y colas no normales; RESET también señala posible forma funcional inadecuada en el ampliado.

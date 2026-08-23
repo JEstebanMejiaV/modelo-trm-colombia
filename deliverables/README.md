@@ -2,29 +2,31 @@
 
 `modelo_trm_colombia.xlsx` reúne en un solo archivo Excel los datos, transformaciones, estimaciones, controles y fuentes del modelo mensual de COP por USD. Está diseñado para lectura ejecutiva y auditoría técnica.
 
-## Contenido de las 11 hojas
+## Contenido de las 12 hojas
 
 1. **Resumen**: principales métricas del modelo principal y el ampliado, lectura económica de la especificación base, comparación de desempeño, pesos Shapley destacados y cautelas de interpretación.
-2. **Datos_fuente**: niveles mensuales de todas las series. Incluye unidades, comentarios con enlaces y la bandera `IPC EE. UU. interpolado`, que vale 1 únicamente en octubre de 2025.
-3. **Transformaciones**: fórmulas enlazadas a `Datos_fuente` para logaritmos, primeras diferencias, rezagos auditables, transformaciones `asinh`, diferenciales y factor regional.
+2. **Datos_fuente**: niveles mensuales de todas las series activas. Incluye PEN por USD, términos de intercambio, EMBIG Colombia, curvas TES nominal y UVR a cinco años y compensación de inflación estadounidense.
+3. **Transformaciones**: fórmulas enlazadas a `Datos_fuente` para logaritmos, primeras diferencias, rezagos auditables, transformaciones `asinh`, diferencial BEI y factores regionales de tres y cuatro monedas.
 4. **Modelo_principal**: coeficientes con errores HAC, métricas del ajuste y reconstrucción mensual por contribuciones. Las referencias a coeficientes se determinan por nombre del término, no por una posición fija.
 5. **Modelo_ampliado**: coeficientes y diagnósticos de la especificación ampliada, ajuste histórico, contribución mensual de cada término y control que reconcilia la suma de contribuciones con el cambio ajustado.
 6. **Pesos_explicativos**: descomposición Shapley/LMG del R² incremental, tabla completa, gráfico de columnas y controles de suma del R² y de las participaciones.
 7. **Validacion**: comparación del modelo principal, el ampliado y la caminata aleatoria; métricas agregadas, observaciones mensuales y gráfico de TRM observada frente a los comparadores.
-8. **ECM_exploratorio**: prueba bounds, valores críticos y coeficientes de corto y largo plazo del contraste ARDL–ECM. Se identifica expresamente como exploratorio.
-9. **Diagnosticos**: pruebas de integración, selección de rezagos y diagnósticos residuales de los modelos principal y ampliado, con alertas visibles para ARCH y no normalidad.
-10. **Variables**: mapa económico de variables, transformación, signo esperado, canal, justificación, cautela y estado dentro del modelo principal, ampliado o extensiones futuras.
-11. **Fuentes**: organismo, código, frecuencia, cobertura, uso, tratamiento y URL de cada serie.
+8. **Pronostico**: comparación regional 3–4, calendario de disponibilidad, coeficientes, diagnósticos y predicciones del modelo con información rezagada. Es una hoja tabular, sin gráfico añadido.
+9. **ECM_exploratorio**: prueba bounds, valores críticos y coeficientes de corto y largo plazo del contraste ARDL–ECM. Se identifica expresamente como exploratorio.
+10. **Diagnosticos**: pruebas de integración, selección de rezagos y diagnósticos residuales de los modelos principal y ampliado, con alertas visibles para ARCH y no normalidad.
+11. **Variables**: mapa económico de variables, transformación, signo esperado, canal, justificación, cautela y estado dentro del modelo principal, ampliado o pronóstico.
+12. **Fuentes**: organismo, código, frecuencia, cobertura, uso, tratamiento y URL de cada serie.
 
 ## Ruta de auditoría recomendada
 
 1. Empiece en `Fuentes` para identificar el organismo y código de cada serie.
-2. Compruebe los niveles y unidades en `Datos_fuente`. Los vacíos no se reemplazan por cero. La única interpolación interna documentada es CPIAUCNS de octubre de 2025 y queda marcada en una columna específica.
-3. Siga las fórmulas de `Transformaciones`. La balanza y los flujos se convierten de USD millones a USD miles de millones, pasan por `asinh` y entran como primeras diferencias rezagadas; el factor regional es el promedio igual ponderado de retornos estandarizados de BRL, CLP y MXN, con parámetros calibrados en 2006–2019.
+2. Compruebe los niveles y unidades en `Datos_fuente`. Los vacíos se conservan como faltantes en la capa activa.
+3. Siga las fórmulas de `Transformaciones`. El factor regional de tres monedas usa BRL, CLP y MXN; el de cuatro agrega PEN. Ambos promedian `z(Δln)` con parámetros calibrados en 2006–2019.
 4. En `Modelo_principal` o `Modelo_ampliado`, verifique que cada cambio ajustado sea la suma del intercepto y las contribuciones de sus regresores. El residuo debe ser cambio observado menos cambio ajustado.
 5. En `Pesos_explicativos`, compruebe tres identidades: la suma Shapley coincide con el R² incremental; R² base más R² incremental coincide con R² completo; y los pesos entre factores suman 100%, salvo redondeo.
-6. Use `Validacion` para recalcular MAE, RMSE, MAPE y acierto de dirección y comparar con la caminata aleatoria.
-7. Termine en `Diagnosticos` y `ECM_exploratorio` antes de extraer conclusiones económicas.
+6. Use `Validacion` solo para la explicación condicional con realizaciones contemporáneas.
+7. Use `Pronostico` para comprobar el calendario de publicación, la selección de tres monedas y la comparación honesta con la caminata aleatoria.
+8. Termine en `Diagnosticos` y `ECM_exploratorio` antes de extraer conclusiones económicas.
 
 ## Cómo interpretar los pesos
 
@@ -35,14 +37,17 @@ No equivale al tamaño del coeficiente, a su p-valor ni a un porcentaje causal d
 ## Cautelas principales
 
 - Las regresiones describen asociaciones dinámicas; no prueban causalidad.
-- La validación es condicional porque usa realizaciones contemporáneas de varios factores. No es un pronóstico estrictamente disponible en tiempo real.
-- El modelo ampliado mejora varias métricas de ajuste y error, pero no supera al principal en todos los criterios, incluido el acierto de dirección.
-- ARCH-LM rechaza ausencia de volatilidad condicional en el modelo ampliado y Jarque–Bera rechaza normalidad. HAC fortalece la inferencia de la ecuación de media, pero no modela la volatilidad ni las colas extremas.
+- `Validacion` es condicional porque usa realizaciones contemporáneas. `Pronostico` usa rezagos de publicación, pero la última revisión disponible de las series; por eso es pseudo-tiempo-real hasta contar con *vintages* históricos.
+- En la muestra actual, el ampliado de cuatro monedas mejora frente al principal el R² ajustado (`0,581` frente a `0,479`), MAPE condicional (`1,69%` frente a `2,01%`) y acierto de dirección (`81,25%` frente a `68,75%`).
+- El pronóstico seleccionado usa tres monedas: su MAPE es `2,63%`, peor que el `2,39%` de la caminata aleatoria, y su R² frente a ese benchmark es `−0,115`.
+- En el ampliado, ARCH-LM y Jarque–Bera rechazan sus hipótesis nulas; RESET no rechaza al 5%. No se detecta autocorrelación ni inestabilidad CUSUM.
 - Remesas, flujos de capital, reservas y variables fiscales pueden responder a la propia TRM; sus coeficientes pueden reflejar endogeneidad.
-- La interpolación del IPC estadounidense afecta una sola observación y está identificada para que pueda excluirse en una prueba de sensibilidad.
-- El factor regional está estandarizado con una ventana histórica fija; su escala no representa un cambio porcentual directo de una moneda concreta.
+- Los términos de intercambio se usan contemporáneamente para explicación *ex post*, pero suelen publicarse con cerca de dos meses de rezago.
+- EMBIG Colombia procede de BCRPData, que identifica como fuentes originales a Reuters/J.P. Morgan. Debe conservarse esa atribución; la disponibilidad de la descarga no constituye una licencia abierta sobre la metodología o la marca EMBIG.
+- El diferencial BEI a cinco años compara compensaciones de inflación de mercado, no expectativas puras: puede incorporar primas de riesgo de inflación y diferencias de liquidez entre instrumentos y países.
+- Los factores regionales están estandarizados con una ventana histórica fija; su escala no representa un cambio porcentual directo de una moneda concreta. PEN mejora la explicación histórica, no el pronóstico.
 - La prueba bounds no confirma cointegración al 5%. Los resultados de largo plazo del ECM son exploratorios.
 
 ## Uso recomendado
 
-Para una explicación mensual, combine el signo y magnitud de las contribuciones en `Modelo_ampliado` con los pesos de `Pesos_explicativos`. Para comparar especificaciones, use conjuntamente R² ajustado, AIC/BIC, validación frente a caminata aleatoria y diagnósticos. No base una conclusión en una sola celda o indicador.
+Para una explicación mensual, combine las contribuciones de `Modelo_ampliado` con los pesos de `Pesos_explicativos`. Para una decisión ex ante, use `Pronostico` y mantenga la caminata aleatoria como benchmark. No mezcle las métricas históricas y de pronóstico ni base una conclusión en una sola celda.

@@ -1,0 +1,13 @@
+﻿factor,rezago_meses_modelo,frecuencia_y_publicacion,regla_disponibilidad_al_inicio_del_mes_t
+Términos de intercambio,3,Mensual; publicación aproximada t+2,Último cambio utilizable al inicio de t: t-3
+Remesas,2,Mensual; publicación posterior al mes de referencia,Supuesto conservador: t-2
+Diferencial de tasas,1,Tasas observables durante el mes,Promedios completos conocidos para t-1
+Déficit fiscal,3,Mensual con rezago y posibles revisiones,Supuesto conservador: t-3
+Dólar amplio,1,Diaria,Promedio completo conocido para t-1
+VIX,1,Diaria,Promedio completo conocido para t-1
+Riesgo soberano EMBIG Colombia,1,Diaria,Promedio completo conocido para t-1
+Reservas internacionales,2,Mensual; publicación posterior al cierre,Supuesto conservador: t-2
+Balanza comercial cambiaria,2,Mensual; publicación posterior al cierre,Supuesto conservador: t-2
+Flujos netos de capital,2,Mensual; publicación posterior al cierre,Supuesto conservador: t-2
+Diferencial de compensación inflacionaria 5 años,1,Curvas diarias,Promedios completos conocidos para t-1
+Monedas regionales,1,Tipos de cambio mensuales,Promedios completos conocidos para t-1
