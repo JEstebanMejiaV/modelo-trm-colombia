@@ -115,23 +115,33 @@ def save(fig: plt.Figure, filename: str) -> None:
     plt.close(fig)
 
 
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as source:
-        for block in iter(lambda: source.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+def text_sha256(path: Path) -> str:
+    content = path.read_text(encoding="utf-8").replace("\r\n", "\n").replace("\r", "\n")
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
+def csv_semantic_sha256(path: Path) -> str:
+    data = pd.read_csv(path)
+    canonical = data.to_csv(
+        index=False,
+        lineterminator="\n",
+        float_format="%.10g",
+        na_rep="",
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def write_metadata() -> None:
     metadata = {
-        "version": 1,
+        "version": 2,
+        "hash_method": "CSV canónico con 10 cifras significativas",
         "generator": {
             "path": "src/build_charts.py",
-            "sha256": sha256(Path(__file__).resolve()),
+            "sha256": text_sha256(Path(__file__).resolve()),
         },
         "sources": {
-            path.relative_to(ROOT).as_posix(): sha256(path) for path in SOURCE_FILES
+            path.relative_to(ROOT).as_posix(): csv_semantic_sha256(path)
+            for path in SOURCE_FILES
         },
         "images": {
             filename: {"width": 1920, "height": 1080} for filename in IMAGE_FILES

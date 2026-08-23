@@ -1,6 +1,6 @@
 # Gráficos explicativos del modelo de TRM
 
-Esta carpeta presenta cuatro lecturas visuales del modelo fuera del archivo Excel. Cada imagen se reconstruye con `python src/build_charts.py` a partir de los CSV versionados en `results/`; no contiene cifras digitadas manualmente. `metadata.json` registra las huellas de las fuentes y del generador, y `python src/check_charts.py` verifica que los PNG estén sincronizados.
+Esta carpeta presenta cuatro lecturas visuales del modelo fuera del archivo Excel. Cada imagen se reconstruye con `python src/build_charts.py` a partir de los CSV versionados en `results/`; no contiene cifras digitadas manualmente. `metadata.json` registra las huellas de las fuentes y del generador, y `python src/check_charts.py` verifica que los PNG estén sincronizados. Los CSV se normalizan a diez cifras significativas antes de calcular la huella para tolerar diferencias irrelevantes de plataforma sin ocultar cambios visibles en los gráficos.
 
 ## 1. Peso explicativo de los factores
 

@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 
+import pandas as pd
 from PIL import Image
 
 
@@ -12,29 +13,37 @@ CHARTS = ROOT / "graficos"
 METADATA = CHARTS / "metadata.json"
 
 
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as source:
-        for block in iter(lambda: source.read(1024 * 1024), b""):
-            digest.update(block)
-    return digest.hexdigest()
+def text_sha256(path: Path) -> str:
+    content = path.read_text(encoding="utf-8").replace("\r\n", "\n").replace("\r", "\n")
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+
+def csv_semantic_sha256(path: Path) -> str:
+    data = pd.read_csv(path)
+    canonical = data.to_csv(
+        index=False,
+        lineterminator="\n",
+        float_format="%.10g",
+        na_rep="",
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def main() -> None:
     metadata = json.loads(METADATA.read_text(encoding="utf-8"))
-    if metadata.get("version") != 1:
+    if metadata.get("version") != 2:
         raise AssertionError("Versión desconocida de metadata de gráficos.")
 
     generator = metadata["generator"]
     generator_path = ROOT / generator["path"]
-    if sha256(generator_path) != generator["sha256"]:
+    if text_sha256(generator_path) != generator["sha256"]:
         raise AssertionError(
             "Los gráficos no corresponden a la versión actual de build_charts.py."
         )
 
     for relative, expected_hash in metadata["sources"].items():
         source = ROOT / relative
-        if sha256(source) != expected_hash:
+        if csv_semantic_sha256(source) != expected_hash:
             raise AssertionError(
                 f"Los gráficos están desactualizados frente a {relative}."
             )
