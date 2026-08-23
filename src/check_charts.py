@@ -23,7 +23,9 @@ def csv_semantic_sha256(path: Path) -> str:
     canonical = data.to_csv(
         index=False,
         lineterminator="\n",
-        float_format="%.10g",
+        # Debe coincidir con build_charts.py: precisión superior a la visible,
+        # pero estable ante ruido numérico irrelevante entre plataformas.
+        float_format="%.6g",
         na_rep="",
     )
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()

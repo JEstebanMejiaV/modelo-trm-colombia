@@ -129,7 +129,9 @@ def csv_semantic_sha256(path: Path) -> str:
     canonical = data.to_csv(
         index=False,
         lineterminator="\n",
-        float_format="%.10g",
+        # Seis cifras exceden la precisión visible de los gráficos y evitan
+        # falsos cambios por diferencias de BLAS/plataforma en la estimación.
+        float_format="%.6g",
         na_rep="",
     )
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -138,7 +140,7 @@ def csv_semantic_sha256(path: Path) -> str:
 def write_metadata() -> None:
     metadata = {
         "version": 2,
-        "hash_method": "CSV canónico con 10 cifras significativas",
+        "hash_method": "CSV canónico con 6 cifras significativas",
         "generator": {
             "path": "src/build_charts.py",
             "sha256": text_sha256(Path(__file__).resolve()),
