@@ -262,8 +262,23 @@ Las instantáneas fuente están en `data/raw`. Sus enlaces y tratamientos aparec
 
 Estas notas documentan procedencia y uso técnico; no sustituyen una revisión jurídica si se planea redistribución comercial.
 
-## Limitaciones y extensiones abiertas
+## Limitaciones y extensiones
 
-1. Completar la descarga histórica ALFRED y conseguir vintages de BanRep/BCRPData —si los proveedores los publican— antes de rotular la evaluación como backtest genuino.
-2. Ampliar la validación temporal, aplicar comparaciones Diebold–Mariano y revisar modelos más parsimoniosos de pronóstico.
-3. Modelar explícitamente volatilidad y colas señaladas por ARCH-LM y Jarque–Bera, y explorar no linealidades sin asumir que RESET las confirma.
+### Completado
+
+- Vintages ALFRED descargados (288/288 via API FRED). Cobertura: 3/12 factores aptos para backtest genuino. BanRep y BCRPData no publican vintages.
+- Diebold-Mariano aplicado: p = 0.21, no se rechaza igualdad de capacidad predictiva entre el pronóstico y la caminata aleatoria.
+- Modelos parsimoniosos evaluados: el top-3 factores tiene mejor BIC y MAPE que los 12 completos.
+- GARCH(1,1) ajustado: persistencia 0.94, volatilidad incondicional 2.12%/mes.
+- Rolling window (120 meses): 10/14 coeficientes inestables entre mitades.
+- Pronóstico multihorizonte (h=1,2,3,6): R² negativo vs caminata en todos los horizontes.
+- Threshold regression: sin no-linealidades significativas (VIX, dólar, EMBIG como umbrales).
+- Variables candidatas evaluadas (MICH, NFCI, T10Y2Y, STLFSI): ninguna aporta al pronóstico.
+- Modelo combinado (interacciones + asimetría + outliers): R² 66%, ARCH resuelto.
+
+### Pendiente
+
+1. Adoptar formalmente el modelo combinado como especificación activa (requiere actualizar el pipeline principal).
+2. Completar el backtest genuino para los 6 factores con vintages parciales (usar los CSV FRED descargados para recalcular pronósticos reales).
+3. Conseguir vintages de BanRep/BCRPData si los proveedores eventualmente los publican.
+4. Implementar scheduled snapshots (GitHub Actions cron) para archivo mensual hacia adelante.

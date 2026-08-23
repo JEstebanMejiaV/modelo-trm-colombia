@@ -1,16 +1,42 @@
 # Código de estimación y construcción del archivo Excel
 
-Esta carpeta contiene siete programas con responsabilidades separadas:
+Esta carpeta contiene el pipeline de estimación, validación y documentación del modelo. Los scripts se organizan en dos niveles: el pipeline principal (que produce los resultados versionados) y los scripts de exploración (que informan decisiones pero no forman parte de la corrida oficial).
+
+## Pipeline principal
 
 | Archivo | Función |
 |---|---|
-| `estimate_model.py` | Lee las fuentes, construye la base mensual, estima los modelos base, ampliado y de pronóstico, compara factores regionales 3–4, calcula validaciones, diagnósticos, pesos Shapley, intervalos por bloques y estabilidad por submuestras, y actualiza `data/` y `results/`. |
-| `archive_vintage.py` | Crea snapshots inmutables por fecha de origen, recupera vintages históricos disponibles y genera la matriz de cobertura del pronóstico. |
-| `check_outputs.py` | Comprueba integridad de datos, muestra común, conciliación Shapley y sincronización entre los CSV y el archivo Excel. |
-| `check_reproducibility.py` | Compara los resultados regenerados con la versión comprometida usando tolerancias numéricas, para no confundir ruido de plataforma con un cambio econométrico. |
-| `build_workbook.mjs` | Construye el archivo Excel, genera las 14 hojas, exporta vistas previas y actualiza `deliverables/modelo_trm_colombia.xlsx`. |
-| `build_charts.py` | Construye cinco gráficos PNG independientes desde los CSV de `results/` y los guarda en `graficos/`. |
-| `check_charts.py` | Verifica que los PNG tengan el formato esperado y correspondan a los CSV y al generador actual mediante huellas SHA-256. |
+| `estimate_model.py` | Orquestador principal. Importa del paquete `model/`, estima los modelos base, ampliado y de pronóstico, calcula Shapley, Diebold-Mariano, modelos parsimoniosos y actualiza `data/`, `results/` y `README.md`. |
+| `archive_vintage.py` | Crea snapshots inmutables por fecha de origen. Descarga vintages FRED via API (`FRED_API_KEY`) y genera la matriz de cobertura. |
+| `build_charts.py` | Construye cinco gráficos PNG desde los CSV de `results/` y los guarda en `graficos/`. |
+| `build_workbook.mjs` | Construye el archivo Excel de 14 hojas y actualiza `deliverables/modelo_trm_colombia.xlsx`. |
+| `check_outputs.py` | Comprueba integridad: conciliación Shapley, sincronización CSV-Excel, cobertura de vintages. |
+| `check_reproducibility.py` | Compara resultados regenerados vs versión comprometida con tolerancias numéricas. |
+| `check_charts.py` | Verifica que los PNG correspondan a los CSV y al generador actual via SHA-256. |
+
+## Scripts de exploración
+
+| Archivo | Función |
+|---|---|
+| `extended_forecast.py` | Pronóstico parsimonioso (top-3), backtest genuino parcial, GARCH(1,1) y forecast combination. |
+| `advanced_diagnostics.py` | Rolling window (120 meses), pronóstico multihorizonte (h=1,2,3,6) y threshold regression. |
+| `improve_explanation_2.py` | PDL del dólar amplio, intervención cambiaria BanRep y estimación robusta (Huber, LAD). |
+| `explore_new_variables.py` | Evalúa candidatas externas: expectativas de inflación, NFCI, pendiente de curva, estrés financiero. |
+
+## Paquete `model/`
+
+Toda la lógica de estimación está modularizada en `src/model/`:
+
+| Módulo | Responsabilidad |
+|---|---|
+| `config.py` | Constantes, especificaciones de factores, dataclasses |
+| `loaders.py` | Carga de datos raw y `build_dataset()` |
+| `transforms.py` | Diseño matricial, selección de rezagos |
+| `estimation.py` | OLS robusto, ARDL, ECM, diagnósticos |
+| `validation.py` | Validación expansiva y contribuciones |
+| `shapley.py` | Descomposición Shapley exacta + bootstrap |
+| `bei.py` | Estacionariedad, tendencias y robustez del BEI |
+| `readme_sync.py` | Actualización automática de bloques del README |
 
 ## Flujo del proyecto
 

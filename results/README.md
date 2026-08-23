@@ -54,9 +54,18 @@ Modelo que solo usa información disponible al inicio del mes objetivo. Ningún 
 | `validacion_metricas_pronostico.csv` | MAPE, acierto y R² vs caminata aleatoria |
 | `validacion_predicciones_pronostico.csv` | Predicciones mensuales pseudo-tiempo-real |
 | `calendario_disponibilidad_pronostico.csv` | Rezago conservador de cada factor |
-| `cobertura_vintages_pronostico.csv` | Cobertura de vintages por factor (0/12 completos) |
+| `cobertura_vintages_pronostico.csv` | Cobertura de vintages por factor (3/12 completos) |
+| `diebold_mariano_pronostico.csv` | Test DM vs caminata (p = 0.21, no rechaza igualdad) |
+| `comparacion_parsimoniosos_pronostico.csv` | Top-3, top-5, top-7 y 12 factores comparados |
+| `coeficientes_pronostico_parsimonioso.csv` | Coeficientes del top-3 (monedas, dólar, EMBIG) |
+| `validacion_metricas_parsimonioso.csv` | MAPE 2.57% del pronóstico parsimonioso |
+| `validacion_predicciones_parsimonioso.csv` | Predicciones mensuales del top-3 |
+| `diagnosticos_pronostico_parsimonioso.csv` | Pruebas residuales del top-3 |
+| `backtest_genuino_parcial.csv` | Revisiones de DTWEXBGS y VIXCLS (vintages vs último) |
+| `comparacion_forecast_combination.csv` | 50/50 e inversa-MSE vs caminata |
+| `pronostico_multihorizonte.csv` | R² vs caminata en h=1,2,3,6 meses (todos negativos) |
 
-La validación es **pseudo-tiempo-real**: respeta el calendario de publicación pero usa el último vintage disponible de cada serie.
+La validación es **pseudo-tiempo-real**: respeta el calendario de publicación pero usa el último vintage disponible de cada serie. El test Diebold-Mariano no rechaza igualdad de capacidad predictiva al 5%.
 
 ## `robustez/` — Pruebas de robustez y contraste ECM
 
@@ -74,6 +83,16 @@ Análisis complementarios que informan decisiones de especificación pero no pro
 | `coeficientes_largo_plazo_ecm.csv` | Vector cointegrante normalizado (exploratorio) |
 | `seleccion_rezagos_ecm.csv` | Grid AIC/BIC/HQIC del ARDL |
 | `diagnosticos_ecm.csv` | Pruebas residuales del contraste ECM |
+| `rolling_window_coeficientes.csv` | 120 ventanas × 14 coeficientes del ampliado |
+| `rolling_window_estabilidad.csv` | Resumen: std, CV, cambios de signo (10/14 inestables) |
+| `threshold_regression.csv` | Test de Chow con VIX, dólar y EMBIG como umbrales |
+| `garch_residuos_ampliado.csv` | GARCH(1,1): persistencia 0.94, vol 2.12%/mes |
+| `comparacion_estimadores_robustos.csv` | OLS vs Huber-T vs LAD |
+| `coeficientes_robustos_vs_ols.csv` | Coeficientes clave por estimador |
+| `outliers_huber_identificados.csv` | 35 meses downweighted por Huber |
+| `comparacion_mejoras_explicacion.csv` | 5 extensiones: interacciones, asimetría, PCA, outliers, combinado |
+| `mejoras_explicacion_parte2.csv` | PDL dólar, intervención, estimación robusta |
+| `evaluacion_variables_candidatas.csv` | MICH, NFCI, T10Y2Y, STLFSI (ninguna aporta) |
 
 El ECM es exploratorio: la prueba bounds no confirma cointegración al 5%, por lo que el modelo principal permanece en diferencias.
 
