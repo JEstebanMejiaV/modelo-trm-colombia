@@ -123,6 +123,10 @@ const expandedContributions = await readCsv("results/contribuciones_modelo_ampli
 const expandedValidationMetrics = await readCsv("results/validacion_metricas_modelo_ampliado.csv");
 const expandedValidationPredictions = await readCsv("results/validacion_predicciones_modelo_ampliado.csv");
 const explanatoryWeights = await readCsv("results/pesos_explicativos_modelo_ampliado.csv");
+const shapleyIntervals = await readCsv("results/intervalos_bootstrap_pesos_shapley.csv");
+const stabilityDetail = await readCsv("results/estabilidad_submuestras_modelo_ampliado.csv");
+const stabilitySummary = await readCsv("results/estabilidad_submuestras_resumen.csv");
+const vintageCoverage = await readCsv("results/cobertura_vintages_pronostico.csv");
 const modelComparison = await readCsv("results/comparacion_modelos.csv");
 const regionalComparison = await readCsv("results/comparacion_factor_regional.csv");
 const forecastAvailability = await readCsv("results/calendario_disponibilidad_pronostico.csv");
@@ -204,6 +208,7 @@ const sheetNames = [
   "Modelo_principal",
   "Modelo_ampliado",
   "Pesos_explicativos",
+  "Robustez",
   "Validacion",
   "Pronostico",
   "ECM_exploratorio",
@@ -358,7 +363,7 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
     ["4", "El resultado positivo de remesas puede reflejar respuesta de los hogares a depreciaciones u otros shocks simultáneos."],
     ["5", "La prueba bounds no confirma cointegración al 5%; el ECM se muestra solo como contraste exploratorio."],
     ["6", "El déficit fiscal y los demás factores deben interpretarse con sus intervalos de confianza; el signo aislado no basta."],
-    ["7", "En el ampliado, ARCH-LM y RESET rechazan al 5%: quedan pendientes volatilidad condicional y forma funcional."],
+    ["7", "En el ampliado, ARCH-LM y Jarque–Bera rechazan al 5%; RESET no rechaza la forma funcional."],
     ["8", "El backtest del pronóstico usa el último vintage disponible: respeta rezagos, pero sigue siendo pseudo-tiempo-real hasta archivar versiones históricas de cada publicación."],
   ];
   s.mergeCells("B30:F30"); s.mergeCells("B31:F31"); s.mergeCells("B32:F32");
@@ -924,6 +929,114 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
   s.freezePanes.freezeColumns(2);
 }
 
+// Robustez: intervalos, submuestras y cobertura de vintages (sin gráficos)
+{
+  const s = sheets.Robustez;
+  title(s, "A1:P1", "Robustez de los pesos y cobertura de datos en tiempo real");
+  subtitle(
+    s,
+    "A2:P3",
+    "Los intervalos Shapley usan 200 réplicas de bloques circulares de 12 meses. Las submuestras revelan cuánto cambian pesos, rangos y signos. La cobertura de vintages sigue incompleta: el ejercicio de pronóstico continúa siendo pseudo-tiempo-real.",
+    COLORS.amber
+  );
+
+  section(s, "A5:H5", "Incertidumbre de los pesos Shapley");
+  s.getRange("A6:H6").values = [[
+    "Factor", "Peso puntual", "Mediana bootstrap", "IC 95% inferior", "IC 95% superior", "Ancho IC", "Prob. top 3", "Réplicas",
+  ]];
+  const intervalRows = [...shapleyIntervals].sort((a, b) => n(b.peso_puntual_pct) - n(a.peso_puntual_pct));
+  s.getRange(`A7:H${6 + intervalRows.length}`).values = intervalRows.map((r) => [
+    r.factor,
+    n(r.peso_puntual_pct) / 100,
+    n(r.peso_bootstrap_mediana_pct) / 100,
+    n(r.ic_95_inferior_pct) / 100,
+    n(r.ic_95_superior_pct) / 100,
+    (n(r.ic_95_superior_pct) - n(r.ic_95_inferior_pct)) / 100,
+    n(r.probabilidad_top3_pct) / 100,
+    n(r.replicas_validas),
+  ]);
+  header(s, "A6:H6");
+  addTable(s, `A6:H${6 + intervalRows.length}`, "IntervalosShapleyTable");
+  s.getRange(`B7:G${6 + intervalRows.length}`).format.numberFormat = "0.0%";
+  s.getRange(`A7:H${6 + intervalRows.length}`).format.rowHeight = 28;
+
+  section(s, "J5:P5", "Estabilidad por submuestras");
+  s.getRange("J6:P6").values = [[
+    "Submuestra", "Obs.", "R² ajustado", "Spearman rangos", "Mediana |Δ peso|", "Máx. |Δ peso|", "Mismo signo / 12",
+  ]];
+  s.getRange(`J7:P${6 + stabilitySummary.length}`).values = stabilitySummary.map((r) => [
+    r.submuestra,
+    n(r.observaciones),
+    n(r.r2_ajustado),
+    n(r.correlacion_spearman_rangos_vs_completa),
+    n(r.mediana_diferencia_abs_peso_pp) / 100,
+    n(r.max_diferencia_abs_peso_pp) / 100,
+    n(r.factores_mismo_signo_de_12),
+  ]);
+  header(s, "J6:P6");
+  addTable(s, `J6:P${6 + stabilitySummary.length}`, "EstabilidadResumenTable");
+  s.getRange(`L7:O${6 + stabilitySummary.length}`).format.numberFormat = "0.0%";
+  s.getRange(`J7:P${6 + stabilitySummary.length}`).format.rowHeight = 31;
+
+  section(s, "A21:G21", "Peso de cada factor por submuestra");
+  const subSamples = stabilitySummary.map((r) => r.submuestra);
+  s.getRange("A22:G22").values = [["Factor", "Grupo", ...subSamples]];
+  const stabilityByFactor = intervalRows.map((interval) => {
+    const factorRows = stabilityDetail.filter((r) => r.factor === interval.factor);
+    const bySubsample = Object.fromEntries(factorRows.map((r) => [r.submuestra, n(r.peso_entre_factores_pct) / 100]));
+    const group = factorRows[0]?.grupo ?? "";
+    return [interval.factor, group, ...subSamples.map((label) => bySubsample[label] ?? null)];
+  });
+  s.getRange(`A23:G${22 + stabilityByFactor.length}`).values = stabilityByFactor;
+  header(s, "A22:G22");
+  addTable(s, `A22:G${22 + stabilityByFactor.length}`, "PesosSubmuestrasTable");
+  s.getRange(`C23:G${22 + stabilityByFactor.length}`).format.numberFormat = "0.0%";
+  s.getRange(`A23:G${22 + stabilityByFactor.length}`).format.rowHeight = 28;
+
+  section(s, "I21:P21", "Cobertura de vintages en los 48 orígenes");
+  s.getRange("I22:P22").values = [[
+    "Factor", "Estado", "Orígenes", "Cobertura", "Apto", "Archivo desde", "Fuentes", "Detalle",
+  ]];
+  s.getRange(`I23:P${22 + vintageCoverage.length}`).values = vintageCoverage.map((r) => [
+    r.factor,
+    r.estado_vintages_2022_05_a_2026_04,
+    n(r.origenes_completos_de_48),
+    n(r.cobertura_pct) / 100,
+    String(r.apto_backtest_genuino).toLowerCase() === "true" ? "Sí" : "No",
+    r.archivo_hacia_adelante_desde,
+    r.fuentes,
+    r.detalle,
+  ]);
+  header(s, "I22:P22");
+  addTable(s, `I22:P${22 + vintageCoverage.length}`, "CoberturaVintagesTable");
+  s.getRange(`L23:L${22 + vintageCoverage.length}`).format.numberFormat = "0.0%";
+  s.getRange(`I23:P${22 + vintageCoverage.length}`).format.rowHeight = 42;
+  for (let i = 0; i < vintageCoverage.length; i += 1) {
+    const row = 23 + i;
+    const complete = String(vintageCoverage[i].apto_backtest_genuino).toLowerCase() === "true";
+    s.getRange(`J${row}:M${row}`).format.fill = complete ? COLORS.green : COLORS.amber;
+  }
+
+  subtitle(
+    s,
+    "A37:P39",
+    "Lectura: intervalos amplios o cambios de signo entre cortes indican incertidumbre de asignación, aunque el peso puntual sea alto. Tener 48 vintages en un factor no basta para un backtest genuino: todos los factores utilizados en cada origen deben estar completos.",
+    COLORS.paleGray
+  );
+  s.getRange("A:A").format.columnWidth = 34;
+  s.getRange("B:B").format.columnWidth = 22;
+  s.getRange("C:H").format.columnWidth = 16;
+  s.getRange("I:I").format.columnWidth = 34;
+  s.getRange("J:J").format.columnWidth = 25;
+  s.getRange("K:M").format.columnWidth = 15;
+  s.getRange("N:N").format.columnWidth = 15;
+  s.getRange("O:O").format.columnWidth = 28;
+  s.getRange("P:P").format.columnWidth = 42;
+  s.getRange("A6:P39").format.wrapText = true;
+  s.freezePanes.freezeRows(6);
+  s.freezePanes.freezeColumns(2);
+}
+
 // Validación
 {
   const s = sheets.Validacion;
@@ -1223,7 +1336,7 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
 {
   const s = sheets.Diagnosticos;
   title(s, "A1:N1", "Diagnósticos y selección del modelo");
-  subtitle(s, "A2:N3", "Las pruebas se interpretan al 5%. No se detecta autocorrelación residual. El ampliado presenta ARCH y RESET rechaza su forma funcional al 5%; ambos modelos rechazan normalidad. HAC fortalece la inferencia de la media, pero no resuelve esas limitaciones.");
+  subtitle(s, "A2:N3", "Las pruebas se interpretan al 5%. No se detecta autocorrelación residual. El ampliado presenta ARCH y residuos no normales, mientras RESET no rechaza la forma funcional. HAC fortalece la inferencia de la media, pero no modela la volatilidad condicional.");
 
   section(s, "A5:D5", "Diagnósticos del modelo principal");
   s.getRange("A6:D6").values = [["Prueba", "Estadístico", "p-valor", "Lectura"]];
@@ -1401,6 +1514,7 @@ for (const spec of [
   { range: "Modelo_principal!A5:N22", rows: 18, cols: 14 },
   { range: "Modelo_ampliado!A5:N22", rows: 18, cols: 14 },
   { range: "Pesos_explicativos!A1:H24", rows: 24, cols: 8 },
+  { range: "Robustez!A1:P39", rows: 39, cols: 16 },
   { range: "Validacion!A5:J16", rows: 12, cols: 10 },
   { range: "Pronostico!A5:P32", rows: 28, cols: 16 },
 ]) {
@@ -1421,6 +1535,7 @@ const renderSpecs = [
   ["Modelo_principal", "A1:W32"],
   ["Modelo_ampliado", "A1:W36"],
   ["Pesos_explicativos", "A1:R30"],
+  ["Robustez", "A1:P39"],
   ["Validacion", "A1:R30"],
   ["Pronostico", "A1:P42"],
   ["ECM_exploratorio", "A1:H30"],

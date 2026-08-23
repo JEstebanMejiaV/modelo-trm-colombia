@@ -1,0 +1,180 @@
+{
+  "created_utc": "2026-08-23T12:56:20.077759+00:00",
+  "files": [
+    {
+      "bytes": 712302,
+      "id": "banrep_trm_1",
+      "provider": "Banco de la República",
+      "raw_path": "data/raw/trm_diaria_banrep.json",
+      "sha256": "aac047f956d4bb568d2f3bcf65728ba0584ccda15d823ce76bfd88332480adc9",
+      "storage": "referencia_inmutable_al_raw_versionado",
+      "url": "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=1"
+    },
+    {
+      "bytes": 559872,
+      "id": "banrep_tasa_politica_59",
+      "provider": "Banco de la República",
+      "raw_path": "data/raw/tasa_politica_diaria_banrep.json",
+      "sha256": "dcbea3fd29a891065efaccf237c2d7018c597749200ec535665a7a9cb1f0cf54",
+      "storage": "referencia_inmutable_al_raw_versionado",
+      "url": "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=59"
+    },
+    {
+      "bytes": 19562,
+      "id": "banrep_remesas_15363",
+      "provider": "Banco de la República",
+      "raw_path": "data/raw/remesas_mensuales_banrep.json",
+      "sha256": "80b40fbc1f81adc99354f063ef44394d0c68307965c3f8999a6c250d27c9ca03",
+      "storage": "referencia_inmutable_al_raw_versionado",
+      "url": "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15363"
+    },
+    {
+      "bytes": 134739,
+      "id": "banrep_terminos_intercambio_15360",
+      "provider": "Banco de la República",
+      "raw_path": "data/raw/series_15360_15368.json",
+      "sha256": "b2d367697244f7078188e0ce65594b9cd0bbfeb6fd0f294b69f10b33af46d942",
+      "storage": "referencia_inmutable_al_raw_versionado",
+      "url": "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15360"
+    },
+    {
+      "bytes": 51743,
+      "id": "banrep_reservas_15053",
+      "provider": "Banco de la República",
+      "raw_path": "data/raw/reservas_netas_sin_flar_banrep.json",
+      "sha256": "531c68dee220b436bd567e1feb9f75ec0498759e25fd2707df812613c789e4cd",
+      "storage": "referencia_inmutable_al_raw_versionado",
+      "url": "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15053"
+    },
+    {
+      "bytes": 312925,
+      "id": "banrep_tes_pesos_5y_15273",
+      "provider": "Banco de la República",
+      "raw_path": "data/raw/tes_5y_pesos_banrep.json",
+      "sha256": "8981ce4025273496491f2f4fac6c145e6f395aefed5b8840f8586187984757e9",
+      "storage": "referencia_inmutable_al_raw_versionado",
+      "url": "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15273"
+    },
+    {
+      "bytes": 282323,
+      "id": "banrep_tes_uvr_5y_15276",
+      "provider": "Banco de la República",
+      "raw_path": "data/raw/tes_5y_uvr_banrep.json",
+      "sha256": "e5655364696e99ab68256e56e17613aee1fa08c0bbb50b47480a2903bcb03150",
+      "storage": "referencia_inmutable_al_raw_versionado",
+      "url": "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15276"
+    },
+    {
+      "bytes": 21635,
+      "id": "banrep_balanza_cambiaria_16702",
+      "provider": "Banco de la República",
+      "raw_path": "data/raw/balanza_comercial_cambiaria_banrep.json",
+      "sha256": "03d43fb1346964fee90dddc367f0fdf21659683e85cf3b81df1b6ad08a19131c",
+      "storage": "referencia_inmutable_al_raw_versionado",
+      "url": "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=16702"
+    },
+    {
+      "bytes": 21730,
+      "id": "banrep_flujos_capital_16706",
+      "provider": "Banco de la República",
+      "raw_path": "data/raw/flujos_capital_totales_banrep.json",
+      "sha256": "5af1678f1728e7cb38c5f211986b872a095d96c1fa4ee591bdd649dc008493ac",
+      "storage": "referencia_inmutable_al_raw_versionado",
+      "url": "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=16706"
+    },
+    {
+      "bytes": 13927,
+      "id": "fred_fedfunds",
+      "provider": "FRED/ALFRED",
+      "raw_path": "data/raw/fed_funds_mensual_fred.csv",
+      "sha256": "8c320a5e17fc8f0b41a42b537309f261371f7926563f829411af4a9358a4db44",
+      "storage": "referencia_inmutable_al_raw_versionado",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=FEDFUNDS"
+    },
+    {
+      "bytes": 103845,
+      "id": "fred_dtwexbgs",
+      "provider": "FRED/ALFRED",
+      "raw_path": "data/raw/dolar_amplio_diario_fred.csv",
+      "sha256": "099b0ab4007d2060e319d5bef35d749a3bf397c5347c74703b8e9a626a99c2ae",
+      "storage": "referencia_inmutable_al_raw_versionado",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=DTWEXBGS"
+    },
+    {
+      "bytes": 160932,
+      "id": "fred_vixcls",
+      "provider": "FRED/ALFRED",
+      "raw_path": "data/raw/vix_diario_fred.csv",
+      "sha256": "a762b0aafe8676f205a98e06a0704a0b856e0ab3f1fd66bf2fd3503639a56f3b",
+      "storage": "referencia_inmutable_al_raw_versionado",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS"
+    },
+    {
+      "bytes": 25083,
+      "id": "fred_brl",
+      "provider": "FRED/ALFRED",
+      "raw_path": "data/raw/brl_usd_mensual_fred.csv",
+      "sha256": "107fc311e141d1b5e3835be6d80e6746df3b704a05fc1352caa5b2924f184af6",
+      "storage": "referencia_inmutable_al_raw_versionado",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=CCUSMA02BRM618N"
+    },
+    {
+      "bytes": 22853,
+      "id": "fred_clp",
+      "provider": "FRED/ALFRED",
+      "raw_path": "data/raw/clp_usd_mensual_fred.csv",
+      "sha256": "704e6e46f785428e0c71c86ebd1f015515e666d3c281b9c91af7b42e00bc0699",
+      "storage": "referencia_inmutable_al_raw_versionado",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=CCUSMA02CLM618N"
+    },
+    {
+      "bytes": 25373,
+      "id": "fred_mxn",
+      "provider": "FRED/ALFRED",
+      "raw_path": "data/raw/mxn_usd_mensual_fred.csv",
+      "sha256": "82b32fa5c3b2cad3139d7bc6b2f0225da2d063cc68f98e00ce177066f8b49bf0",
+      "storage": "referencia_inmutable_al_raw_versionado",
+      "url": "https://fred.stlouisfed.org/graph/fredgraph.csv?id=CCUSMA02MXM618N"
+    },
+    {
+      "bytes": 15059197,
+      "id": "fed_gsw_bkeven05",
+      "provider": "Federal Reserve Board",
+      "raw_path": "data/raw/bei_5y_eeuu_diario_fed.csv",
+      "sha256": "53dd5e773eedf4cdf89afa6ce9779b728dcc9d947358fb79e6af4dd2b7e42214",
+      "storage": "referencia_inmutable_al_raw_versionado",
+      "url": "https://www.federalreserve.gov/data/yield-curve-tables/feds200805.csv"
+    },
+    {
+      "bytes": 222963,
+      "id": "bcrp_embig_colombia_pd04715xd",
+      "provider": "BCRPData; fuentes originales Reuters/J.P. Morgan",
+      "raw_path": "data/raw/embig_colombia_diario_bcrp.json",
+      "sha256": "2f7317ea502d62f79af2fc24de31ce749c5e768170316dfe310accc3b44c9191",
+      "storage": "referencia_inmutable_al_raw_versionado",
+      "url": "https://estadisticas.bcrp.gob.pe/estadisticas/series/api/PD04715XD/json/2005-12-1/{origin_date_bcrp}/esp"
+    },
+    {
+      "bytes": 12716,
+      "id": "bcrp_pen_pn01207pm",
+      "provider": "BCRPData",
+      "raw_path": "data/raw/pen_usd_mensual_bcrp.json",
+      "sha256": "5a511e23fcacb5361f6883f2b76a8ab7d949c2094b8365ff388043bac34dc6c9",
+      "storage": "referencia_inmutable_al_raw_versionado",
+      "url": "https://estadisticas.bcrp.gob.pe/estadisticas/series/api/PN01207PM/json/2005-12/{origin_month_bcrp}/esp"
+    },
+    {
+      "bytes": 303105,
+      "id": "minhacienda_balance_gnc",
+      "provider": "Ministerio de Hacienda y Crédito Público",
+      "raw_path": "data/raw/balance_fiscal_gnc_mensual_trimestral.xlsx",
+      "sha256": "1f36d9f1f9a5d4b56d032c3f6ba7eb2462d1d86e8e88ee63d11e82637da636b0",
+      "storage": "referencia_inmutable_al_raw_versionado",
+      "url": "https://www.minhacienda.gov.co/documents/d/portal/balance-fiscal-gnc-mensual-y-trimestral?download=true"
+    }
+  ],
+  "immutable": true,
+  "mode": "baseline",
+  "origin_date": "2026-08-23",
+  "schema_version": 1
+}

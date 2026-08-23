@@ -112,6 +112,10 @@ El bloque fijo —intercepto, dinámica seleccionada de TRM y pandemia— explic
 
 Estos pesos miden ajuste estadístico en esta muestra. No miden causalidad, importancia estructural ni el efecto de una intervención. Cuando dos factores están correlacionados, Shapley distribuye su señal compartida; por eso el peso no es igual al tamaño o a la significancia de un coeficiente.
 
+La incertidumbre se evalúa con 200 réplicas de un *bootstrap* circular de bloques de 12 meses. Los intervalos percentiles del 95% de los tres factores principales son: monedas regionales, **20,66%–34,56%**; dólar amplio, **11,87%–27,43%**; y EMBIG Colombia, **12,23%–26,21%**. Son intervalos de la asignación Shapley bajo remuestreo temporal, no intervalos de un efecto causal.
+
+La jerarquía general es estable en cinco cortes: la correlación de rangos de Spearman frente a la muestra completa va de **0,944 a 0,972**. Sin embargo, la submuestra 2020–2026 conserva el signo de solo **7 de 12** coeficientes y el mayor cambio individual de peso alcanza **6,71 p.p.**. Por eso la estabilidad de rangos no debe confundirse con estabilidad paramétrica.
+
 ## Tres monedas, cuatro monedas y PEN
 
 El PEN procede de [BCRPData, serie `PN01207PM`](https://estadisticas.bcrp.gob.pe/estadisticas/series/mensuales/resultados/PN01207PM/html) y se incorpora como soles por USD. Para cada moneda se calcula `Δln`, se estandariza con media y desviación estándar poblacional de 2006–2019 y después se toma un promedio simple. La correlación entre los factores de tres y cuatro monedas es 95,81%.
@@ -131,7 +135,7 @@ Esta ecuación pronostica la TRM promedio del mes `t` al inicio de `t`. No usa f
 
 La validación expansiva de 48 meses obtiene MAPE de **2,63%**, acierto de dirección de **47,92%** y R² frente a la caminata aleatoria de **−11,52%**. La caminata obtiene MAPE de **2,39%**. Es decir, la ecuación explicativa no se convierte automáticamente en un buen pronóstico y, con esta información, el benchmark simple sigue siendo superior.
 
-La evaluación es **pseudo-tiempo-real**: respeta el calendario de publicación, pero usa la última versión disponible de cada serie. Un backtest genuino en tiempo real requiere archivos históricos de cada *vintage* tal como se conocían en cada fecha de origen; esas revisiones pasadas no están disponibles en las instantáneas actuales. El repositorio deja esta limitación visible y registra las huellas de las descargas actuales para comenzar a archivar *vintages* reproducibles hacia adelante.
+La evaluación es **pseudo-tiempo-real**: respeta el calendario de publicación, pero usa la última versión disponible de cada serie. El repositorio ahora archiva descargas por fecha de origen y deja implementada una recuperación ALFRED reanudable; sin embargo, el proveedor cortó las conexiones individuales y el paquete multiserie se descartó por contener datos posteriores al origen. Por ello **0 de 12 factores** tienen todavía cobertura versionada completa para los 48 orígenes. Las series de BanRep y BCRPData también carecen aquí de una historia integral de revisiones. La matriz de cobertura está en `results/cobertura_vintages_pronostico.csv`.
 
 ## Corto y largo plazo: ECM exploratorio
 
@@ -192,9 +196,13 @@ Los siguientes archivos se conservan únicamente como instantáneas *raw* hereda
 - `src/estimate_model.py`: prepara los datos, estima los modelos y guarda los resultados.
 - `src/build_workbook.mjs`: construye el archivo Excel auditable a partir de los resultados.
 - `src/build_charts.py`: reconstruye los gráficos PNG independientes.
+- `src/archive_vintage.py`: crea snapshots inmutables, recupera históricos disponibles y calcula cobertura por factor.
 - `graficos/`: imágenes explicativas y guía de lectura.
+- `data/vintages/`: manifiestos fechados, catálogo histórico verificado y reglas del archivo hacia adelante.
 - `data/modelo_trm_datos_mensuales.csv`: base mensual consolidada.
 - `results/pesos_explicativos_modelo_ampliado.csv`: descomposición Shapley exacta.
+- `results/intervalos_bootstrap_pesos_shapley.csv`: intervalos de los pesos mediante bloques mensuales.
+- `results/estabilidad_submuestras_resumen.csv`: estabilidad de rangos, pesos y signos por corte temporal.
 - `results/comparacion_modelos.csv`: comparación principal–ampliado sobre la misma muestra.
 - `results/`: coeficientes, diagnósticos, pruebas, contribuciones y validación.
 
@@ -216,7 +224,7 @@ node .\src\build_workbook.mjs
 python .\src\build_charts.py
 ```
 
-Las instantáneas fuente están en `data/raw`. Sus enlaces y tratamientos aparecen en la hoja `Fuentes` del archivo Excel final; la fecha de descarga y las huellas SHA-256 de los cinco insumos nuevos se registran en `results/metadata.json`.
+Las instantáneas fuente están en `data/raw`. Sus enlaces y tratamientos aparecen en la hoja `Fuentes` del archivo Excel final; `data/vintages/2026-08-23/manifest.json` registra la referencia inicial de todas las fuentes activas y `results/metadata.json` conserva los controles clave.
 
 ## Fuentes y condiciones de uso
 
@@ -232,8 +240,7 @@ Estas notas documentan procedencia y uso técnico; no sustituyen una revisión j
 
 ## Limitaciones y extensiones abiertas
 
-1. Archivar cada descarga futura con su fecha de origen y conseguir *vintages* históricos para convertir la evaluación pseudo-tiempo-real en un backtest genuino.
-2. Añadir intervalos de incertidumbre a los pesos Shapley con *bootstrap* por bloques y comprobar estabilidad por submuestras.
-3. Ampliar la validación temporal, aplicar comparaciones Diebold–Mariano y revisar modelos más parsimoniosos de pronóstico.
-4. Modelar explícitamente volatilidad, colas y posibles no linealidades señaladas por ARCH-LM, Jarque–Bera y RESET.
-5. Evaluar el diferencial BEI en diferencias, con quiebres y tendencias, y comparar la agregación mensual separada con fechas diarias comunes.
+1. Completar la descarga histórica ALFRED y conseguir vintages de BanRep/BCRPData —si los proveedores los publican— antes de rotular la evaluación como backtest genuino.
+2. Ampliar la validación temporal, aplicar comparaciones Diebold–Mariano y revisar modelos más parsimoniosos de pronóstico.
+3. Modelar explícitamente volatilidad y colas señaladas por ARCH-LM y Jarque–Bera, y explorar no linealidades sin asumir que RESET las confirma.
+4. Evaluar el diferencial BEI en diferencias, con quiebres y tendencias, y comparar la agregación mensual separada con fechas diarias comunes.

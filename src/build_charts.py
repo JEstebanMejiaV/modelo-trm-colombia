@@ -27,6 +27,8 @@ CHARTS = ROOT / "graficos"
 
 SOURCE_FILES = [
     RESULTS / "pesos_explicativos_modelo_ampliado.csv",
+    RESULTS / "intervalos_bootstrap_pesos_shapley.csv",
+    RESULTS / "estabilidad_submuestras_resumen.csv",
     RESULTS / "comparacion_modelos.csv",
     RESULTS / "validacion_metricas_modelo_ampliado.csv",
     RESULTS / "validacion_predicciones.csv",
@@ -165,8 +167,14 @@ def write_metadata() -> None:
     )
 
 
-def chart_weights(weights: pd.DataFrame) -> None:
-    data = weights.sort_values("peso_entre_factores_pct", ascending=False).copy()
+def chart_weights(weights: pd.DataFrame, intervals: pd.DataFrame) -> None:
+    data = weights.merge(
+        intervals[
+            ["factor", "ic_95_inferior_pct", "ic_95_superior_pct"]
+        ],
+        on="factor",
+        validate="one_to_one",
+    ).sort_values("peso_entre_factores_pct", ascending=False).copy()
     data["etiqueta"] = data["factor"].map(LABELS).fillna(data["factor"])
     colors = data["grupo"].map(GROUP_COLORS)
     top_two = data.head(2)["peso_entre_factores_pct"].sum()
@@ -175,9 +183,21 @@ def chart_weights(weights: pd.DataFrame) -> None:
     fig, ax = plt.subplots(figsize=(12.8, 7.2))
     y = np.arange(len(data))
     bars = ax.barh(y, data["peso_entre_factores_pct"], color=colors, height=0.66)
+    lower_error = data["peso_entre_factores_pct"] - data["ic_95_inferior_pct"]
+    upper_error = data["ic_95_superior_pct"] - data["peso_entre_factores_pct"]
+    ax.errorbar(
+        data["peso_entre_factores_pct"],
+        y,
+        xerr=np.vstack([lower_error, upper_error]),
+        fmt="none",
+        ecolor=FOREGROUND,
+        elinewidth=1.4,
+        capsize=3,
+        zorder=3,
+    )
     ax.set_yticks(y, data["etiqueta"])
     ax.invert_yaxis()
-    ax.set_xlim(0, data["peso_entre_factores_pct"].max() * 1.23)
+    ax.set_xlim(0, data["ic_95_superior_pct"].max() * 1.18)
     ax.set_xlabel("Participación dentro del R² incremental (%)")
     ax.tick_params(axis="y", length=0)
     clean_axis(ax)
@@ -222,7 +242,7 @@ def chart_weights(weights: pd.DataFrame) -> None:
     fig.text(
         0.04,
         0.018,
-        "Descomposición Shapley/LMG exacta. Los pesos suman 100% dentro del bloque de factores; describen ajuste estadístico, no causalidad.",
+        "Barras: peso Shapley/LMG exacto. Bigotes: intervalo percentil 95% con 200 réplicas de bloques circulares de 12 meses. Asociación, no causalidad.",
         color=MUTED,
         fontsize=9.5,
     )
@@ -846,6 +866,9 @@ def chart_ecm(
 def main() -> None:
     CHARTS.mkdir(parents=True, exist_ok=True)
     weights = pd.read_csv(RESULTS / "pesos_explicativos_modelo_ampliado.csv")
+    shapley_intervals = pd.read_csv(
+        RESULTS / "intervalos_bootstrap_pesos_shapley.csv"
+    )
     comparison = pd.read_csv(RESULTS / "comparacion_modelos.csv")
     validation = pd.read_csv(RESULTS / "validacion_metricas_modelo_ampliado.csv")
     base_predictions = pd.read_csv(RESULTS / "validacion_predicciones.csv")
@@ -864,7 +887,7 @@ def main() -> None:
     bounds = pd.read_csv(RESULTS / "bounds_resumen.csv")
 
     configure_style()
-    chart_weights(weights)
+    chart_weights(weights, shapley_intervals)
     chart_performance(comparison, validation, forecast_validation, regional_comparison)
     chart_validation(base_predictions, expanded_predictions, forecast_predictions)
     chart_standardized_effects(weights, coefficients, contributions)

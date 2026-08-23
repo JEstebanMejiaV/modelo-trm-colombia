@@ -6,7 +6,7 @@ Esta carpeta presenta cinco lecturas visuales del modelo fuera del archivo Excel
 
 ![Peso explicativo Shapley](01_pesos_explicativos.png)
 
-Ordena los 12 factores por su participación en el R² incremental asignado mediante Shapley/LMG. Los pesos suman 100% dentro del bloque de factores. No son porcentajes causales del precio del dólar: dependen de la muestra, la especificación y la información compartida entre variables correlacionadas.
+Ordena los 12 factores por su participación en el R² incremental asignado mediante Shapley/LMG. Los bigotes añaden intervalos percentiles del 95% obtenidos con 200 réplicas de bloques circulares de 12 meses. Los pesos suman 100% dentro del bloque de factores. No son porcentajes causales del precio del dólar: dependen de la muestra, la especificación y la información compartida entre variables correlacionadas.
 
 ## 2. Comparación de desempeño
 
@@ -48,9 +48,9 @@ El CSV de largo plazo contiene el vector cointegrante normalizado con coeficient
 - Los cinco gráficos describen asociaciones estadísticas, no causalidad.
 - Términos de intercambio, dólar amplio, VIX, EMBIG Colombia y monedas regionales usan información contemporánea realizada.
 - El factor histórico usa BRL, CLP, MXN y PEN; el pronóstico usa BRL, CLP y MXN porque obtiene menor BIC. PEN mejora el ajuste histórico, no el desempeño ex ante.
-- La evaluación con rezagos es pseudo-tiempo-real: no reconstruye las versiones de los datos que existían en cada fecha histórica.
+- La evaluación con rezagos sigue siendo pseudo-tiempo-real: el archivo hacia adelante está activo, pero 0 de 12 factores tienen cobertura histórica versionada completa para los 48 orígenes.
 - En el modelo ampliado, balanza, capitales, reservas, remesas, tasas, déficit y el diferencial de compensación inflacionaria entran rezagados, pero aun así pueden compartir choques o responder indirectamente a la propia TRM.
 - El diferencial BEI a cinco años se construye con compensaciones de mercado: combina inflación esperada con primas por riesgo inflacionario y diferencias de liquidez entre bonos nominales e indexados; no es una expectativa pura.
 - EMBIG Colombia mide una prima de riesgo soberano de mercado; su coeficiente contemporáneo también puede recoger liquidez y aversión global al riesgo.
 - La balanza comercial tiene signo estimado positivo, contrario al esperado; esto puede reflejar simultaneidad o composición de los flujos.
-- ARCH-LM y Jarque–Bera alertan sobre volatilidad condicional y colas no normales; RESET también señala posible forma funcional inadecuada en el ampliado.
+- ARCH-LM y Jarque–Bera alertan sobre volatilidad condicional y colas no normales; RESET no rechaza la forma funcional al 5% en el ampliado.

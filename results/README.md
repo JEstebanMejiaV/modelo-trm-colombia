@@ -55,6 +55,18 @@ Aplica una descomposición Shapley/LMG exacta del incremento del R² sobre el bl
 
 Shapley promedia todos los órdenes posibles de incorporación y reparte la información compartida entre variables correlacionadas. El resultado depende de la especificación, muestra y agrupación elegidas; no mide participación causal ni importancia estructural permanente.
 
+### `intervalos_bootstrap_pesos_shapley.csv`
+
+Añade incertidumbre de remuestreo a los pesos puntuales. Usa 200 réplicas de bloques circulares de 12 meses para conservar dependencia local; dentro de cada réplica aproxima la asignación Shapley con 64 permutaciones antitéticas y una semilla fija. Reporta media, mediana, intervalo percentil del 95%, probabilidad de quedar entre los tres primeros factores y los parámetros de reproducción. El peso puntual sigue siendo el Shapley exacto de 4.096 subconjuntos.
+
+Los intervalos de monedas regionales (`20,66%–34,56%`), dólar amplio (`11,87%–27,43%`) y EMBIG Colombia (`12,23%–26,21%`) se solapan. Esto respalda que el grupo dominante es robusto, pero no un orden exacto e inmutable entre sus integrantes.
+
+### `estabilidad_submuestras_modelo_ampliado.csv` y `estabilidad_submuestras_resumen.csv`
+
+Reestiman la especificación ampliada en la muestra completa, ambas mitades, prepandemia y 2020 en adelante. El detalle incluye coeficiente, p-valor HAC, Shapley exacto, rango, cambio de peso y coincidencia de signo. El resumen reporta R² ajustado, correlación de rangos de Spearman y desviaciones absolutas frente a la muestra completa.
+
+La correlación de rangos permanece entre `0,944` y `0,972`. No obstante, 2020–2026 conserva el signo de solo 7 de 12 coeficientes y registra un cambio máximo de peso de `6,71 p.p.`. La importancia relativa es más estable que los signos parciales; ambos resultados deben mostrarse juntos.
+
 ## Comparación de modelos
 
 ### `comparacion_modelos.csv`
@@ -95,7 +107,11 @@ Miden una ventana expansiva de 48 meses para el pronóstico y la caminata aleato
 
 Incluye las mismas pruebas residuales del resto de ecuaciones. No rechaza autocorrelación, ARCH, RESET ni inestabilidad al 5%; Jarque–Bera sí rechaza normalidad.
 
-La validación respeta rezagos de publicación, pero usa la versión más reciente disponible de cada serie. Se denomina **pseudo-tiempo-real**: un backtest genuino exige los *vintages* históricos que realmente existían en cada fecha de origen.
+La validación respeta rezagos de publicación, pero usa la versión más reciente disponible de cada serie. Se denomina **pseudo-tiempo-real**: `cobertura_vintages_pronostico.csv` muestra que 0 de 12 factores tienen los 48 orígenes versionados completos. Un backtest genuino exige cobertura simultánea de todos los factores.
+
+### `cobertura_vintages_pronostico.csv`
+
+Resume por factor el proveedor, estado, orígenes completos, porcentaje de cobertura, fecha inicial del archivo hacia adelante y aptitud individual para un backtest genuino. La ruta ALFRED está implementada con validación y caché reanudable, pero el proveedor cortó la descarga individual; el paquete multiserie fue rechazado porque contenía observaciones posteriores al origen. Las series de BanRep/BCRPData y el balance fiscal tampoco tienen una colección binaria completa por fecha de origen.
 
 ## Validación condicional
 
@@ -150,4 +166,4 @@ En carpetas locales antiguas pueden aparecer `ajuste_historico.csv`, `coeficient
 
 ## Metadatos
 
-`metadata.json` resume muestra, observaciones, temporización, métricas, selección de rezagos, resultados bounds, comparación regional, especificación de pronóstico y controles de conciliación Shapley. También registra la advertencia de *vintages*, la fecha de descarga y el SHA-256 de las cinco instantáneas nuevas.
+`metadata.json` resume muestra, observaciones, temporización, métricas, selección de rezagos, resultados bounds, comparación regional, especificación de pronóstico y controles de conciliación Shapley. También registra parámetros del bootstrap, estabilidad reciente, cobertura de vintages, fecha de archivo y SHA-256 de las instantáneas clave.

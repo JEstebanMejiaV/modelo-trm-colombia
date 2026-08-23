@@ -171,7 +171,13 @@ Términos de intercambio, dólar amplio, VIX, EMBIG y factor regional usan infor
 
 La ecuación de pronóstico evita regresores contemporáneos: términos de intercambio y déficit usan `L3`; remesas, reservas, balanza y flujos de capital usan `L2`; tasas, dólar amplio, VIX, EMBIG, diferencial BEI y factor regional de tres monedas usan `L1`. La variable dependiente incorpora un rezago propio seleccionado por BIC. El detalle factor por factor está en `results/calendario_disponibilidad_pronostico.csv`.
 
-Este calendario evita anticipar el valor del mes objetivo, pero la base usa la última revisión hoy disponible de cada serie. Por tanto, la prueba es pseudo-tiempo-real. Una evaluación genuina exige reconstruir la base con el *vintage* que existía en cada origen; las huellas actuales permiten empezar ese archivo hacia adelante, no recuperar revisiones históricas ausentes.
+Este calendario evita anticipar el valor del mes objetivo, pero la base usa la última revisión hoy disponible de cada serie. Por tanto, la prueba es pseudo-tiempo-real. `data/vintages/` añade un archivo inmutable hacia adelante, cataloga versiones fiscales y deja una recuperación ALFRED reanudable. La cobertura histórica versionada sigue en cero; consulte `data/vintages/README.md` y `results/cobertura_vintages_pronostico.csv`.
+
+### Archivo por fecha de origen
+
+`src/archive_vintage.py snapshot --origin-date AAAA-MM-DD` descarga todas las fuentes activas en una carpeta nueva, registra hora UTC, URL final, tamaño, tipo de contenido y SHA-256, y se niega a sobrescribir una fecha existente. El baseline `2026-08-23` referencia y fija las huellas de `data/raw` sin duplicar archivos grandes.
+
+La ruta ALFRED solicita, serie por serie, FEDFUNDS, dólar amplio, VIX, BRL, CLP y MXN para 2022-05 a 2026-04, y rechaza observaciones posteriores al origen. El servidor cortó las conexiones individuales durante esta actualización, por lo que no se versiona un consolidado incompleto. El historial oficial de versiones fiscales fue catalogado, pero el portal bloqueó la descarga automatizada de los binarios; ninguna versión se cuenta como recuperada sin XLSX y SHA-256.
 
 ## Lectura de las tres sustituciones
 

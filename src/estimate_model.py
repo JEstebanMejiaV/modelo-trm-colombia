@@ -30,6 +30,10 @@ RESULTS = ROOT / "results"
 DATA = ROOT / "data"
 SAMPLE_START = pd.Timestamp("2006-01-01")
 SAMPLE_END = pd.Timestamp("2026-04-01")
+SHAPLEY_BOOTSTRAP_REPLICATIONS = 200
+SHAPLEY_BOOTSTRAP_BLOCK_MONTHS = 12
+SHAPLEY_BOOTSTRAP_PERMUTATIONS = 64
+SHAPLEY_BOOTSTRAP_SEED = 20260823
 
 MONTH_NUMBERS_ES = {
     "Ene": 1,
@@ -1025,6 +1029,231 @@ def exact_shapley_r2(
     return result
 
 
+def factor_columns_from_specs(
+    factor_specs: dict[str, dict[str, object]],
+) -> dict[str, list[str]]:
+    return {
+        name: [design_term_name(component, lag) for component, lag in spec["terminos"]]
+        for name, spec in factor_specs.items()
+    }
+
+
+def moving_block_indices(
+    observations: int, block_months: int, rng: np.random.Generator
+) -> np.ndarray:
+    """Bootstrap circular de bloques móviles para conservar dependencia mensual local."""
+    blocks = math.ceil(observations / block_months)
+    starts = rng.integers(0, observations, size=blocks)
+    offsets = np.arange(block_months)
+    return ((starts[:, None] + offsets[None, :]) % observations).ravel()[:observations]
+
+
+def permutation_shapley_weights(
+    y: np.ndarray,
+    x: pd.DataFrame,
+    factor_specs: dict[str, dict[str, object]],
+    permutations: int,
+    rng: np.random.Generator,
+) -> np.ndarray:
+    """Aproxima Shapley con permutaciones antitéticas dentro de una réplica."""
+    factor_columns = factor_columns_from_specs(factor_specs)
+    assigned = {column for columns in factor_columns.values() for column in columns}
+    base_columns = [column for column in x.columns if column not in assigned]
+    names = list(factor_specs)
+    total_ss = float(np.square(y - y.mean()).sum())
+    matrix = x.to_numpy(dtype=float)
+    gram = matrix.T @ matrix
+    cross = matrix.T @ y
+    y_square = float(y @ y)
+    column_positions = {column: position for position, column in enumerate(x.columns)}
+    base_positions = [column_positions[column] for column in base_columns]
+    factor_positions = [
+        [column_positions[column] for column in factor_columns[name]] for name in names
+    ]
+    cache: dict[int, float] = {}
+
+    def r_squared(mask: int) -> float:
+        if mask in cache:
+            return cache[mask]
+        positions = list(base_positions)
+        for player, columns in enumerate(factor_positions):
+            if mask & (1 << player):
+                positions.extend(columns)
+        sub_gram = gram[np.ix_(positions, positions)]
+        sub_cross = cross[positions]
+        beta, *_ = np.linalg.lstsq(sub_gram, sub_cross, rcond=None)
+        rss = max(0.0, y_square - float(beta @ sub_cross))
+        value = 1.0 - rss / total_ss
+        cache[mask] = value
+        return value
+
+    contributions = np.zeros(len(names), dtype=float)
+    evaluated = 0
+    for _ in range(math.ceil(permutations / 2)):
+        random_order = rng.permutation(len(names))
+        for order in (random_order, random_order[::-1]):
+            if evaluated >= permutations:
+                break
+            mask = 0
+            previous_r2 = r_squared(mask)
+            for player in order:
+                mask |= 1 << int(player)
+                current_r2 = r_squared(mask)
+                contributions[int(player)] += current_r2 - previous_r2
+                previous_r2 = current_r2
+            evaluated += 1
+    contributions /= evaluated
+    incremental = float(contributions.sum())
+    if incremental <= 0:
+        raise ValueError("El R² incremental bootstrap no es positivo.")
+    return 100.0 * contributions / incremental
+
+
+def block_bootstrap_shapley(
+    selected: SelectedDifferenceModel,
+    factor_specs: dict[str, dict[str, object]],
+    point_shapley: pd.DataFrame,
+) -> pd.DataFrame:
+    """Intervalos percentiles de pesos Shapley mediante bootstrap por bloques."""
+    rng = np.random.default_rng(SHAPLEY_BOOTSTRAP_SEED)
+    bootstrap_weights: list[np.ndarray] = []
+    for _ in range(SHAPLEY_BOOTSTRAP_REPLICATIONS):
+        sample_positions = moving_block_indices(
+            len(selected.y), SHAPLEY_BOOTSTRAP_BLOCK_MONTHS, rng
+        )
+        y_bootstrap = selected.y.to_numpy(dtype=float)[sample_positions]
+        x_bootstrap = selected.x.iloc[sample_positions].reset_index(drop=True)
+        bootstrap_weights.append(
+            permutation_shapley_weights(
+                y_bootstrap,
+                x_bootstrap,
+                factor_specs,
+                SHAPLEY_BOOTSTRAP_PERMUTATIONS,
+                rng,
+            )
+        )
+    draws = np.vstack(bootstrap_weights)
+    point_lookup = point_shapley.set_index("factor")
+    names = list(factor_specs)
+    top_three = np.argsort(-draws, axis=1)[:, :3]
+    rows = []
+    for player, factor in enumerate(names):
+        values = draws[:, player]
+        rows.append(
+            {
+                "factor": factor,
+                "grupo": factor_specs[factor]["grupo"],
+                "peso_puntual_pct": float(
+                    point_lookup.loc[factor, "peso_entre_factores_pct"]
+                ),
+                "peso_bootstrap_media_pct": float(values.mean()),
+                "peso_bootstrap_mediana_pct": float(np.median(values)),
+                "ic_95_inferior_pct": float(np.quantile(values, 0.025)),
+                "ic_95_superior_pct": float(np.quantile(values, 0.975)),
+                "probabilidad_top3_pct": float(
+                    100.0 * np.mean(np.any(top_three == player, axis=1))
+                ),
+                "replicas_validas": SHAPLEY_BOOTSTRAP_REPLICATIONS,
+                "bloque_meses": SHAPLEY_BOOTSTRAP_BLOCK_MONTHS,
+                "permutaciones_por_replica": SHAPLEY_BOOTSTRAP_PERMUTATIONS,
+                "semilla": SHAPLEY_BOOTSTRAP_SEED,
+            }
+        )
+    return pd.DataFrame(rows).sort_values("peso_puntual_pct", ascending=False).reset_index(drop=True)
+
+
+def subsample_stability(
+    selected: SelectedDifferenceModel,
+    factor_specs: dict[str, dict[str, object]],
+    point_shapley: pd.DataFrame,
+    full_coefficients: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Reestima coeficientes y Shapley en cortes temporales predefinidos."""
+    midpoint = len(selected.y) // 2
+    masks = [
+        ("Muestra completa", np.ones(len(selected.y), dtype=bool)),
+        ("Primera mitad", np.arange(len(selected.y)) < midpoint),
+        ("Segunda mitad", np.arange(len(selected.y)) >= midpoint),
+        ("Prepandemia", selected.y.index <= pd.Timestamp("2019-12-01")),
+        ("2020 en adelante", selected.y.index >= pd.Timestamp("2020-01-01")),
+    ]
+    full_weights = point_shapley.set_index("factor")["peso_entre_factores_pct"]
+    full_signs = (
+        full_coefficients.set_index("termino")["coeficiente"]
+        .apply(np.sign)
+        .to_dict()
+    )
+    factor_columns = factor_columns_from_specs(factor_specs)
+    detail_rows: list[dict[str, object]] = []
+    summary_rows: list[dict[str, object]] = []
+    for label, mask in masks:
+        y_sub = selected.y.loc[mask]
+        x_sub = selected.x.loc[mask]
+        result_sub = sm.OLS(y_sub, x_sub).fit()
+        sub_selected = SelectedDifferenceModel(
+            p=selected.p, q=selected.q, result=result_sub, y=y_sub, x=x_sub
+        )
+        _, coefficients_sub = tidy_robust_ols(result_sub, maxlags=6)
+        if label == "Muestra completa":
+            shapley_sub = point_shapley.copy()
+            coefficients_sub = full_coefficients.copy()
+        else:
+            shapley_sub = exact_shapley_r2(
+                sub_selected, factor_specs, coefficients_sub
+            )
+        weights_sub = shapley_sub.set_index("factor")["peso_entre_factores_pct"]
+        ranks_sub = weights_sub.rank(ascending=False, method="min")
+        differences = weights_sub - full_weights
+        coefficient_lookup = coefficients_sub.set_index("termino")
+        sign_matches = []
+        for factor in factor_specs:
+            term = factor_columns[factor][0]
+            coefficient = float(coefficient_lookup.loc[term, "coeficiente"])
+            p_value = float(coefficient_lookup.loc[term, "p_valor"])
+            sign_match = bool(np.sign(coefficient) == full_signs[term])
+            sign_matches.append(sign_match)
+            detail_rows.append(
+                {
+                    "submuestra": label,
+                    "inicio": y_sub.index.min().strftime("%Y-%m-%d"),
+                    "fin": y_sub.index.max().strftime("%Y-%m-%d"),
+                    "observaciones": len(y_sub),
+                    "r2": float(result_sub.rsquared),
+                    "r2_ajustado": float(result_sub.rsquared_adj),
+                    "factor": factor,
+                    "grupo": factor_specs[factor]["grupo"],
+                    "coeficiente": coefficient,
+                    "p_valor_hac": p_value,
+                    "shapley_r2": float(shapley_sub.set_index("factor").loc[factor, "shapley_r2"]),
+                    "peso_entre_factores_pct": float(weights_sub[factor]),
+                    "rango_peso": int(ranks_sub[factor]),
+                    "signo_coincide_muestra_completa": sign_match,
+                    "diferencia_peso_vs_completa_pp": float(differences[factor]),
+                }
+            )
+        full_ranks = full_weights.rank(ascending=False, method="min")
+        rank_correlation = float(
+            stats.spearmanr(
+                full_ranks.to_numpy(),
+                ranks_sub.reindex(full_ranks.index).to_numpy(),
+            ).statistic
+        )
+        summary_rows.append(
+            {
+                "submuestra": label,
+                "inicio": y_sub.index.min().strftime("%Y-%m-%d"),
+                "fin": y_sub.index.max().strftime("%Y-%m-%d"),
+                "observaciones": len(y_sub),
+                "r2_ajustado": float(result_sub.rsquared_adj),
+                "correlacion_spearman_rangos_vs_completa": rank_correlation,
+                "mediana_diferencia_abs_peso_pp": float(differences.abs().median()),
+                "max_diferencia_abs_peso_pp": float(differences.abs().max()),
+                "factores_mismo_signo_de_12": int(sum(sign_matches)),
+            }
+        )
+    return pd.DataFrame(detail_rows), pd.DataFrame(summary_rows)
+
+
 def bounds_to_frames(bounds_result) -> tuple[pd.DataFrame, pd.DataFrame]:
     summary = pd.DataFrame(
         [
@@ -1105,6 +1334,15 @@ def main() -> None:
     )
     shapley_expanded = exact_shapley_r2(
         selected_expanded, EXPANDED_FACTOR_SPECS_4, coefficients_expanded
+    )
+    shapley_bootstrap = block_bootstrap_shapley(
+        selected_expanded, EXPANDED_FACTOR_SPECS_4, shapley_expanded
+    )
+    stability_detail, stability_summary = subsample_stability(
+        selected_expanded,
+        EXPANDED_FACTOR_SPECS_4,
+        shapley_expanded,
+        coefficients_expanded,
     )
 
     forecast_common_index = make_timed_difference_design(
@@ -1362,6 +1600,21 @@ def main() -> None:
         index=False,
         encoding="utf-8-sig",
     )
+    shapley_bootstrap.to_csv(
+        RESULTS / "intervalos_bootstrap_pesos_shapley.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
+    stability_detail.to_csv(
+        RESULTS / "estabilidad_submuestras_modelo_ampliado.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
+    stability_summary.to_csv(
+        RESULTS / "estabilidad_submuestras_resumen.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
     comparison.to_csv(
         RESULTS / "comparacion_modelos.csv", index=False, encoding="utf-8-sig"
     )
@@ -1435,6 +1688,17 @@ def main() -> None:
     else:
         cointegration_5pct = "no concluyente"
 
+    vintage_coverage = pd.read_csv(RESULTS / "cobertura_vintages_pronostico.csv")
+    complete_vintage_factors = int(
+        vintage_coverage["apto_backtest_genuino"].astype("string").str.lower().eq("true").sum()
+    )
+    bootstrap_widest = shapley_bootstrap.assign(
+        ancho=lambda frame: frame["ic_95_superior_pct"] - frame["ic_95_inferior_pct"]
+    ).sort_values("ancho", ascending=False).iloc[0]
+    recent_stability = stability_summary.loc[
+        stability_summary["submuestra"].eq("2020 en adelante")
+    ].iloc[0]
+
     metadata = {
         "muestra_inicio": model_data.index.min().strftime("%Y-%m-%d"),
         "muestra_fin": model_data.index.max().strftime("%Y-%m-%d"),
@@ -1464,11 +1728,29 @@ def main() -> None:
         "shapley_r2_incremental": float(
             shapley_expanded["r2_incremental"].iloc[0]
         ),
+        "shapley_bootstrap_metodo": "Bootstrap circular de bloques mensuales; pesos de cada réplica aproximados con permutaciones antitéticas",
+        "shapley_bootstrap_replicas": SHAPLEY_BOOTSTRAP_REPLICATIONS,
+        "shapley_bootstrap_bloque_meses": SHAPLEY_BOOTSTRAP_BLOCK_MONTHS,
+        "shapley_bootstrap_permutaciones": SHAPLEY_BOOTSTRAP_PERMUTATIONS,
+        "shapley_bootstrap_semilla": SHAPLEY_BOOTSTRAP_SEED,
+        "shapley_bootstrap_factor_intervalo_mas_ancho": str(bootstrap_widest["factor"]),
+        "shapley_bootstrap_intervalo_mas_ancho_pp": float(bootstrap_widest["ancho"]),
+        "estabilidad_submuestras_cortes": int(len(stability_summary)),
+        "estabilidad_2020_spearman_rangos": float(
+            recent_stability["correlacion_spearman_rangos_vs_completa"]
+        ),
+        "estabilidad_2020_factores_mismo_signo_de_12": int(
+            recent_stability["factores_mismo_signo_de_12"]
+        ),
         "factor_regional": "Modelo activo: promedio de cambios log estandarizados de BRL, CLP, MXN y PEN por USD; comparación contra BRL, CLP y MXN; parámetros calibrados 2006-2019",
         "factor_regional_correlacion_3_4": regional_correlation,
         "pronostico_modelo": f"Modelo mensual de un paso con todos los factores rezagados conforme a un calendario conservador de disponibilidad al inicio del mes objetivo; composición regional seleccionada por BIC: {forecast_currencies}",
         "pronostico_factor_regional_monedas": forecast_currencies,
         "pronostico_advertencia_vintages": "El backtest respeta rezagos de publicación, pero usa la última versión disponible de las series. Es pseudo-tiempo-real hasta contar con vintages históricos archivados; no debe rotularse como backtest genuino en tiempo real.",
+        "vintages_archivo_inicio": "2026-08-23",
+        "vintages_origenes_alfred_recuperados": 0,
+        "vintages_factores_completos_de_12": complete_vintage_factors,
+        "backtest_genuino_disponible": complete_vintage_factors == len(FORECAST_FACTOR_SPECS_3),
         "pronostico_p_cambio_trm": selected_forecast.p,
         "pronostico_observaciones": int(selected_forecast.result.nobs),
         "pronostico_r_cuadrado": float(selected_forecast.result.rsquared),
