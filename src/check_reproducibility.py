@@ -30,6 +30,7 @@ def tracked_outputs() -> list[Path]:
         "data/modelo_trm_muestra_estimacion.csv",
         "results/*.csv",
         "results/metadata.json",
+        "graficos/metadata.json",
     ).decode("utf-8").splitlines()
     return [ROOT / path for path in paths]
 

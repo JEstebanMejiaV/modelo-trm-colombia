@@ -1,0 +1,42 @@
+{
+  "generator": {
+    "path": "src/build_charts.py",
+    "sha256": "ee6f2bf42eab3d5efe5b8fe1cea71029c25f50029e05f1b642ef0062c666707f"
+  },
+  "hash_method": "CSV canónico con 6 cifras significativas",
+  "images": {
+    "01_pesos_explicativos.png": {
+      "height": 1080,
+      "width": 1920
+    },
+    "02_desempeno_modelos.png": {
+      "height": 1080,
+      "width": 1920
+    },
+    "03_validacion_trm.png": {
+      "height": 1080,
+      "width": 1920
+    },
+    "04_efectos_tipicos.png": {
+      "height": 1080,
+      "width": 1920
+    },
+    "05_ecm_elasticidades.png": {
+      "height": 1080,
+      "width": 1920
+    }
+  },
+  "sources": {
+    "results/bounds_resumen.csv": "5f386efd16e1576ad4664d17dcc6aad6fe0eadbb3986503e2bc966cf62b94d83",
+    "results/coeficientes_corto_plazo_ecm.csv": "9f5aee2b1ca06a1d5915eb8e0ea80ab8abb9276ae823a45fb4998e0354f0a6c7",
+    "results/coeficientes_largo_plazo_ecm.csv": "116fc1a92f9939ef7e64e0e8499f6c1c46211365ad2b88bd5159e31daf0974ac",
+    "results/coeficientes_modelo_ampliado.csv": "b8676b015baca18a59441c300877d1bc7f8d3a3e004157e85c5e0f790f6b5f6e",
+    "results/comparacion_modelos.csv": "b1aa3394983fd152b4021b6982a8aac734dc0de8ac1f3a8a273f6334f16ddc76",
+    "results/contribuciones_modelo_ampliado.csv": "4885ef34f4c560fe7995e6943bbd9cb856d356b8d6bb794826d9cfc630a364bb",
+    "results/pesos_explicativos_modelo_ampliado.csv": "c207da7dca6a429e2857a5f8b8bd4c6c7c484310c491149736ba2e7f70611ba6",
+    "results/validacion_metricas_modelo_ampliado.csv": "240908f934226a77c13e3fc808bce81d717786d684d1ad2bdcf80d98c3d91296",
+    "results/validacion_predicciones.csv": "838f622a4c6387a7483050b4178d6c534e75e128347ba0d1ae451a0a06d81856",
+    "results/validacion_predicciones_modelo_ampliado.csv": "991ff31e2224773392d9930dcf504aedfd0fa2ae9e4fd132315e131baf2957d7"
+  },
+  "version": 2
+}
