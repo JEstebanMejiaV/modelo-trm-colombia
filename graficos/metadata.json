@@ -1,7 +1,7 @@
 {
   "generator": {
     "path": "src/build_charts.py",
-    "sha256": "ee6f2bf42eab3d5efe5b8fe1cea71029c25f50029e05f1b642ef0062c666707f"
+    "sha256": "6a244d07baf4de160ea3125baab47196ce0900bcd3d1dd2b75142eb77cce65bc"
   },
   "hash_method": "CSV canónico con 6 cifras significativas",
   "images": {
@@ -27,16 +27,19 @@
     }
   },
   "sources": {
-    "results/bounds_resumen.csv": "5f386efd16e1576ad4664d17dcc6aad6fe0eadbb3986503e2bc966cf62b94d83",
-    "results/coeficientes_corto_plazo_ecm.csv": "9f5aee2b1ca06a1d5915eb8e0ea80ab8abb9276ae823a45fb4998e0354f0a6c7",
-    "results/coeficientes_largo_plazo_ecm.csv": "116fc1a92f9939ef7e64e0e8499f6c1c46211365ad2b88bd5159e31daf0974ac",
-    "results/coeficientes_modelo_ampliado.csv": "b8676b015baca18a59441c300877d1bc7f8d3a3e004157e85c5e0f790f6b5f6e",
-    "results/comparacion_modelos.csv": "b1aa3394983fd152b4021b6982a8aac734dc0de8ac1f3a8a273f6334f16ddc76",
-    "results/contribuciones_modelo_ampliado.csv": "4885ef34f4c560fe7995e6943bbd9cb856d356b8d6bb794826d9cfc630a364bb",
-    "results/pesos_explicativos_modelo_ampliado.csv": "c207da7dca6a429e2857a5f8b8bd4c6c7c484310c491149736ba2e7f70611ba6",
-    "results/validacion_metricas_modelo_ampliado.csv": "240908f934226a77c13e3fc808bce81d717786d684d1ad2bdcf80d98c3d91296",
-    "results/validacion_predicciones.csv": "838f622a4c6387a7483050b4178d6c534e75e128347ba0d1ae451a0a06d81856",
-    "results/validacion_predicciones_modelo_ampliado.csv": "991ff31e2224773392d9930dcf504aedfd0fa2ae9e4fd132315e131baf2957d7"
+    "results/bounds_resumen.csv": "093f1e9b5f3c733ba8832dff1a534dc8a425e9c2d88e26edb0df64153feecc0a",
+    "results/coeficientes_corto_plazo_ecm.csv": "6e86e6a4a16a735c15cc9a45d14572e49cb10fbea971503cb7a32a67bdfad820",
+    "results/coeficientes_largo_plazo_ecm.csv": "60f7b80384872c3950acc775847d945b2c0f77c053f056b0f058b12d3938ee0a",
+    "results/coeficientes_modelo_ampliado.csv": "ed0434e5d0636f9e49ce986b04fb8ec0ab6099a319774645c3f68f15b3954c94",
+    "results/comparacion_factor_regional.csv": "dc389d6cb93e4a66fbcd1bb867225fe54508c9b4a2f2b7916c8e7be98bc6bf65",
+    "results/comparacion_modelos.csv": "cb6eff59938c7a61081a9add913461da45477724a3a1032ec0e5d83398fde39e",
+    "results/contribuciones_modelo_ampliado.csv": "e658e0a3db05a076b321f0bfca40ce2651de08af82d7b35c31103619bc725f7b",
+    "results/pesos_explicativos_modelo_ampliado.csv": "56aa8fc5a775cbcd73cde3e02cd5dc86a7afff4f69218fd38c69293f5c726098",
+    "results/validacion_metricas_modelo_ampliado.csv": "f3e06984c627976faa856173b5732533c289ed4390b9e5707fd5d2394fdbf3f1",
+    "results/validacion_metricas_pronostico.csv": "b9ec799698f50c75b8e9f560a12d5f851e18b1c53a9fcd73fdc5cf55e8862df0",
+    "results/validacion_predicciones.csv": "f27903fbb89f7cb966ec327f991d101c9dd92d402f344b6f3a3ab53d28be5cce",
+    "results/validacion_predicciones_modelo_ampliado.csv": "f2ca9709bd7ab00a9470383df2c21572e05731535e81e24a52a8d3a2dfa2da4c",
+    "results/validacion_predicciones_pronostico.csv": "91c26a8a46f13c422ee44b8105297c24f31fa12fd6de46309ba87b37307a36b7"
   },
   "version": 2
 }

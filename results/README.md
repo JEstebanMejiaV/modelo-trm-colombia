@@ -1,6 +1,6 @@
 # Resultados econométricos
 
-Esta carpeta contiene las salidas tabulares del modelo mensual de la TRM. La especificación principal usa siete regresores y la ampliada agrega riesgo TES–Treasury, reservas, balanza comercial cambiaria, flujos de capital, diferencial de inflación y monedas regionales. Todas las estimaciones describen asociaciones estadísticas; no identifican efectos causales.
+Esta carpeta contiene las salidas tabulares del modelo mensual de la TRM. La especificación principal usa seis factores económicos y una dummy de pandemia; la ampliada lleva el total a 12 factores al agregar EMBIG Colombia, reservas, balanza comercial cambiaria, flujos de capital, diferencial BEI a cinco años y monedas regionales. También se separa una ecuación de pronóstico que solo usa información rezagada. Todas las estimaciones describen asociaciones estadísticas; no identifican efectos causales.
 
 ## Convenciones de lectura
 
@@ -21,6 +21,13 @@ Coeficientes de la ecuación principal en diferencias. Las columnas contienen el
 ### `coeficientes_modelo_ampliado.csv`
 
 La misma estructura para el modelo ampliado. Para comparar magnitudes deben respetarse las unidades y transformaciones: no es válido comparar directamente un coeficiente logarítmico con otro medido en puntos porcentuales o `asinh`.
+
+Tres términos requieren una lectura particular:
+
+- `D.ln_terminos_intercambio.L0` es el cambio logarítmico contemporáneo de los términos de intercambio. El dato se publica con un rezago aproximado de dos meses, por lo que sirve para explicación *ex post*, no para un pronóstico disponible al comienzo de `t`.
+- `D.embig_colombia_pp.L0` es el cambio contemporáneo del promedio mensual de EMBIG Colombia, convertido de puntos básicos a puntos porcentuales. La instantánea procede de BCRPData, que atribuye la serie a Reuters/J.P. Morgan; debe conservarse esa atribución y no interpretarse la descarga pública como licencia abierta sobre la metodología o marca EMBIG.
+- `diferencial_bei_5y_pp.L1` es la compensación de inflación colombiana a cinco años menos la estadounidense, rezagada un mes. El BEI incorpora primas de riesgo de inflación y diferencias de liquidez: es compensación de mercado, no una expectativa pura ni una encuesta.
+- `factor_monedas_regionales_4.L0` es el promedio igual de cambios log estandarizados de BRL, CLP, MXN y PEN por USD. PEN procede de BCRPData `PN01207PM`. Es contemporáneo y pertenece a la explicación histórica, no al pronóstico seleccionado.
 
 ### `ajuste_historico_modelo_principal.csv` y `ajuste_historico_modelo_ampliado.csv`
 
@@ -60,7 +67,35 @@ Compara la especificación base y la ampliada sobre la misma muestra.
 - `acierto_direccion_pct` mayor indica más meses con el signo correcto del cambio.
 - `r2_validacion_condicional_vs_caminata` compara errores cuadrados con la caminata aleatoria; valores positivos indican mejora en la validación expansiva condicional. No es un R² de pronóstico ex ante porque usa algunos predictores contemporáneos ya realizados.
 
-No debe elegirse un modelo con una sola métrica. En los resultados actuales, el ampliado mejora R², criterios de información, MAPE y R² frente a la caminata, y mantiene el mismo acierto de dirección que el principal.
+No debe elegirse un modelo con una sola métrica. En los resultados actuales, el ampliado histórico de cuatro monedas mejora el R² ajustado (`0,581` frente a `0,479`), AIC (`−1150,02` frente a `−1103,31`), BIC (`−1101,29` frente a `−1075,46`), MAPE condicional (`1,69%` frente a `2,01%`), acierto de dirección (`81,25%` frente a `68,75%`) y R² condicional frente a la caminata (`0,490` frente a `0,319`).
+
+## Factor regional y pronóstico
+
+### `comparacion_factor_regional.csv`
+
+Compara los factores regionales de tres monedas —BRL, CLP y MXN— y cuatro —las anteriores más PEN— en dos usos distintos. Contiene R² ajustado, BIC, validación, coeficiente regional y p-valor HAC. En la muestra actual, cuatro monedas dominan en la explicación histórica, mientras tres monedas obtienen menor BIC y MAPE en el pronóstico. `correlacion_factores_3_4` es 0,9581.
+
+### `calendario_disponibilidad_pronostico.csv`
+
+Documenta el rezago conservador asignado a cada factor y la regla de información disponible al comienzo del mes objetivo. Ningún factor económico usa `.L0`.
+
+### `seleccion_rezagos_modelo_pronostico.csv`
+
+Compara de cero a tres rezagos de `Δln(TRM)` mediante AIC, BIC y R² ajustado. BIC selecciona un rezago.
+
+### `coeficientes_modelo_pronostico.csv`
+
+Reporta coeficientes e inferencia HAC de la ecuación seleccionada. Los términos económicos usan rezagos de uno a tres meses y el factor regional activo es `factor_monedas_regionales_3.L1`.
+
+### `validacion_metricas_pronostico.csv` y `validacion_predicciones_pronostico.csv`
+
+Miden una ventana expansiva de 48 meses para el pronóstico y la caminata aleatoria. El pronóstico obtiene MAPE de 2,63%, acierto de dirección de 47,92% y R² frente a caminata de −0,115; la caminata obtiene MAPE de 2,39%. El resultado documenta que el modelo explicativo no supera el benchmark cuando se restringe la información al origen.
+
+### `diagnosticos_modelo_pronostico.csv`
+
+Incluye las mismas pruebas residuales del resto de ecuaciones. No rechaza autocorrelación, ARCH, RESET ni inestabilidad al 5%; Jarque–Bera sí rechaza normalidad.
+
+La validación respeta rezagos de publicación, pero usa la versión más reciente disponible de cada serie. Se denomina **pseudo-tiempo-real**: un backtest genuino exige los *vintages* históricos que realmente existían en cada fecha de origen.
 
 ## Validación condicional
 
@@ -72,7 +107,7 @@ Presentan observaciones, MAE y RMSE en logaritmos, MAPE y acierto de dirección 
 
 Contienen las observaciones mensuales de esa validación: TRM observada, estimación condicional, caminata aleatoria y cambios logarítmicos. Permiten recalcular las métricas y revisar meses extremos.
 
-La validación es explicativa y condicional: utiliza realizaciones contemporáneas de factores globales, riesgo TES–Treasury y monedas regionales. No representa un pronóstico estrictamente disponible en tiempo real.
+La validación es explicativa y condicional: utiliza realizaciones contemporáneas de términos de intercambio, dólar amplio, VIX, EMBIG Colombia y monedas regionales. No representa un pronóstico estrictamente disponible en tiempo real; además, los términos de intercambio de `t` suelen conocerse cerca de dos meses después.
 Los coeficientes se reestiman en cada ventana expansiva, pero la cantidad de rezagos queda fijada por la selección hecha con la muestra completa. El denominador fiscal anual también usa la mediana del PIB implícito de todos los meses del año, por lo que no reproduce un conjunto de datos con vintages en tiempo real.
 
 ## Diagnósticos y selección
@@ -81,7 +116,7 @@ Los coeficientes se reestiman en cada ventana expansiva, pero la cantidad de rez
 
 Incluyen Ljung–Box y Breusch–Godfrey para autocorrelación, ARCH-LM para volatilidad condicional, Jarque–Bera para normalidad, Ramsey RESET para forma funcional, CUSUM para estabilidad y Durbin–Watson como referencia. La interpretación usual se hace al 5%.
 
-El modelo ampliado rechaza ausencia de ARCH y normalidad. HAC protege la inferencia de la ecuación de media, pero no sustituye un modelo explícito de volatilidad ni elimina el riesgo de colas extremas.
+Al 5%, el modelo ampliado rechaza ausencia de ARCH (`p = 0,0007`) y normalidad (`p = 0,0002`), pero RESET no rechaza (`p = 0,101`). No hay evidencia de autocorrelación en Ljung–Box o Breusch–Godfrey ni de inestabilidad según CUSUM. HAC protege la inferencia de la ecuación de media frente a heterocedasticidad y autocorrelación de forma robusta, pero no modela la volatilidad ni normaliza las colas.
 
 ### `seleccion_rezagos_adl_diferencias.csv` y `seleccion_rezagos_modelo_ampliado.csv`
 
@@ -89,7 +124,7 @@ Comparan de cero a tres rezagos del cambio de la TRM mediante AIC, BIC y R² aju
 
 ### `pruebas_integracion.csv`
 
-Reporta ADF y KPSS para niveles y diferencias, con número de observaciones y rezagos. ADF tiene como nula la presencia de raíz unitaria; KPSS, la estacionariedad. Deben interpretarse conjuntamente y con cautela ante quiebres estructurales.
+Reporta ADF y KPSS para niveles y diferencias, con número de observaciones y rezagos. ADF tiene como nula la presencia de raíz unitaria; KPSS, la estacionariedad. Para el diferencial BEI, la especificación con constante y rezagos BIC favorece el nivel, pero el resultado es sensible a tendencia y selección de rezagos; no debe presentarse como una conclusión definitiva. Todas las pruebas requieren cautela ante quiebres estructurales.
 
 ## Contraste ARDL–ECM
 
@@ -115,4 +150,4 @@ En carpetas locales antiguas pueden aparecer `ajuste_historico.csv`, `coeficient
 
 ## Metadatos
 
-`metadata.json` resume muestra, observaciones, temporización, métricas, selección de rezagos, resultados bounds, construcción del factor regional, interpolación documentada del IPC estadounidense y controles de conciliación Shapley.
+`metadata.json` resume muestra, observaciones, temporización, métricas, selección de rezagos, resultados bounds, comparación regional, especificación de pronóstico y controles de conciliación Shapley. También registra la advertencia de *vintages*, la fecha de descarga y el SHA-256 de las cinco instantáneas nuevas.
