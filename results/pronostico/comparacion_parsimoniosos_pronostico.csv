@@ -1,0 +1,5 @@
+﻿factores_top_n,factores,parametros,r_cuadrado_ajustado,bic,mape_pct,acierto_direccion_pct,r2_vs_caminata
+3,"Dólar amplio, Monedas regionales, Riesgo soberano EMBIG Colombia",6,0.07921263791872357,-947.5914079121835,2.5706268854255394,45.83333333333333,-0.07602178879406307
+5,"Balanza comercial cambiaria, Dólar amplio, Monedas regionales, Riesgo soberano EMBIG Colombia, VIX",8,0.09999544469669452,-944.1692623803326,2.5872079198652993,56.25,-0.06400316782506144
+7,"Balanza comercial cambiaria, Dólar amplio, Flujos netos de capital, Monedas regionales, Riesgo soberano EMBIG Colombia, Términos de intercambio, VIX",10,0.09631416992183273,-934.3062534809013,2.634276950043336,50.0,-0.08923493077740496
+12,"Balanza comercial cambiaria, Diferencial de compensación inflacionaria 5 años, Diferencial de tasas, Déficit fiscal, Dólar amplio, Flujos netos de capital, Monedas regionales, Remesas, Reservas internacionales, Riesgo soberano EMBIG Colombia, Términos de intercambio, VIX",15,0.1020059674405992,-913.6943990045021,2.6312174552611536,52.083333333333336,-0.10980343277788518

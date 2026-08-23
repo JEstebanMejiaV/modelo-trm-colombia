@@ -2257,6 +2257,26 @@ def main() -> None:
         index=False,
         encoding="utf-8-sig",
     )
+
+    # ── Diebold-Mariano: pronóstico vs caminata aleatoria ────────────────────
+    dm_result = diebold_mariano_test(predictions_forecast)
+    dm_result.to_csv(
+        RESULTS / "pronostico/diebold_mariano_pronostico.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
+
+    # ── Modelos parsimoniosos de pronóstico ──────────────────────────────────
+    components = difference_components(model_data)
+    parsimonious = parsimonious_forecasts(
+        model_data, components, shapley_expanded, holdout=48
+    )
+    parsimonious.to_csv(
+        RESULTS / "pronostico/comparacion_parsimoniosos_pronostico.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
+
     lag_grid_ecm.to_csv(
         RESULTS / "robustez/seleccion_rezagos_ecm.csv", index=False, encoding="utf-8-sig"
     )
@@ -2556,6 +2576,131 @@ _PRINCIPAL_READINGS: dict[str, str] = {
         "Se asocia con una TRM alrededor de {:.1f}% mayor, condicionado a los demás factores."
     ),
 }
+
+
+def diebold_mariano_test(
+    predictions: pd.DataFrame,
+    model_column: str = "ln_trm_pronostico_publicacion",
+    benchmark_column: str = "ln_trm_caminata_aleatoria",
+    observed_column: str = "ln_trm_observada",
+    max_lag: int = 6,
+) -> pd.DataFrame:
+    """
+    Test de Diebold-Mariano (1995) con errores HAC (Newey-West).
+
+    H0: la capacidad predictiva del modelo y del benchmark son iguales.
+    H1 (dos colas): son distintas.
+    H1 (una cola): el modelo es mejor (loss menor).
+
+    Usa loss cuadrática: L(e) = e².
+    """
+    e_model = predictions[model_column] - predictions[observed_column]
+    e_bench = predictions[benchmark_column] - predictions[observed_column]
+    d = e_bench ** 2 - e_model ** 2  # positivo si modelo es mejor
+
+    n = len(d)
+    d_bar = float(d.mean())
+
+    # Varianza HAC Newey-West
+    gamma_0 = float(((d - d_bar) ** 2).mean())
+    gamma_sum = 0.0
+    for lag in range(1, max_lag + 1):
+        weight = 1.0 - lag / (max_lag + 1)  # Bartlett kernel
+        gamma_k = float(((d.iloc[lag:].values - d_bar) * (d.iloc[:-lag].values - d_bar)).mean())
+        gamma_sum += 2 * weight * gamma_k
+    variance = (gamma_0 + gamma_sum) / n
+
+    if variance <= 0:
+        dm_stat = float("nan")
+        p_two_sided = float("nan")
+        p_one_sided = float("nan")
+    else:
+        dm_stat = d_bar / (variance ** 0.5)
+        p_two_sided = float(2 * (1 - stats.t.cdf(abs(dm_stat), df=n - 1)))
+        # Una cola: H1 = modelo mejor (d_bar > 0 → dm_stat > 0)
+        p_one_sided = float(1 - stats.t.cdf(dm_stat, df=n - 1))
+
+    result = pd.DataFrame([
+        {
+            "test": "Diebold-Mariano",
+            "loss": "cuadrática (MSE)",
+            "kernel_hac": f"Bartlett ({max_lag} rezagos)",
+            "observaciones": n,
+            "loss_media_modelo": float((e_model ** 2).mean()),
+            "loss_media_benchmark": float((e_bench ** 2).mean()),
+            "diferencia_loss_media": d_bar,
+            "estadistico_dm": dm_stat,
+            "p_valor_dos_colas": p_two_sided,
+            "p_valor_una_cola_modelo_mejor": p_one_sided,
+            "modelo": model_column,
+            "benchmark": benchmark_column,
+        }
+    ])
+    return result
+
+
+def parsimonious_forecasts(
+    model_data: pd.DataFrame,
+    components: pd.DataFrame,
+    shapley_expanded: pd.DataFrame,
+    holdout: int = 48,
+) -> pd.DataFrame:
+    """
+    Estima modelos de pronóstico parsimoniosos con los top-N factores por Shapley.
+
+    Compara: top-3, top-5, top-7 y el modelo completo (12 factores).
+    Todos usan rezagos de publicación (FORECAST_FACTOR_SPECS).
+    """
+    from copy import deepcopy
+
+    # Ranking de factores por peso Shapley
+    ranked_factors = shapley_expanded.sort_values(
+        "peso_entre_factores_pct", ascending=False
+    )["factor"].tolist()
+
+    forecast_common_index = make_timed_difference_design(
+        components, p=3, factor_specs=FORECAST_FACTOR_SPECS_3
+    )[0].index
+
+    results_rows: list[dict[str, object]] = []
+    for n_factors in [3, 5, 7, 12]:
+        selected_names = set(ranked_factors[:n_factors])
+        # Filtrar FORECAST_FACTOR_SPECS_3 a solo los factores seleccionados
+        specs_subset = {
+            name: spec for name, spec in FORECAST_FACTOR_SPECS_3.items()
+            if name in selected_names
+        }
+        if not specs_subset:
+            continue
+
+        selected_model, _ = select_timed_difference_model(
+            model_data, specs_subset, common_index=forecast_common_index
+        )
+        preds, metrics = difference_validation(
+            model_data, selected_model, holdout=holdout
+        )
+
+        metric_row = metrics.loc[
+            ~metrics["modelo"].str.contains("Caminata", case=False)
+        ].iloc[0]
+
+        # R² vs caminata
+        e_model = preds["ln_trm_modelo_condicional"] - preds["ln_trm_observada"]
+        e_bench = preds["ln_trm_caminata_aleatoria"] - preds["ln_trm_observada"]
+        r2_vs_walk = 1.0 - float((e_model ** 2).sum()) / float((e_bench ** 2).sum())
+
+        results_rows.append({
+            "factores_top_n": n_factors,
+            "factores": ", ".join(sorted(selected_names)),
+            "parametros": int(selected_model.result.df_model) + 1,
+            "r_cuadrado_ajustado": float(selected_model.result.rsquared_adj),
+            "bic": float(selected_model.result.bic),
+            "mape_pct": float(metric_row["mape_pct"]),
+            "acierto_direccion_pct": float(metric_row["acierto_direccion_pct"]),
+            "r2_vs_caminata": r2_vs_walk,
+        })
+
+    return pd.DataFrame(results_rows)
 
 
 def _pval_str(p: float) -> str:

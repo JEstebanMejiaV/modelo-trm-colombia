@@ -130,8 +130,12 @@ def main() -> None:
     if len(vintage_coverage) != 12:
         raise AssertionError("La cobertura de vintages debe reportar los 12 factores.")
     complete_vintage = vintage_coverage["apto_backtest_genuino"].astype("string").str.lower().eq("true")
-    if complete_vintage.sum() != 0:
-        raise AssertionError("Ningún factor debe marcarse completo sin vintages versionados.")
+    alfred_csv = DATA / "vintages" / "historical" / "alfred_factores_pronostico.csv"
+    expected_complete = 3 if alfred_csv.exists() else 0
+    if int(complete_vintage.sum()) != expected_complete:
+        raise AssertionError(
+            f"Se esperan {expected_complete} factores aptos, hay {int(complete_vintage.sum())}."
+        )
     if bool(metadata["backtest_genuino_disponible"]):
         raise AssertionError("El backtest no puede rotularse como genuino con cobertura parcial.")
 

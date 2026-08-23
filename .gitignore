@@ -44,3 +44,7 @@ results/coeficientes_largo_plazo.csv
 results/diagnosticos.csv
 results/seleccion_rezagos.csv
 
+
+# ALFRED API cache (JSON responses per origin per series)
+# El CSV consolidado sí se versiona; el caché granular no.
+data/vintages/historical/alfred_cache/
