@@ -1,0 +1,361 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from openpyxl import load_workbook
+
+from .config import ROOT, RAW, DATA, MONTH_NUMBERS_ES
+
+
+def month_start(values: pd.Series | pd.DatetimeIndex) -> pd.DatetimeIndex:
+    return pd.DatetimeIndex(values).to_period("M").to_timestamp()
+
+
+def read_fred(path: Path, output_name: str, daily: bool = False) -> pd.Series:
+    raw = pd.read_csv(path)
+    frame = pd.DataFrame(
+        {
+            "fecha": pd.to_datetime(raw.iloc[:, 0].astype("string"), errors="coerce"),
+            "valor": pd.to_numeric(raw.iloc[:, 1], errors="coerce"),
+        }
+    ).dropna()
+    series = frame.set_index("fecha")["valor"].sort_index()
+    if daily:
+        series = series.resample("MS").mean()
+    else:
+        series.index = month_start(series.index)
+        series = series.groupby(level=0).mean()
+    series.name = output_name
+    return series
+
+
+def load_fed_gsw_breakeven_daily(path: Path) -> pd.Series:
+    """Lee BKEVEN05 diario del archivo Gürkaynak-Sack-Wright."""
+    raw = pd.read_csv(
+        path,
+        skiprows=18,
+        usecols=["Date", "BKEVEN05"],
+        na_values=["NA"],
+    )
+    frame = pd.DataFrame(
+        {
+            "fecha": pd.to_datetime(raw["Date"], errors="coerce"),
+            "bei_eeuu_5y_pct": pd.to_numeric(raw["BKEVEN05"], errors="coerce"),
+        }
+    ).dropna()
+    series = frame.set_index("fecha")["bei_eeuu_5y_pct"].sort_index()
+    series.index = series.index.normalize()
+    series = series.groupby(level=0).mean()
+    series.name = "bei_eeuu_5y_pct"
+    return series
+
+
+def load_fed_gsw_breakeven(path: Path) -> pd.Series:
+    daily = load_fed_gsw_breakeven_daily(path)
+    monthly = daily.resample("MS").mean()
+    monthly.name = "bei_eeuu_5y_pct"
+    return monthly
+
+
+def load_banrep_series(path: Path, output_name: str, daily: bool = False) -> pd.Series:
+    """Lee el JSON publico del graficador de BanRep y lo lleva a frecuencia mensual."""
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    item = payload[0] if isinstance(payload, list) else payload
+    data = pd.DataFrame(item["data"], columns=["timestamp_ms", output_name])
+    dates = pd.to_datetime(data.pop("timestamp_ms"), unit="ms", utc=True).dt.tz_convert(None)
+    data.index = pd.DatetimeIndex(dates)
+    series = pd.to_numeric(data[output_name], errors="coerce").dropna().sort_index()
+    if daily:
+        # Se promedia cada mercado por separado; no se cruzan calendarios diarios.
+        series = series.resample("MS").mean()
+    else:
+        series.index = month_start(series.index)
+        series = series.groupby(level=0).mean()
+    series.name = output_name
+    return series
+
+
+def load_banrep_observations(path: Path, output_name: str) -> pd.Series:
+    """Lee observaciones BanRep sin agregarlas para comparar calendarios diarios."""
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    item = payload[0] if isinstance(payload, list) else payload
+    frame = pd.DataFrame(item["data"], columns=["timestamp_ms", output_name])
+    dates = pd.to_datetime(frame.pop("timestamp_ms"), unit="ms", utc=True).dt.tz_convert(None)
+    frame.index = pd.DatetimeIndex(dates).normalize()
+    series = pd.to_numeric(frame[output_name], errors="coerce").dropna().sort_index()
+    series = series.groupby(level=0).mean()
+    series.name = output_name
+    return series
+
+
+def build_bei_aggregations() -> pd.DataFrame:
+    """Construye BEI mensual con medias separadas y con fechas diarias comunes."""
+    nominal = load_banrep_observations(
+        RAW / "tes_5y_pesos_banrep.json", "tes_5y_pesos_colombia_pct"
+    )
+    real = load_banrep_observations(
+        RAW / "tes_5y_uvr_banrep.json", "tes_5y_uvr_colombia_pct"
+    )
+    us = load_fed_gsw_breakeven_daily(RAW / "bei_5y_eeuu_diario_fed.csv")
+
+    separate = pd.concat(
+        [
+            nominal.resample("MS").mean(),
+            real.resample("MS").mean(),
+            us.resample("MS").mean(),
+        ],
+        axis=1,
+        sort=True,
+    )
+    separate["bei_colombia_5y_pct"] = (
+        separate["tes_5y_pesos_colombia_pct"]
+        - separate["tes_5y_uvr_colombia_pct"]
+    )
+    separate["diferencial_bei_5y_pp"] = (
+        separate["bei_colombia_5y_pct"] - separate["bei_eeuu_5y_pct"]
+    )
+
+    common_daily = pd.concat([nominal, real, us], axis=1, join="inner").dropna()
+    common_daily["diferencial_bei_5y_comun_pp"] = (
+        common_daily["tes_5y_pesos_colombia_pct"]
+        - common_daily["tes_5y_uvr_colombia_pct"]
+        - common_daily["bei_eeuu_5y_pct"]
+    )
+    common = common_daily.resample("MS").agg(
+        tes_5y_pesos_comun_pct=("tes_5y_pesos_colombia_pct", "mean"),
+        tes_5y_uvr_comun_pct=("tes_5y_uvr_colombia_pct", "mean"),
+        bei_eeuu_5y_comun_pct=("bei_eeuu_5y_pct", "mean"),
+        diferencial_bei_5y_comun_pp=("diferencial_bei_5y_comun_pp", "mean"),
+        dias_comunes=("diferencial_bei_5y_comun_pp", "count"),
+    )
+    counts = pd.concat(
+        [
+            nominal.resample("MS").count().rename("dias_tes_pesos"),
+            real.resample("MS").count().rename("dias_tes_uvr"),
+            us.resample("MS").count().rename("dias_bei_eeuu"),
+        ],
+        axis=1,
+        sort=True,
+    )
+    out = separate.join(common, how="outer").join(counts, how="outer")
+    out["diferencia_comun_menos_separada_pp"] = (
+        out["diferencial_bei_5y_comun_pp"] - out["diferencial_bei_5y_pp"]
+    )
+    out.index.name = "fecha"
+    return out
+
+
+def load_remittances(path: Path) -> pd.Series:
+    payload = json.loads(path.read_text(encoding="utf-8"))[0]
+    data = pd.DataFrame(payload["data"], columns=["timestamp_ms", "remesas_usd_millones"])
+    dates = pd.to_datetime(data.pop("timestamp_ms"), unit="ms", utc=True).dt.tz_convert(None)
+    data.index = month_start(dates)
+    return data["remesas_usd_millones"].astype(float).sort_index()
+
+
+def load_banrep_daily(path: Path, output_name: str) -> pd.Series:
+    return load_banrep_series(path, output_name, daily=True)
+
+
+def load_terms_of_trade(path: Path) -> pd.Series:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    series_payload = next(item for item in payload if item.get("id") == 15360)
+    data = pd.DataFrame(series_payload["data"], columns=["timestamp_ms", "terminos_intercambio"])
+    dates = pd.to_datetime(data.pop("timestamp_ms"), unit="ms", utc=True).dt.tz_convert(None)
+    data.index = month_start(dates)
+    return data["terminos_intercambio"].astype(float).sort_index()
+
+
+def load_embig_bcrp(path: Path) -> pd.Series:
+    """Lee EMBIG Colombia del JSON público del BCRP y promedia por mes."""
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    rows: list[tuple[pd.Timestamp, float]] = []
+    for observation in payload.get("periods", []):
+        parts = str(observation.get("name", "")).strip().split(".")
+        values = observation.get("values") or []
+        if len(parts) != 3 or not values or parts[1] not in MONTH_NUMBERS_ES:
+            continue
+        year = int(parts[2])
+        year += 2000 if year < 70 else 1900
+        date = pd.Timestamp(year=year, month=MONTH_NUMBERS_ES[parts[1]], day=int(parts[0]))
+        value = pd.to_numeric(str(values[0]).replace(",", "."), errors="coerce")
+        if pd.notna(value):
+            rows.append((date, float(value)))
+    if not rows:
+        raise ValueError(f"No se encontraron observaciones EMBIG válidas en {path}.")
+    daily = pd.Series(
+        (value for _, value in rows),
+        index=pd.DatetimeIndex(date for date, _ in rows),
+        name="embig_colombia_pb",
+    ).sort_index()
+    daily = daily.groupby(level=0).mean()
+    monthly = daily.resample("MS").mean()
+    monthly.name = "embig_colombia_pb"
+    return monthly
+
+
+def load_bcrp_monthly(path: Path, output_name: str) -> pd.Series:
+    """Lee una serie mensual de BCRPData con periodos como Ene.2006."""
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    rows: list[tuple[pd.Timestamp, float]] = []
+    for observation in payload.get("periods", []):
+        parts = str(observation.get("name", "")).strip().split(".")
+        values = observation.get("values") or []
+        if len(parts) != 2 or not values or parts[0] not in MONTH_NUMBERS_ES:
+            continue
+        value = pd.to_numeric(str(values[0]).replace(",", "."), errors="coerce")
+        if pd.notna(value):
+            rows.append(
+                (
+                    pd.Timestamp(year=int(parts[1]), month=MONTH_NUMBERS_ES[parts[0]], day=1),
+                    float(value),
+                )
+            )
+    if not rows:
+        raise ValueError(f"No se encontraron observaciones mensuales válidas en {path}.")
+    series = pd.Series(
+        (value for _, value in rows),
+        index=pd.DatetimeIndex(date for date, _ in rows),
+        name=output_name,
+    ).sort_index()
+    return series.groupby(level=0).mean()
+
+
+def _row_values(ws, row_number: int) -> tuple[list[object], list[object]]:
+    dates = [cell.value for cell in ws[6]][1:]
+    values = [cell.value for cell in ws[row_number]][1:]
+    return dates, values
+
+
+def load_fiscal(path: Path) -> pd.DataFrame:
+    workbook = load_workbook(path, read_only=True, data_only=True)
+    monthly_amounts = workbook.worksheets[0]
+    monthly_pct = workbook.worksheets[3]
+
+    dates, balance_values = _row_values(monthly_amounts, 31)
+    _, income_values = _row_values(monthly_amounts, 8)
+    pct_dates, income_pct_values = _row_values(monthly_pct, 8)
+
+    fiscal = pd.DataFrame(
+        {
+            "fecha": pd.to_datetime(dates, errors="coerce"),
+            "balance_fiscal_miles_millones_cop": pd.to_numeric(balance_values, errors="coerce"),
+            "ingresos_totales_miles_millones_cop": pd.to_numeric(income_values, errors="coerce"),
+        }
+    ).dropna(subset=["fecha"])
+    fiscal["fecha"] = month_start(fiscal["fecha"])
+    fiscal = fiscal.set_index("fecha").sort_index()
+
+    fiscal_pct = pd.DataFrame(
+        {
+            "fecha": pd.to_datetime(pct_dates, errors="coerce"),
+            "ingresos_totales_pct_pib": pd.to_numeric(income_pct_values, errors="coerce"),
+        }
+    ).dropna(subset=["fecha"])
+    fiscal_pct["fecha"] = month_start(fiscal_pct["fecha"])
+    fiscal_pct = fiscal_pct.set_index("fecha").sort_index()
+
+    fiscal = fiscal.join(fiscal_pct, how="left")
+    valid = fiscal["ingresos_totales_pct_pib"].abs() > 1e-9
+    fiscal.loc[valid, "pib_anual_miles_millones_cop_observado"] = (
+        100.0
+        * fiscal.loc[valid, "ingresos_totales_miles_millones_cop"]
+        / fiscal.loc[valid, "ingresos_totales_pct_pib"]
+    )
+    year_gdp = fiscal.groupby(fiscal.index.year)["pib_anual_miles_millones_cop_observado"].median()
+    fiscal["pib_anual_miles_millones_cop"] = fiscal.index.year.map(year_gdp)
+    fiscal["balance_fiscal_12m_miles_millones_cop"] = fiscal[
+        "balance_fiscal_miles_millones_cop"
+    ].rolling(12, min_periods=12).sum()
+    fiscal["deficit_fiscal_12m_pct_pib"] = (
+        -100.0
+        * fiscal["balance_fiscal_12m_miles_millones_cop"]
+        / fiscal["pib_anual_miles_millones_cop"]
+    )
+    return fiscal
+
+
+def build_dataset() -> pd.DataFrame:
+    series = [
+        load_banrep_daily(RAW / "trm_diaria_banrep.json", "trm_cop_usd"),
+        load_banrep_daily(
+            RAW / "tasa_politica_diaria_banrep.json", "tasa_politica_colombia_pct"
+        ),
+        read_fred(RAW / "fed_funds_mensual_fred.csv", "fed_funds_eeuu_pct"),
+        read_fred(RAW / "dolar_amplio_diario_fred.csv", "indice_dolar_amplio", daily=True),
+        read_fred(RAW / "vix_diario_fred.csv", "vix", daily=True),
+        load_remittances(RAW / "remesas_mensuales_banrep.json"),
+        load_terms_of_trade(RAW / "series_15360_15368.json"),
+        load_banrep_series(
+            RAW / "reservas_netas_sin_flar_banrep.json",
+            "reservas_netas_sin_flar_usd_millones",
+        ),
+        build_bei_aggregations(),
+        load_embig_bcrp(RAW / "embig_colombia_diario_bcrp.json"),
+        load_banrep_series(
+            RAW / "balanza_comercial_cambiaria_banrep.json",
+            "balanza_comercial_cambiaria_usd_millones",
+        ),
+        load_banrep_series(
+            RAW / "flujos_capital_totales_banrep.json",
+            "flujos_capital_usd_millones",
+        ),
+        read_fred(RAW / "brl_usd_mensual_fred.csv", "brl_por_usd"),
+        read_fred(RAW / "clp_usd_mensual_fred.csv", "clp_por_usd"),
+        read_fred(RAW / "mxn_usd_mensual_fred.csv", "mxn_por_usd"),
+        load_bcrp_monthly(RAW / "pen_usd_mensual_bcrp.json", "pen_por_usd"),
+    ]
+    data = pd.concat(series, axis=1, sort=True).sort_index()
+    data = data.join(load_fiscal(RAW / "balance_fiscal_gnc_mensual_trimestral.xlsx"), how="outer")
+
+    data["remesas_12m_usd_millones"] = data["remesas_usd_millones"].rolling(
+        12, min_periods=12
+    ).sum()
+    data["diferencial_tasas_pp"] = (
+        data["tasa_politica_colombia_pct"] - data["fed_funds_eeuu_pct"]
+    )
+    data["embig_colombia_pp"] = data["embig_colombia_pb"] / 100.0
+    data["asinh_balanza_comercial"] = np.arcsinh(
+        data["balanza_comercial_cambiaria_usd_millones"] / 1000.0
+    )
+    data["asinh_flujos_capital"] = np.arcsinh(
+        data["flujos_capital_usd_millones"] / 1000.0
+    )
+
+    regional_returns = pd.DataFrame(
+        {
+            currency: np.log(data[currency].where(data[currency] > 0)).diff()
+            for currency in ["brl_por_usd", "clp_por_usd", "mxn_por_usd", "pen_por_usd"]
+        }
+    )
+    calibration = regional_returns.loc["2006-01-01":"2019-12-01"]
+    regional_z = (regional_returns - calibration.mean()) / calibration.std(ddof=0)
+    data["factor_monedas_regionales_3"] = regional_z[
+        ["brl_por_usd", "clp_por_usd", "mxn_por_usd"]
+    ].mean(axis=1, skipna=False)
+    data["factor_monedas_regionales_4"] = regional_z[
+        ["brl_por_usd", "clp_por_usd", "mxn_por_usd", "pen_por_usd"]
+    ].mean(axis=1, skipna=False)
+    # Alias explícito del modelo ampliado activo: composición de cuatro monedas.
+    data["factor_monedas_regionales"] = data["factor_monedas_regionales_4"]
+
+    positive_logs = {
+        "ln_trm": "trm_cop_usd",
+        "ln_remesas_12m": "remesas_12m_usd_millones",
+        "ln_dolar_amplio": "indice_dolar_amplio",
+        "ln_vix": "vix",
+        "ln_terminos_intercambio": "terminos_intercambio",
+        "ln_reservas_netas_sin_flar": "reservas_netas_sin_flar_usd_millones",
+    }
+    for target, source in positive_logs.items():
+        data[target] = np.log(data[source].where(data[source] > 0))
+    data["dln_vix"] = data["ln_vix"].diff()
+    data["dummy_pandemia_2020"] = (
+        (data.index >= pd.Timestamp("2020-03-01"))
+        & (data.index <= pd.Timestamp("2020-05-01"))
+    ).astype(int)
+    data.index.name = "fecha"
+    return data
