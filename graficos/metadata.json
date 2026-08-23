@@ -1,7 +1,7 @@
 {
   "generator": {
     "path": "src/build_charts.py",
-    "sha256": "9f800951a08bc013ae84c05970b4cdafab7cafb4560ebbe2348a0b5381184879"
+    "sha256": "391473178e8785b3e332ee417f598f16514665c28c09f45a90c923f60b15563c"
   },
   "hash_method": "CSV canónico con 6 cifras significativas",
   "images": {
@@ -27,21 +27,21 @@
     }
   },
   "sources": {
-    "results/bounds_resumen.csv": "093f1e9b5f3c733ba8832dff1a534dc8a425e9c2d88e26edb0df64153feecc0a",
-    "results/coeficientes_corto_plazo_ecm.csv": "6e86e6a4a16a735c15cc9a45d14572e49cb10fbea971503cb7a32a67bdfad820",
-    "results/coeficientes_largo_plazo_ecm.csv": "60f7b80384872c3950acc775847d945b2c0f77c053f056b0f058b12d3938ee0a",
-    "results/coeficientes_modelo_ampliado.csv": "c39c3ed6247d7dad373ef8f845ca0294aeb2e9e1366a0e1a0af598a1a86e12e8",
-    "results/comparacion_factor_regional.csv": "b9894ab513d3f8de6e172c12f878d423806e2cee2821baa1194859047da011fb",
-    "results/comparacion_modelos.csv": "03a0f53beffac6bebd8faaf398956a9068f78bbed4ee4f9993b50e4679a00667",
-    "results/contribuciones_modelo_ampliado.csv": "35e6ae02091373204b9a31c2069160ea0fc4b6c7321eb8ec496ab931909c000c",
-    "results/estabilidad_submuestras_resumen.csv": "a7325bab96f93837b36f804d966090f90f24a3cb857a1169052a8968c911ab39",
-    "results/intervalos_bootstrap_pesos_shapley.csv": "fb439c5fe95759d0cb1ca768c6d24d41350c7ff9c7b677da3e4a7e3fa0656140",
-    "results/pesos_explicativos_modelo_ampliado.csv": "43bdcdadb315461662eda94696202a68ddfdb2bb561efb62d104c7a7c6eb60d9",
-    "results/validacion_metricas_modelo_ampliado.csv": "bbc457ebcfd8fc6524e4be810b4de7487aad80172efaa4278c2310af6471aff4",
-    "results/validacion_metricas_pronostico.csv": "a38c88f895a3555263ad5b5ccc4a37b2774d1570321cac0a85b2b511cac49e47",
-    "results/validacion_predicciones_modelo_ampliado.csv": "3beb25965de0cee820b4712f9628db1d01ebc13c166c202633c34d11cc5bd659",
-    "results/validacion_predicciones_modelo_principal.csv": "f27903fbb89f7cb966ec327f991d101c9dd92d402f344b6f3a3ab53d28be5cce",
-    "results/validacion_predicciones_pronostico.csv": "e5401937d6d58b8e7f8d01dc6eb9daaed0979100e37cc2af3a97b4e4d298e0b8"
+    "results/explicacion/coeficientes_modelo_ampliado.csv": "c39c3ed6247d7dad373ef8f845ca0294aeb2e9e1366a0e1a0af598a1a86e12e8",
+    "results/explicacion/comparacion_factor_regional.csv": "b9894ab513d3f8de6e172c12f878d423806e2cee2821baa1194859047da011fb",
+    "results/explicacion/comparacion_modelos.csv": "03a0f53beffac6bebd8faaf398956a9068f78bbed4ee4f9993b50e4679a00667",
+    "results/explicacion/contribuciones_modelo_ampliado.csv": "35e6ae02091373204b9a31c2069160ea0fc4b6c7321eb8ec496ab931909c000c",
+    "results/explicacion/estabilidad_submuestras_resumen.csv": "a7325bab96f93837b36f804d966090f90f24a3cb857a1169052a8968c911ab39",
+    "results/explicacion/intervalos_bootstrap_pesos_shapley.csv": "fb439c5fe95759d0cb1ca768c6d24d41350c7ff9c7b677da3e4a7e3fa0656140",
+    "results/explicacion/pesos_explicativos_modelo_ampliado.csv": "43bdcdadb315461662eda94696202a68ddfdb2bb561efb62d104c7a7c6eb60d9",
+    "results/explicacion/validacion_metricas_modelo_ampliado.csv": "bbc457ebcfd8fc6524e4be810b4de7487aad80172efaa4278c2310af6471aff4",
+    "results/explicacion/validacion_predicciones_modelo_ampliado.csv": "3beb25965de0cee820b4712f9628db1d01ebc13c166c202633c34d11cc5bd659",
+    "results/explicacion/validacion_predicciones_modelo_principal.csv": "f27903fbb89f7cb966ec327f991d101c9dd92d402f344b6f3a3ab53d28be5cce",
+    "results/pronostico/validacion_metricas_pronostico.csv": "a38c88f895a3555263ad5b5ccc4a37b2774d1570321cac0a85b2b511cac49e47",
+    "results/pronostico/validacion_predicciones_pronostico.csv": "e5401937d6d58b8e7f8d01dc6eb9daaed0979100e37cc2af3a97b4e4d298e0b8",
+    "results/robustez/bounds_resumen.csv": "093f1e9b5f3c733ba8832dff1a534dc8a425e9c2d88e26edb0df64153feecc0a",
+    "results/robustez/coeficientes_corto_plazo_ecm.csv": "6e86e6a4a16a735c15cc9a45d14572e49cb10fbea971503cb7a32a67bdfad820",
+    "results/robustez/coeficientes_largo_plazo_ecm.csv": "60f7b80384872c3950acc775847d945b2c0f77c053f056b0f058b12d3938ee0a"
   },
   "version": 2
 }

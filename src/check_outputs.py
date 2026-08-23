@@ -41,7 +41,7 @@ def main() -> None:
                 f"La instantánea raw {filename} no coincide con su SHA-256 registrado."
             )
 
-    weights = pd.read_csv(RESULTS / "pesos_explicativos_modelo_ampliado.csv")
+    weights = pd.read_csv(RESULTS / "explicacion/pesos_explicativos_modelo_ampliado.csv")
     if len(weights) != 12:
         raise AssertionError("La descomposición debe contener exactamente 12 factores.")
     if (weights["shapley_r2"] < -1e-12).any():
@@ -53,7 +53,7 @@ def main() -> None:
     ):
         raise AssertionError("Los aportes Shapley no cierran contra el R² incremental.")
 
-    bootstrap = pd.read_csv(RESULTS / "intervalos_bootstrap_pesos_shapley.csv")
+    bootstrap = pd.read_csv(RESULTS / "explicacion/intervalos_bootstrap_pesos_shapley.csv")
     if set(bootstrap["factor"]) != set(weights["factor"]) or len(bootstrap) != 12:
         raise AssertionError("Los intervalos bootstrap no cubren los 12 factores Shapley.")
     if not bootstrap["replicas_validas"].eq(200).all():
@@ -75,9 +75,9 @@ def main() -> None:
         raise AssertionError("Los pesos puntuales del bootstrap no concilian con Shapley exacto.")
 
     stability_detail = pd.read_csv(
-        RESULTS / "estabilidad_submuestras_modelo_ampliado.csv"
+        RESULTS / "explicacion/estabilidad_submuestras_modelo_ampliado.csv"
     )
-    stability_summary = pd.read_csv(RESULTS / "estabilidad_submuestras_resumen.csv")
+    stability_summary = pd.read_csv(RESULTS / "explicacion/estabilidad_submuestras_resumen.csv")
     expected_subsamples = {
         "Muestra completa",
         "Primera mitad",
@@ -126,7 +126,7 @@ def main() -> None:
     if len(fiscal_history["versions"]) != 8:
         raise AssertionError("El catálogo fiscal no contiene las ocho versiones verificadas.")
 
-    vintage_coverage = pd.read_csv(RESULTS / "cobertura_vintages_pronostico.csv")
+    vintage_coverage = pd.read_csv(RESULTS / "pronostico/cobertura_vintages_pronostico.csv")
     if len(vintage_coverage) != 12:
         raise AssertionError("La cobertura de vintages debe reportar los 12 factores.")
     complete_vintage = vintage_coverage["apto_backtest_genuino"].astype("string").str.lower().eq("true")
@@ -135,14 +135,14 @@ def main() -> None:
     if bool(metadata["backtest_genuino_disponible"]):
         raise AssertionError("El backtest no puede rotularse como genuino con cobertura parcial.")
 
-    comparison = pd.read_csv(RESULTS / "comparacion_modelos.csv")
+    comparison = pd.read_csv(RESULTS / "explicacion/comparacion_modelos.csv")
     if set(comparison["modelo"]) != {"Base", "Ampliado historico"}:
         raise AssertionError("La comparación no contiene las dos especificaciones esperadas.")
     if comparison["observaciones"].nunique() != 1:
         raise AssertionError("Base y ampliado no usan la misma muestra efectiva.")
 
     expanded_coefficients = pd.read_csv(
-        RESULTS / "coeficientes_modelo_ampliado.csv"
+        RESULTS / "explicacion/coeficientes_modelo_ampliado.csv"
     )
     expanded_terms = set(expanded_coefficients["termino"])
     required_active_terms = {
@@ -171,7 +171,7 @@ def main() -> None:
             f"{sorted(unexpected_retired_terms)}"
         )
 
-    integration = pd.read_csv(RESULTS / "pruebas_integracion.csv")
+    integration = pd.read_csv(RESULTS / "explicacion/pruebas_integracion.csv")
     for variable in ["asinh_balanza_comercial", "asinh_flujos_capital"]:
         transformations = set(
             integration.loc[integration["variable"].eq(variable), "transformacion"]
@@ -243,7 +243,7 @@ def main() -> None:
         ):
             raise AssertionError(f"No concilia la construcción de {label}.")
 
-    bei_aggregation = pd.read_csv(RESULTS / "comparacion_agregacion_bei_5y.csv")
+    bei_aggregation = pd.read_csv(RESULTS / "robustez/comparacion_agregacion_bei_5y.csv")
     if len(bei_aggregation) != 244 or bei_aggregation["dias_comunes"].isna().any():
         raise AssertionError("La comparación BEI debe cubrir 244 meses con fechas comunes.")
     if bei_aggregation["dias_comunes"].min() < 1:
@@ -253,7 +253,7 @@ def main() -> None:
     ) < 0.99:
         raise AssertionError("Las dos agregaciones BEI divergen de forma inesperada.")
 
-    bei_stationarity = pd.read_csv(RESULTS / "pruebas_estacionariedad_bei_5y.csv")
+    bei_stationarity = pd.read_csv(RESULTS / "robustez/pruebas_estacionariedad_bei_5y.csv")
     if len(bei_stationarity) != 24:
         raise AssertionError("Las pruebas BEI no cubren agregaciones, transformaciones y determinísticos.")
     differenced_tests = bei_stationarity.loc[
@@ -264,11 +264,11 @@ def main() -> None:
     if not differenced_tests.loc[differenced_tests["prueba"].eq("KPSS"), "p_valor"].ge(0.05).all():
         raise AssertionError("KPSS rechaza estacionariedad de una primera diferencia BEI.")
 
-    bei_trends = pd.read_csv(RESULTS / "tendencias_quiebres_bei_5y.csv")
+    bei_trends = pd.read_csv(RESULTS / "robustez/tendencias_quiebres_bei_5y.csv")
     if len(bei_trends) != 6 or bei_trends["fecha_quiebre_za"].nunique() != 1:
         raise AssertionError("La comparación de tendencias/quiebres BEI está incompleta.")
 
-    bei_specs = pd.read_csv(RESULTS / "comparacion_especificaciones_bei_5y.csv")
+    bei_specs = pd.read_csv(RESULTS / "robustez/comparacion_especificaciones_bei_5y.csv")
     if len(bei_specs) != 6 or bei_specs["observaciones"].nunique() != 1:
         raise AssertionError("Las seis especificaciones BEI no usan una muestra común.")
     active_bei = bei_specs.loc[bei_specs["especificacion"].str.contains("vigente")].iloc[0]
@@ -308,7 +308,7 @@ def main() -> None:
         ):
             raise AssertionError(f"No concilia la construcción de {label}.")
 
-    regional_comparison = pd.read_csv(RESULTS / "comparacion_factor_regional.csv")
+    regional_comparison = pd.read_csv(RESULTS / "explicacion/comparacion_factor_regional.csv")
     expected_uses = {
         "Explicación histórica",
         "Pronóstico con rezagos de publicación",
@@ -339,7 +339,7 @@ def main() -> None:
         raise AssertionError("La selección de tres monedas no minimiza el BIC del pronóstico.")
 
     forecast_coefficients = pd.read_csv(
-        RESULTS / "coeficientes_modelo_pronostico.csv"
+        RESULTS / "pronostico/coeficientes_modelo_pronostico.csv"
     )
     forecast_terms = set(forecast_coefficients["termino"])
     if "factor_monedas_regionales_3.L1" not in forecast_terms:
@@ -351,9 +351,9 @@ def main() -> None:
                 f"El pronóstico contiene información contemporánea o sin rezago: {term}."
             )
 
-    forecast_metrics = pd.read_csv(RESULTS / "validacion_metricas_pronostico.csv")
+    forecast_metrics = pd.read_csv(RESULTS / "pronostico/validacion_metricas_pronostico.csv")
     forecast_predictions = pd.read_csv(
-        RESULTS / "validacion_predicciones_pronostico.csv"
+        RESULTS / "pronostico/validacion_predicciones_pronostico.csv"
     )
     if set(forecast_metrics["modelo"]) != {
         "Pronóstico con rezagos de publicación",
