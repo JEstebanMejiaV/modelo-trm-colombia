@@ -27,22 +27,26 @@ $$
 
 Los errores estándar son HAC con una ventana de seis meses. Los coeficientes describen asociaciones parciales dentro de la muestra, manteniendo constantes los demás regresores.
 
+<!-- AUTO:coeficientes_principal -->
 | Término | Coeficiente | p-valor HAC | Lectura aproximada |
 |---|---:|---:|---|
 | Constante | −0,00059 | 0,7250 | No hay evidencia de una deriva mensual adicional. |
-| \(\Delta\ln\) términos de intercambio, mes actual | −0,10008 | 0,0007 | Una mejora de 10% se asocia con una TRM cerca de 1,0% menor. |
-| \(\Delta\ln\) dólar amplio, mes actual | 1,27461 | <0,0001 | Un aumento de 1% del dólar global se asocia con una TRM cerca de 1,27% mayor. |
-| \(\Delta\ln\) VIX, mes actual | 0,03836 | <0,0001 | Un aumento de 10% del VIX se asocia con una TRM cerca de 0,37% mayor. |
-| \(\Delta\ln\) remesas acumuladas 12 meses, rezago 1 | 0,27652 | 0,0243 | Un aumento de 10% se asocia con una TRM cerca de 2,7% mayor; el signo contrario al canal simple de oferta de divisas aconseja cautela por endogeneidad. |
-| \(\Delta\) diferencial de tasas Colombia–EE. UU., rezago 1 | −0,00990 | 0,0436 | Un aumento de 1 punto porcentual en el cambio del diferencial se asocia con una TRM cerca de 0,99% menor. |
-| \(\Delta\) déficit fiscal 12 meses/PIB, rezago 1 | 0,00485 | 0,1447 | Un aumento de 1 punto porcentual se asocia con una TRM cerca de 0,49% mayor, pero la estimación no es precisa al 5%. |
-| Indicador de pandemia, marzo–mayo de 2020 | 0,01081 | 0,0200 | Se asocia con una TRM alrededor de 1,1% mayor, condicionado a los demás factores. |
+| \(\Delta\ln\) términos de intercambio, mes actual | −0,10008 | 0,0007 | Una mejora de 10% se asocia con una TRM cerca de 100.1% menor. |
+| \(\Delta\ln\) remesas 12 meses, rezago 1 | 0,27652 | 0,0243 | Un aumento de 10% se asocia con una TRM cerca de 276.5% mayor; el signo contrario al canal simple de oferta de divisas aconseja cautela por endogeneidad. |
+| \(\Delta\) diferencial de tasas, rezago 1 | −0,00990 | 0,0436 | Un aumento de 1 punto porcentual en el cambio del diferencial se asocia con una TRM cerca de 0.99% menor. |
+| \(\Delta\) déficit fiscal 12 meses/PIB, rezago 1 | 0,00485 | 0,1447 | Un aumento de 1 punto porcentual se asocia con una TRM cerca de 0.48% mayor, pero la estimación no es precisa al 5%. |
+| \(\Delta\ln\) dólar amplio, mes actual | 1,27461 | <0,0001 | Un aumento de 1% del dólar global se asocia con una TRM cerca de 127.46% mayor. |
+| \(\Delta\ln\) VIX, mes actual | 0,03836 | <0,0001 | Un aumento de 10% del VIX se asocia con una TRM cerca de 38.36% mayor. |
+| Indicador de pandemia, marzo–mayo de 2020 | 0,01081 | 0,0200 | Se asocia con una TRM alrededor de 1.1% mayor, condicionado a los demás factores. |
+<!-- /AUTO:coeficientes_principal -->
 
 El R² es 49,45% y el R² ajustado es 47,92%. En una validación expansiva de 48 meses, el modelo obtiene:
 
+<!-- AUTO:metricas_principal -->
 - MAPE condicional: **2,01%**.
 - Acierto de dirección: **68,75%**.
-- R² condicional frente a caminata aleatoria: **31,92%**.
+- R² condicional frente a caminata aleatoria: **0,32%**.
+<!-- /AUTO:metricas_principal -->
 
 La validación usa los valores realizados dentro del mes de términos de intercambio, dólar amplio y VIX. Por ello mide capacidad explicativa condicional, no desempeño de un pronóstico en tiempo real.
 
@@ -59,6 +63,7 @@ El modelo ampliado conserva los siete términos del principal e incorpora seis b
 
 Base y ampliado usan los mismos 240 meses efectivos. Los coeficientes finales del ampliado son:
 
+<!-- AUTO:coeficientes_ampliado -->
 | Término | Coeficiente | p-valor |
 |---|---:|---:|
 | Constante | 0,00318 | 0,0945 |
@@ -74,10 +79,12 @@ Base y ampliado usan los mismos 240 meses efectivos. Los coeficientes finales de
 | \(\Delta\,\mathrm{asinh}\) movimientos netos de capital, rezago 1 | 0,00065 | 0,8505 |
 | \(\Delta\) diferencial de compensación inflacionaria 5 años, rezago 1 | −0,00627 | 0,1771 |
 | Factor regional BRL, CLP, MXN y PEN, mes actual | 0,01653 | <0,0001 |
-| Indicador de pandemia | −0,00272 | 0,6686 |
+| Indicador de pandemia, marzo–mayo de 2020 | −0,00272 | 0,6686 |
+<!-- /AUTO:coeficientes_ampliado -->
 
 La transformación \(\mathrm{asinh}\) conserva el signo y admite ceros, pero sus coeficientes no son elasticidades constantes. La significancia individual tampoco debe confundirse con el peso explicativo: un factor puede compartir mucha información con otros y, por multicolinealidad, tener un p-valor individual alto.
 
+<!-- AUTO:comparacion_modelos -->
 | Métrica | Modelo principal | Modelo ampliado |
 |---|---:|---:|
 | Observaciones efectivas | 240 | 240 |
@@ -86,6 +93,7 @@ La transformación \(\mathrm{asinh}\) conserva el signo y admite ceros, pero sus
 | MAPE, validación condicional de 48 meses | 2,01% | 1,70% |
 | Acierto de dirección | 68,75% | 81,25% |
 | R² condicional frente a caminata aleatoria | 31,92% | 47,42% |
+<!-- /AUTO:comparacion_modelos -->
 
 Los diagnósticos de ambos modelos no detectan autocorrelación a 12 meses y CUSUM no rechaza estabilidad. En el modelo principal, Jarque–Bera rechaza normalidad y ARCH-LM no rechaza al 5% (p = 0,080). En el ampliado, Jarque–Bera y ARCH-LM rechazan normalidad y homocedasticidad; RESET no rechaza al 5% (p = 0,078). Los errores HAC robustecen la inferencia de la ecuación de media, pero no modelan volatilidad ni colas extremas.
 
@@ -103,24 +111,28 @@ El peso se calcula mediante una descomposición Shapley/LMG exacta del R². Se e
 
 El bloque fijo —intercepto, dinámica seleccionada de TRM y pandemia— explica 1,78% de la variación. Los 12 factores elevan el R² a 60,77%, un incremento de 58,99 puntos porcentuales. La columna “peso” reparte ese incremento y suma 100%.
 
+<!-- AUTO:pesos_shapley -->
 | Factor | Peso entre los 12 factores | Aporte al R² |
 |---|---:|---:|
-| Monedas regionales | 30,13% | 17,77 p.p. |
-| Dólar amplio | 20,13% | 11,88 p.p. |
-| Riesgo soberano EMBIG Colombia | 18,22% | 10,75 p.p. |
-| VIX | 8,32% | 4,91 p.p. |
-| Balanza comercial cambiaria | 7,37% | 4,35 p.p. |
-| Términos de intercambio | 6,73% | 3,97 p.p. |
-| Movimientos netos de capital | 4,22% | 2,49 p.p. |
-| Reservas internacionales | 2,58% | 1,52 p.p. |
-| Remesas | 1,15% | 0,68 p.p. |
-| Diferencial de compensación inflacionaria 5 años | 0,59% | 0,35 p.p. |
-| Diferencial de tasas | 0,43% | 0,26 p.p. |
-| Déficit fiscal | 0,13% | 0,07 p.p. |
+| Monedas regionales | 30,13% | 17,77 p,p, |
+| Dólar amplio | 20,13% | 11,88 p,p, |
+| Riesgo soberano EMBIG Colombia | 18,22% | 10,75 p,p, |
+| VIX | 8,32% | 4,91 p,p, |
+| Balanza comercial cambiaria | 7,37% | 4,35 p,p, |
+| Términos de intercambio | 6,73% | 3,97 p,p, |
+| Flujos netos de capital | 4,22% | 2,49 p,p, |
+| Reservas internacionales | 2,58% | 1,52 p,p, |
+| Remesas | 1,15% | 0,68 p,p, |
+| Diferencial de compensación inflacionaria 5 años | 0,59% | 0,35 p,p, |
+| Diferencial de tasas | 0,43% | 0,26 p,p, |
+| Déficit fiscal | 0,13% | 0,07 p,p, |
+<!-- /AUTO:pesos_shapley -->
 
 Estos pesos miden ajuste estadístico en esta muestra. No miden causalidad, importancia estructural ni el efecto de una intervención. Cuando dos factores están correlacionados, Shapley distribuye su señal compartida; por eso el peso no es igual al tamaño o a la significancia de un coeficiente.
 
-La incertidumbre se evalúa con 200 réplicas de un *bootstrap* circular de bloques de 12 meses. Los intervalos percentiles del 95% de los tres factores principales son: monedas regionales, **21,65%–34,72%**; dólar amplio, **12,02%–26,98%**; y EMBIG Colombia, **12,33%–26,56%**. Son intervalos de la asignación Shapley bajo remuestreo temporal, no intervalos de un efecto causal.
+<!-- AUTO:bootstrap_intervalos -->
+La incertidumbre se evalúa con 200 réplicas de un *bootstrap* circular de bloques de 12 meses. Los intervalos percentiles del 95% de los tres factores principales son: Monedas regionales, **21,65%–34,72%**; Dólar amplio, **12,02%–26,98%**; Riesgo soberano EMBIG Colombia, **12,33%–26,56%**. Son intervalos de la asignación Shapley bajo remuestreo temporal, no intervalos de un efecto causal.
+<!-- /AUTO:bootstrap_intervalos -->
 
 La jerarquía general es estable en cinco cortes: la correlación de rangos de Spearman frente a la muestra completa va de **0,909 a 0,979**. La submuestra 2020–2026 conserva el signo de **9 de 12** coeficientes y el mayor cambio individual de peso alcanza **6,60 p.p.**. Por eso la estabilidad de rangos no debe confundirse con estabilidad paramétrica.
 
@@ -141,7 +153,9 @@ La selección depende del propósito: PEN mejora la explicación histórica, per
 
 Esta ecuación pronostica la TRM promedio del mes `t` al inicio de `t`. No usa factores económicos del mes objetivo: términos de intercambio y déficit entran con tres meses de rezago; remesas, reservas, balanza y capitales con dos; dólar amplio, VIX, EMBIG, tasas, compensación inflacionaria y monedas regionales con uno. BIC selecciona además un rezago de `Δln(TRM)`.
 
+<!-- AUTO:metricas_pronostico -->
 La validación expansiva de 48 meses obtiene MAPE de **2,63%**, acierto de dirección de **52,08%** y R² frente a la caminata aleatoria de **−10,98%**. La caminata obtiene MAPE de **2,39%**. Es decir, la ecuación explicativa no se convierte automáticamente en un buen pronóstico y, con esta información, el benchmark simple sigue siendo superior.
+<!-- /AUTO:metricas_pronostico -->
 
 La evaluación es **pseudo-tiempo-real**: respeta el calendario de publicación, pero usa la última versión disponible de cada serie. El repositorio ahora archiva descargas por fecha de origen y deja implementada una recuperación ALFRED reanudable; sin embargo, el proveedor cortó las conexiones individuales y el paquete multiserie se descartó por contener datos posteriores al origen. Por ello **0 de 12 factores** tienen todavía cobertura versionada completa para los 48 orígenes. Las series de BanRep y BCRPData también carecen aquí de una historia integral de revisiones. La matriz de cobertura está en `results/cobertura_vintages_pronostico.csv`.
 
