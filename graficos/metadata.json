@@ -1,7 +1,7 @@
 {
   "generator": {
     "path": "src/build_charts.py",
-    "sha256": "6266c393d85ae45d7cbf47ea786f4739e18e7f20a6663982620c6f6ab1807cf9"
+    "sha256": "9f800951a08bc013ae84c05970b4cdafab7cafb4560ebbe2348a0b5381184879"
   },
   "hash_method": "CSV canónico con 6 cifras significativas",
   "images": {

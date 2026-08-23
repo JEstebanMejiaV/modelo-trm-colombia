@@ -871,7 +871,7 @@ def main() -> None:
     )
     comparison = pd.read_csv(RESULTS / "comparacion_modelos.csv")
     validation = pd.read_csv(RESULTS / "validacion_metricas_modelo_ampliado.csv")
-    base_predictions = pd.read_csv(RESULTS / "validacion_predicciones.csv")
+    base_predictions = pd.read_csv(RESULTS / "validacion_predicciones_modelo_principal.csv")
     expanded_predictions = pd.read_csv(
         RESULTS / "validacion_predicciones_modelo_ampliado.csv"
     )
