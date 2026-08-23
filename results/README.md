@@ -26,7 +26,7 @@ Tres términos requieren una lectura particular:
 
 - `D.ln_terminos_intercambio.L0` es el cambio logarítmico contemporáneo de los términos de intercambio. El dato se publica con un rezago aproximado de dos meses, por lo que sirve para explicación *ex post*, no para un pronóstico disponible al comienzo de `t`.
 - `D.embig_colombia_pp.L0` es el cambio contemporáneo del promedio mensual de EMBIG Colombia, convertido de puntos básicos a puntos porcentuales. La instantánea procede de BCRPData, que atribuye la serie a Reuters/J.P. Morgan; debe conservarse esa atribución y no interpretarse la descarga pública como licencia abierta sobre la metodología o marca EMBIG.
-- `diferencial_bei_5y_pp.L1` es la compensación de inflación colombiana a cinco años menos la estadounidense, rezagada un mes. El BEI incorpora primas de riesgo de inflación y diferencias de liquidez: es compensación de mercado, no una expectativa pura ni una encuesta.
+- `D.diferencial_bei_5y_pp.L1` es el cambio rezagado de la compensación de inflación colombiana a cinco años menos la estadounidense. Se usa la diferencia porque el nivel es sensible a tendencias y quiebres. El BEI incorpora primas de riesgo de inflación y diferencias de liquidez: es compensación de mercado, no una expectativa pura ni una encuesta.
 - `factor_monedas_regionales_4.L0` es el promedio igual de cambios log estandarizados de BRL, CLP, MXN y PEN por USD. PEN procede de BCRPData `PN01207PM`. Es contemporáneo y pertenece a la explicación histórica, no al pronóstico seleccionado.
 
 ### `ajuste_historico_modelo_principal.csv` y `ajuste_historico_modelo_ampliado.csv`
@@ -59,13 +59,13 @@ Shapley promedia todos los órdenes posibles de incorporación y reparte la info
 
 Añade incertidumbre de remuestreo a los pesos puntuales. Usa 200 réplicas de bloques circulares de 12 meses para conservar dependencia local; dentro de cada réplica aproxima la asignación Shapley con 64 permutaciones antitéticas y una semilla fija. Reporta media, mediana, intervalo percentil del 95%, probabilidad de quedar entre los tres primeros factores y los parámetros de reproducción. El peso puntual sigue siendo el Shapley exacto de 4.096 subconjuntos.
 
-Los intervalos de monedas regionales (`20,66%–34,56%`), dólar amplio (`11,87%–27,43%`) y EMBIG Colombia (`12,23%–26,21%`) se solapan. Esto respalda que el grupo dominante es robusto, pero no un orden exacto e inmutable entre sus integrantes.
+Los intervalos de monedas regionales (`21,65%–34,72%`), dólar amplio (`12,02%–26,98%`) y EMBIG Colombia (`12,33%–26,56%`) se solapan. Esto respalda que el grupo dominante es robusto, pero no un orden exacto e inmutable entre sus integrantes.
 
 ### `estabilidad_submuestras_modelo_ampliado.csv` y `estabilidad_submuestras_resumen.csv`
 
 Reestiman la especificación ampliada en la muestra completa, ambas mitades, prepandemia y 2020 en adelante. El detalle incluye coeficiente, p-valor HAC, Shapley exacto, rango, cambio de peso y coincidencia de signo. El resumen reporta R² ajustado, correlación de rangos de Spearman y desviaciones absolutas frente a la muestra completa.
 
-La correlación de rangos permanece entre `0,944` y `0,972`. No obstante, 2020–2026 conserva el signo de solo 7 de 12 coeficientes y registra un cambio máximo de peso de `6,71 p.p.`. La importancia relativa es más estable que los signos parciales; ambos resultados deben mostrarse juntos.
+La correlación de rangos permanece entre `0,909` y `0,979`. En 2020–2026 se conserva el signo de 9 de 12 coeficientes y el cambio máximo de peso es `6,60 p.p.`. La importancia relativa es más estable que los signos parciales; ambos resultados deben mostrarse juntos.
 
 ## Comparación de modelos
 
@@ -79,7 +79,7 @@ Compara la especificación base y la ampliada sobre la misma muestra.
 - `acierto_direccion_pct` mayor indica más meses con el signo correcto del cambio.
 - `r2_validacion_condicional_vs_caminata` compara errores cuadrados con la caminata aleatoria; valores positivos indican mejora en la validación expansiva condicional. No es un R² de pronóstico ex ante porque usa algunos predictores contemporáneos ya realizados.
 
-No debe elegirse un modelo con una sola métrica. En los resultados actuales, el ampliado histórico de cuatro monedas mejora el R² ajustado (`0,581` frente a `0,479`), AIC (`−1150,02` frente a `−1103,31`), BIC (`−1101,29` frente a `−1075,46`), MAPE condicional (`1,69%` frente a `2,01%`), acierto de dirección (`81,25%` frente a `68,75%`) y R² condicional frente a la caminata (`0,490` frente a `0,319`).
+No debe elegirse un modelo con una sola métrica. En los resultados actuales, el ampliado histórico de cuatro monedas mejora el R² ajustado (`0,585` frente a `0,479`), AIC (`−1152,18` frente a `−1103,31`), BIC (`−1103,45` frente a `−1075,46`), MAPE condicional (`1,70%` frente a `2,01%`), acierto de dirección (`81,25%` frente a `68,75%`) y R² condicional frente a la caminata (`0,474` frente a `0,319`).
 
 ## Factor regional y pronóstico
 
@@ -101,7 +101,7 @@ Reporta coeficientes e inferencia HAC de la ecuación seleccionada. Los término
 
 ### `validacion_metricas_pronostico.csv` y `validacion_predicciones_pronostico.csv`
 
-Miden una ventana expansiva de 48 meses para el pronóstico y la caminata aleatoria. El pronóstico obtiene MAPE de 2,63%, acierto de dirección de 47,92% y R² frente a caminata de −0,115; la caminata obtiene MAPE de 2,39%. El resultado documenta que el modelo explicativo no supera el benchmark cuando se restringe la información al origen.
+Miden una ventana expansiva de 48 meses para el pronóstico y la caminata aleatoria. El pronóstico obtiene MAPE de 2,63%, acierto de dirección de 52,08% y R² frente a caminata de −0,110; la caminata obtiene MAPE de 2,39%. El resultado documenta que el modelo explicativo no supera el benchmark cuando se restringe la información al origen.
 
 ### `diagnosticos_modelo_pronostico.csv`
 
@@ -132,7 +132,7 @@ Los coeficientes se reestiman en cada ventana expansiva, pero la cantidad de rez
 
 Incluyen Ljung–Box y Breusch–Godfrey para autocorrelación, ARCH-LM para volatilidad condicional, Jarque–Bera para normalidad, Ramsey RESET para forma funcional, CUSUM para estabilidad y Durbin–Watson como referencia. La interpretación usual se hace al 5%.
 
-Al 5%, el modelo ampliado rechaza ausencia de ARCH (`p = 0,0007`) y normalidad (`p = 0,0002`), pero RESET no rechaza (`p = 0,101`). No hay evidencia de autocorrelación en Ljung–Box o Breusch–Godfrey ni de inestabilidad según CUSUM. HAC protege la inferencia de la ecuación de media frente a heterocedasticidad y autocorrelación de forma robusta, pero no modela la volatilidad ni normaliza las colas.
+Al 5%, el modelo ampliado rechaza ausencia de ARCH (`p = 0,0016`) y normalidad (`p = 0,0020`), pero RESET no rechaza (`p = 0,078`). No hay evidencia de autocorrelación en Ljung–Box o Breusch–Godfrey ni de inestabilidad según CUSUM. HAC protege la inferencia de la ecuación de media frente a heterocedasticidad y autocorrelación de forma robusta, pero no modela la volatilidad ni normaliza las colas.
 
 ### `seleccion_rezagos_adl_diferencias.csv` y `seleccion_rezagos_modelo_ampliado.csv`
 
@@ -140,7 +140,23 @@ Comparan de cero a tres rezagos del cambio de la TRM mediante AIC, BIC y R² aju
 
 ### `pruebas_integracion.csv`
 
-Reporta ADF y KPSS para niveles y diferencias, con número de observaciones y rezagos. ADF tiene como nula la presencia de raíz unitaria; KPSS, la estacionariedad. Para el diferencial BEI, la especificación con constante y rezagos BIC favorece el nivel, pero el resultado es sensible a tendencia y selección de rezagos; no debe presentarse como una conclusión definitiva. Todas las pruebas requieren cautela ante quiebres estructurales.
+Reporta ADF y KPSS para niveles y diferencias, con número de observaciones y rezagos. ADF tiene como nula la presencia de raíz unitaria; KPSS, la estacionariedad. La evaluación ampliada del BEI está en los cuatro archivos siguientes.
+
+### `comparacion_agregacion_bei_5y.csv`
+
+Compara, mes a mes, el diferencial construido con promedios separados y el calculado solo sobre fechas diarias comunes. Incluye cada componente, número de días publicados, diferencia entre métodos y estadísticos globales. La correlación es `0,99975`, la diferencia media es `0,00004 p.p.` y la máxima absoluta `0,156 p.p.`; la intersección diaria puede caer a 4 observaciones en un mes.
+
+### `pruebas_estacionariedad_bei_5y.csv`
+
+Aplica ADF, KPSS y Zivot–Andrews al nivel y la primera diferencia de ambas agregaciones, con constante y con constante más tendencia. El nivel separado parece estacionario con constante, pero no con tendencia: ADF da `p = 0,054` y KPSS rechaza. Zivot–Andrews con tendencia y quiebre selecciona 2009-01, pero no rechaza raíz unitaria al 5% (`p = 0,089`). La primera diferencia ofrece resultados robustos en ambos métodos de agregación.
+
+### `tendencias_quiebres_bei_5y.csv`
+
+Compara una media sin tendencia, una tendencia lineal y una tendencia segmentada en la fecha sugerida por Zivot–Andrews. El quiebre se selecciona con la muestra completa y se presenta como diagnóstico *ex post*, no como regla disponible en tiempo real ni prueba automática de cambio estructural.
+
+### `comparacion_especificaciones_bei_5y.csv`
+
+Reestima seis variantes sobre los mismos 240 meses: nivel o diferencia, promedios separados o fechas comunes, nivel con tendencia y nivel con cambio de coeficiente en 2009-01. La primera diferencia con promedios separados obtiene el menor BIC (`−1103,45`) y es la especificación activa. El nivel logra un MAPE condicional apenas menor, pero depende más de supuestos determinísticos. La variante con quiebre de coeficiente empeora el BIC y sus cambios no son significativos al 5%.
 
 ## Contraste ARDL–ECM
 

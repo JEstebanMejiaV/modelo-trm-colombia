@@ -21,7 +21,7 @@ from statsmodels.stats.diagnostic import (
 )
 from statsmodels.stats.stattools import durbin_watson, jarque_bera
 from statsmodels.tsa.ardl import ARDL, UECM
-from statsmodels.tsa.stattools import adfuller, kpss
+from statsmodels.tsa.stattools import adfuller, kpss, zivot_andrews
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -121,7 +121,7 @@ def expanded_factor_specs(regional_component: str) -> dict[str, dict[str, object
     },
     "Diferencial de compensación inflacionaria 5 años": {
         "grupo": "Política doméstica",
-        "terminos": [("diferencial_bei_5y_pp", 1)],
+        "terminos": [("D.diferencial_bei_5y_pp", 1)],
     },
     "Monedas regionales": {
         "grupo": "Regional",
@@ -180,7 +180,7 @@ def forecast_factor_specs(regional_component: str) -> dict[str, dict[str, object
         },
         "Diferencial de compensación inflacionaria 5 años": {
             "grupo": "Política doméstica",
-            "terminos": [("diferencial_bei_5y_pp", 1)],
+            "terminos": [("D.diferencial_bei_5y_pp", 1)],
         },
         "Monedas regionales": {
             "grupo": "Regional",
@@ -220,11 +220,14 @@ DIFFERENCED_COMPONENTS = [
     "ln_reservas_netas_sin_flar",
     "asinh_balanza_comercial",
     "asinh_flujos_capital",
+    "diferencial_bei_5y_pp",
+    "diferencial_bei_5y_comun_pp",
 ]
 
 
 LEVEL_COMPONENTS = [
     "diferencial_bei_5y_pp",
+    "diferencial_bei_5y_comun_pp",
     "factor_monedas_regionales_3",
     "factor_monedas_regionales_4",
 ]
@@ -268,8 +271,8 @@ def read_fred(path: Path, output_name: str, daily: bool = False) -> pd.Series:
     return series
 
 
-def load_fed_gsw_breakeven(path: Path) -> pd.Series:
-    """Lee BKEVEN05 del archivo diario Gürkaynak-Sack-Wright del Federal Reserve Board."""
+def load_fed_gsw_breakeven_daily(path: Path) -> pd.Series:
+    """Lee BKEVEN05 diario del archivo Gürkaynak-Sack-Wright."""
     raw = pd.read_csv(
         path,
         skiprows=18,
@@ -282,9 +285,18 @@ def load_fed_gsw_breakeven(path: Path) -> pd.Series:
             "bei_eeuu_5y_pct": pd.to_numeric(raw["BKEVEN05"], errors="coerce"),
         }
     ).dropna()
-    series = frame.set_index("fecha")["bei_eeuu_5y_pct"].sort_index().resample("MS").mean()
+    series = frame.set_index("fecha")["bei_eeuu_5y_pct"].sort_index()
+    series.index = series.index.normalize()
+    series = series.groupby(level=0).mean()
     series.name = "bei_eeuu_5y_pct"
     return series
+
+
+def load_fed_gsw_breakeven(path: Path) -> pd.Series:
+    daily = load_fed_gsw_breakeven_daily(path)
+    monthly = daily.resample("MS").mean()
+    monthly.name = "bei_eeuu_5y_pct"
+    return monthly
 
 
 def load_banrep_series(path: Path, output_name: str, daily: bool = False) -> pd.Series:
@@ -303,6 +315,76 @@ def load_banrep_series(path: Path, output_name: str, daily: bool = False) -> pd.
         series = series.groupby(level=0).mean()
     series.name = output_name
     return series
+
+
+def load_banrep_observations(path: Path, output_name: str) -> pd.Series:
+    """Lee observaciones BanRep sin agregarlas para comparar calendarios diarios."""
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    item = payload[0] if isinstance(payload, list) else payload
+    frame = pd.DataFrame(item["data"], columns=["timestamp_ms", output_name])
+    dates = pd.to_datetime(frame.pop("timestamp_ms"), unit="ms", utc=True).dt.tz_convert(None)
+    frame.index = pd.DatetimeIndex(dates).normalize()
+    series = pd.to_numeric(frame[output_name], errors="coerce").dropna().sort_index()
+    series = series.groupby(level=0).mean()
+    series.name = output_name
+    return series
+
+
+def build_bei_aggregations() -> pd.DataFrame:
+    """Construye BEI mensual con medias separadas y con fechas diarias comunes."""
+    nominal = load_banrep_observations(
+        RAW / "tes_5y_pesos_banrep.json", "tes_5y_pesos_colombia_pct"
+    )
+    real = load_banrep_observations(
+        RAW / "tes_5y_uvr_banrep.json", "tes_5y_uvr_colombia_pct"
+    )
+    us = load_fed_gsw_breakeven_daily(RAW / "bei_5y_eeuu_diario_fed.csv")
+
+    separate = pd.concat(
+        [
+            nominal.resample("MS").mean(),
+            real.resample("MS").mean(),
+            us.resample("MS").mean(),
+        ],
+        axis=1,
+        sort=True,
+    )
+    separate["bei_colombia_5y_pct"] = (
+        separate["tes_5y_pesos_colombia_pct"]
+        - separate["tes_5y_uvr_colombia_pct"]
+    )
+    separate["diferencial_bei_5y_pp"] = (
+        separate["bei_colombia_5y_pct"] - separate["bei_eeuu_5y_pct"]
+    )
+
+    common_daily = pd.concat([nominal, real, us], axis=1, join="inner").dropna()
+    common_daily["diferencial_bei_5y_comun_pp"] = (
+        common_daily["tes_5y_pesos_colombia_pct"]
+        - common_daily["tes_5y_uvr_colombia_pct"]
+        - common_daily["bei_eeuu_5y_pct"]
+    )
+    common = common_daily.resample("MS").agg(
+        tes_5y_pesos_comun_pct=("tes_5y_pesos_colombia_pct", "mean"),
+        tes_5y_uvr_comun_pct=("tes_5y_uvr_colombia_pct", "mean"),
+        bei_eeuu_5y_comun_pct=("bei_eeuu_5y_pct", "mean"),
+        diferencial_bei_5y_comun_pp=("diferencial_bei_5y_comun_pp", "mean"),
+        dias_comunes=("diferencial_bei_5y_comun_pp", "count"),
+    )
+    counts = pd.concat(
+        [
+            nominal.resample("MS").count().rename("dias_tes_pesos"),
+            real.resample("MS").count().rename("dias_tes_uvr"),
+            us.resample("MS").count().rename("dias_bei_eeuu"),
+        ],
+        axis=1,
+        sort=True,
+    )
+    out = separate.join(common, how="outer").join(counts, how="outer")
+    out["diferencia_comun_menos_separada_pp"] = (
+        out["diferencial_bei_5y_comun_pp"] - out["diferencial_bei_5y_pp"]
+    )
+    out.index.name = "fecha"
+    return out
 
 
 def load_remittances(path: Path) -> pd.Series:
@@ -450,17 +532,7 @@ def build_dataset() -> pd.DataFrame:
             RAW / "reservas_netas_sin_flar_banrep.json",
             "reservas_netas_sin_flar_usd_millones",
         ),
-        load_banrep_series(
-            RAW / "tes_5y_pesos_banrep.json",
-            "tes_5y_pesos_colombia_pct",
-            daily=True,
-        ),
-        load_banrep_series(
-            RAW / "tes_5y_uvr_banrep.json",
-            "tes_5y_uvr_colombia_pct",
-            daily=True,
-        ),
-        load_fed_gsw_breakeven(RAW / "bei_5y_eeuu_diario_fed.csv"),
+        build_bei_aggregations(),
         load_embig_bcrp(RAW / "embig_colombia_diario_bcrp.json"),
         load_banrep_series(
             RAW / "balanza_comercial_cambiaria_banrep.json",
@@ -485,13 +557,6 @@ def build_dataset() -> pd.DataFrame:
         data["tasa_politica_colombia_pct"] - data["fed_funds_eeuu_pct"]
     )
     data["embig_colombia_pp"] = data["embig_colombia_pb"] / 100.0
-    data["bei_colombia_5y_pct"] = (
-        data["tes_5y_pesos_colombia_pct"] - data["tes_5y_uvr_colombia_pct"]
-    )
-    data["diferencial_bei_5y_pp"] = (
-        data["bei_colombia_5y_pct"] - data["bei_eeuu_5y_pct"]
-    )
-
     data["asinh_balanza_comercial"] = np.arcsinh(
         data["balanza_comercial_cambiaria_usd_millones"] / 1000.0
     )
@@ -560,6 +625,166 @@ def integration_tests(data: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
                     "adf_rezagos": int(adf[2]),
                     "kpss_estadistico": kpss_stat,
                     "kpss_p": kpss_p,
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def bei_stationarity_tests(data: pd.DataFrame) -> pd.DataFrame:
+    """Contrasta nivel/diferencia con constante, tendencia y un quiebre endógeno."""
+    definitions = {
+        "Medias mensuales separadas": "diferencial_bei_5y_pp",
+        "Fechas diarias comunes": "diferencial_bei_5y_comun_pp",
+    }
+    rows: list[dict[str, object]] = []
+    for aggregation, column in definitions.items():
+        original = data[column].loc[SAMPLE_START:SAMPLE_END].dropna()
+        for transformation, series in [
+            ("nivel", original),
+            ("primera_diferencia", original.diff().dropna()),
+        ]:
+            for deterministic, regression in [
+                ("constante", "c"),
+                ("constante_tendencia", "ct"),
+            ]:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    adf = adfuller(series, regression=regression, autolag="BIC")
+                    kpss_result = kpss(series, regression=regression, nlags="auto")
+                rows.extend(
+                    [
+                        {
+                            "agregacion": aggregation,
+                            "variable": column,
+                            "transformacion": transformation,
+                            "prueba": "ADF",
+                            "deterministico": deterministic,
+                            "hipotesis_nula": "raiz_unitaria",
+                            "n": len(series),
+                            "estadistico": float(adf[0]),
+                            "p_valor": float(adf[1]),
+                            "rezagos": int(adf[2]),
+                            "fecha_quiebre": "",
+                            "critico_5_pct": float(adf[4]["5%"]),
+                        },
+                        {
+                            "agregacion": aggregation,
+                            "variable": column,
+                            "transformacion": transformation,
+                            "prueba": "KPSS",
+                            "deterministico": deterministic,
+                            "hipotesis_nula": "estacionariedad",
+                            "n": len(series),
+                            "estadistico": float(kpss_result[0]),
+                            "p_valor": float(kpss_result[1]),
+                            "rezagos": int(kpss_result[2]),
+                            "fecha_quiebre": "",
+                            "critico_5_pct": float(kpss_result[3]["5%"]),
+                        },
+                    ]
+                )
+            for deterministic, regression in [
+                ("constante_con_quiebre", "c"),
+                ("constante_tendencia_con_quiebre", "ct"),
+            ]:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    za = zivot_andrews(series, regression=regression, autolag="BIC")
+                break_date = series.index[int(za[4])]
+                rows.append(
+                    {
+                        "agregacion": aggregation,
+                        "variable": column,
+                        "transformacion": transformation,
+                        "prueba": "Zivot-Andrews",
+                        "deterministico": deterministic,
+                        "hipotesis_nula": "raiz_unitaria_con_quiebre",
+                        "n": len(series),
+                        "estadistico": float(za[0]),
+                        "p_valor": float(za[1]),
+                        "rezagos": int(za[3]),
+                        "fecha_quiebre": break_date.strftime("%Y-%m-%d"),
+                        "critico_5_pct": float(za[2]["5%"]),
+                    }
+                )
+    return pd.DataFrame(rows)
+
+
+def bei_trend_break_models(
+    data: pd.DataFrame, stationarity: pd.DataFrame
+) -> pd.DataFrame:
+    """Compara tendencia lineal y tendencia segmentada en el propio diferencial BEI."""
+    definitions = {
+        "Medias mensuales separadas": "diferencial_bei_5y_pp",
+        "Fechas diarias comunes": "diferencial_bei_5y_comun_pp",
+    }
+    rows: list[dict[str, object]] = []
+    for aggregation, column in definitions.items():
+        series = data[column].loc[SAMPLE_START:SAMPLE_END].dropna()
+        break_record = stationarity.loc[
+            stationarity["agregacion"].eq(aggregation)
+            & stationarity["transformacion"].eq("nivel")
+            & stationarity["prueba"].eq("Zivot-Andrews")
+            & stationarity["deterministico"].eq("constante_tendencia_con_quiebre")
+        ].iloc[0]
+        break_date = pd.Timestamp(break_record["fecha_quiebre"])
+        trend_years = pd.Series(
+            np.arange(len(series), dtype=float) / 12.0,
+            index=series.index,
+            name="tendencia_anual",
+        )
+        post = (series.index >= break_date).astype(float)
+        break_year = float(trend_years.loc[break_date])
+        post_slope = np.maximum(0.0, trend_years.to_numpy() - break_year)
+        designs = {
+            "Sin tendencia": pd.DataFrame(index=series.index),
+            "Tendencia lineal": pd.DataFrame(
+                {"tendencia_anual": trend_years}, index=series.index
+            ),
+            "Tendencia segmentada con quiebre ZA": pd.DataFrame(
+                {
+                    "tendencia_anual": trend_years,
+                    "cambio_nivel_post_quiebre": post,
+                    "cambio_pendiente_post_quiebre": post_slope,
+                },
+                index=series.index,
+            ),
+        }
+        for model_name, design in designs.items():
+            x = sm.add_constant(design, has_constant="add")
+            result = sm.OLS(series, x).fit()
+            _, coefficients = tidy_robust_ols(result, maxlags=6)
+            lookup = coefficients.set_index("termino")
+
+            def value(term: str, field: str) -> float:
+                if term not in lookup.index:
+                    return math.nan
+                return float(lookup.loc[term, field])
+
+            rows.append(
+                {
+                    "agregacion": aggregation,
+                    "variable": column,
+                    "modelo_deterministico": model_name,
+                    "fecha_quiebre_za": break_date.strftime("%Y-%m-%d"),
+                    "observaciones": int(result.nobs),
+                    "r_cuadrado_ajustado": float(result.rsquared_adj),
+                    "aic": float(result.aic),
+                    "bic": float(result.bic),
+                    "tendencia_pp_por_ano": value("tendencia_anual", "coeficiente"),
+                    "p_valor_hac_tendencia": value("tendencia_anual", "p_valor"),
+                    "cambio_nivel_quiebre_pp": value(
+                        "cambio_nivel_post_quiebre", "coeficiente"
+                    ),
+                    "p_valor_hac_cambio_nivel": value(
+                        "cambio_nivel_post_quiebre", "p_valor"
+                    ),
+                    "cambio_pendiente_pp_por_ano": value(
+                        "cambio_pendiente_post_quiebre", "coeficiente"
+                    ),
+                    "p_valor_hac_cambio_pendiente": value(
+                        "cambio_pendiente_post_quiebre", "p_valor"
+                    ),
                 }
             )
     return pd.DataFrame(rows)
@@ -922,6 +1147,178 @@ def difference_validation(
             }
         )
     return pred, pd.DataFrame(metrics)
+
+
+def bei_factor_specs(component: str) -> dict[str, dict[str, object]]:
+    """Copia la especificación ampliada y sustituye únicamente el término BEI."""
+    specs = {
+        name: {**spec, "terminos": list(spec["terminos"])}
+        for name, spec in EXPANDED_FACTOR_SPECS_4.items()
+    }
+    specs["Diferencial de compensación inflacionaria 5 años"]["terminos"] = [
+        (component, 1)
+    ]
+    return specs
+
+
+def bei_model_specification_comparison(
+    model_data: pd.DataFrame,
+    selected_expanded: SelectedDifferenceModel,
+    break_date: pd.Timestamp,
+) -> pd.DataFrame:
+    """Compara transformaciones y calendarios BEI sobre una muestra idéntica."""
+    components = difference_components(model_data)
+    common_index = selected_expanded.y.index
+    variants = [
+        (
+            "Nivel — medias separadas (referencia)",
+            "Medias mensuales separadas",
+            "nivel",
+            "diferencial_bei_5y_pp",
+            "ninguno",
+        ),
+        (
+            "Primera diferencia — medias separadas (vigente)",
+            "Medias mensuales separadas",
+            "primera_diferencia",
+            "D.diferencial_bei_5y_pp",
+            "ninguno",
+        ),
+        (
+            "Nivel — fechas diarias comunes",
+            "Fechas diarias comunes",
+            "nivel",
+            "diferencial_bei_5y_comun_pp",
+            "ninguno",
+        ),
+        (
+            "Primera diferencia — fechas diarias comunes",
+            "Fechas diarias comunes",
+            "primera_diferencia",
+            "D.diferencial_bei_5y_comun_pp",
+            "ninguno",
+        ),
+        (
+            "Nivel separado + tendencia lineal",
+            "Medias mensuales separadas",
+            "nivel",
+            "diferencial_bei_5y_pp",
+            "tendencia",
+        ),
+        (
+            "Nivel separado + quiebre de coeficiente ZA",
+            "Medias mensuales separadas",
+            "nivel",
+            "diferencial_bei_5y_pp",
+            "quiebre_coeficiente",
+        ),
+    ]
+    rows: list[dict[str, object]] = []
+    full_trend = pd.Series(
+        np.arange(len(model_data), dtype=float) / 12.0,
+        index=model_data.index,
+        name="tendencia_anual",
+    )
+    for name, aggregation, transformation, component, extension in variants:
+        specs = bei_factor_specs(component)
+        y, x = make_timed_difference_design(
+            components,
+            p=selected_expanded.p,
+            factor_specs=specs,
+            index=common_index,
+        )
+        bei_term = design_term_name(component, 1)
+        if extension == "tendencia":
+            x["tendencia_anual"] = full_trend.reindex(x.index)
+        elif extension == "quiebre_coeficiente":
+            x["post_quiebre_za"] = (x.index >= break_date).astype(float)
+            x[f"{bei_term}_x_post_quiebre"] = x[bei_term] * x["post_quiebre_za"]
+
+        result = sm.OLS(y, x).fit()
+        robust, coefficients = tidy_robust_ols(result, maxlags=6)
+        lookup = coefficients.set_index("termino")
+        predictions, metrics = difference_validation(
+            model_data,
+            SelectedDifferenceModel(
+                p=selected_expanded.p,
+                q=0,
+                result=result,
+                y=y,
+                x=x,
+            ),
+            holdout=48,
+        )
+        metric = metrics.loc[~metrics["modelo"].str.contains("Caminata")].iloc[0]
+        model_error = (
+            predictions["ln_trm_modelo_condicional"]
+            - predictions["ln_trm_observada"]
+        )
+        benchmark_error = (
+            predictions["ln_trm_caminata_aleatoria"]
+            - predictions["ln_trm_observada"]
+        )
+        r2_validation = 1.0 - float(np.square(model_error).sum()) / float(
+            np.square(benchmark_error).sum()
+        )
+
+        pre_coefficient = float(lookup.loc[bei_term, "coeficiente"])
+        pre_p_value = float(lookup.loc[bei_term, "p_valor"])
+        change_term = f"{bei_term}_x_post_quiebre"
+        change_coefficient = math.nan
+        change_p_value = math.nan
+        post_coefficient = math.nan
+        post_p_value = math.nan
+        if change_term in lookup.index:
+            change_coefficient = float(lookup.loc[change_term, "coeficiente"])
+            change_p_value = float(lookup.loc[change_term, "p_valor"])
+            restriction = np.zeros(len(result.params), dtype=float)
+            restriction[list(x.columns).index(bei_term)] = 1.0
+            restriction[list(x.columns).index(change_term)] = 1.0
+            post_test = robust.t_test(restriction)
+            post_coefficient = float(np.asarray(post_test.effect).reshape(-1)[0])
+            post_p_value = float(np.asarray(post_test.pvalue).reshape(-1)[0])
+
+        rows.append(
+            {
+                "especificacion": name,
+                "agregacion_bei": aggregation,
+                "transformacion_bei": transformation,
+                "extension_deterministica": extension,
+                "fecha_quiebre_za": (
+                    break_date.strftime("%Y-%m-%d")
+                    if extension == "quiebre_coeficiente"
+                    else ""
+                ),
+                "observaciones": int(result.nobs),
+                "p_cambio_trm": int(selected_expanded.p),
+                "r_cuadrado_ajustado": float(result.rsquared_adj),
+                "aic": float(result.aic),
+                "bic": float(result.bic),
+                "coeficiente_bei_pre_quiebre": pre_coefficient,
+                "p_valor_hac_bei_pre_quiebre": pre_p_value,
+                "cambio_coeficiente_post_quiebre": change_coefficient,
+                "p_valor_hac_cambio_coeficiente": change_p_value,
+                "coeficiente_bei_post_quiebre": post_coefficient,
+                "p_valor_hac_bei_post_quiebre": post_p_value,
+                "mape_condicional_pct": float(metric["mape_pct"]),
+                "rmse_log_condicional": float(metric["rmse_log"]),
+                "acierto_direccion_condicional_pct": float(
+                    metric["acierto_direccion_pct"]
+                ),
+                "r2_validacion_condicional_vs_caminata": r2_validation,
+                "quiebre_elegido_con_muestra_completa": extension
+                == "quiebre_coeficiente",
+            }
+        )
+    comparison = pd.DataFrame(rows)
+    current = comparison.loc[
+        comparison["especificacion"].eq(
+            "Primera diferencia — medias separadas (vigente)"
+        )
+    ].iloc[0]
+    if not np.isclose(current["bic"], selected_expanded.result.bic, atol=1e-8):
+        raise AssertionError("La especificación BEI vigente no concilia con el modelo ampliado.")
+    return comparison
 
 
 def difference_fit_and_contributions(
@@ -1295,6 +1692,19 @@ def main() -> None:
         }
         raise ValueError(f"La muestra balanceada contiene meses faltantes: {missing}")
     model_data.index.name = "fecha"
+    bei_stationarity = bei_stationarity_tests(model_data)
+    bei_trend_breaks = bei_trend_break_models(model_data, bei_stationarity)
+    bei_break_date = pd.Timestamp(
+        bei_stationarity.loc[
+            bei_stationarity["agregacion"].eq("Medias mensuales separadas")
+            & bei_stationarity["transformacion"].eq("nivel")
+            & bei_stationarity["prueba"].eq("Zivot-Andrews")
+            & bei_stationarity["deterministico"].eq(
+                "constante_tendencia_con_quiebre"
+            ),
+            "fecha_quiebre",
+        ].iloc[0]
+    )
 
     components = difference_components(model_data)
     common_index = make_timed_difference_design(
@@ -1326,6 +1736,9 @@ def main() -> None:
     )
     _, coefficients_expanded = tidy_robust_ols(selected_expanded.result, maxlags=6)
     diagnostics_expanded = diagnostics(selected_expanded.result)
+    bei_model_comparison = bei_model_specification_comparison(
+        model_data, selected_expanded, bei_break_date
+    )
     predictions_expanded, validation_expanded = difference_validation(
         model_data, selected_expanded, holdout=min(48, len(selected_expanded.y) // 4)
     )
@@ -1555,6 +1968,7 @@ def main() -> None:
             "asinh_balanza_comercial",
             "asinh_flujos_capital",
             "diferencial_bei_5y_pp",
+            "diferencial_bei_5y_comun_pp",
         ],
     )
     short_run_ecm = tidy_result(uecm_result)
@@ -1563,6 +1977,45 @@ def main() -> None:
 
     data.to_csv(DATA / "modelo_trm_datos_mensuales.csv", encoding="utf-8-sig", float_format="%.10g")
     model_data.to_csv(DATA / "modelo_trm_muestra_estimacion.csv", encoding="utf-8-sig", float_format="%.10g")
+    bei_aggregation_columns = [
+        "tes_5y_pesos_colombia_pct",
+        "tes_5y_uvr_colombia_pct",
+        "bei_eeuu_5y_pct",
+        "bei_colombia_5y_pct",
+        "diferencial_bei_5y_pp",
+        "tes_5y_pesos_comun_pct",
+        "tes_5y_uvr_comun_pct",
+        "bei_eeuu_5y_comun_pct",
+        "diferencial_bei_5y_comun_pp",
+        "diferencia_comun_menos_separada_pp",
+        "dias_tes_pesos",
+        "dias_tes_uvr",
+        "dias_bei_eeuu",
+        "dias_comunes",
+    ]
+    data.loc[SAMPLE_START:SAMPLE_END, bei_aggregation_columns].to_csv(
+        RESULTS / "comparacion_agregacion_bei_5y.csv",
+        encoding="utf-8-sig",
+        float_format="%.10g",
+    )
+    bei_stationarity.to_csv(
+        RESULTS / "pruebas_estacionariedad_bei_5y.csv",
+        index=False,
+        encoding="utf-8-sig",
+        float_format="%.10g",
+    )
+    bei_trend_breaks.to_csv(
+        RESULTS / "tendencias_quiebres_bei_5y.csv",
+        index=False,
+        encoding="utf-8-sig",
+        float_format="%.10g",
+    )
+    bei_model_comparison.to_csv(
+        RESULTS / "comparacion_especificaciones_bei_5y.csv",
+        index=False,
+        encoding="utf-8-sig",
+        float_format="%.10g",
+    )
     lag_grid_diff.to_csv(
         RESULTS / "seleccion_rezagos_adl_diferencias.csv", index=False, encoding="utf-8-sig"
     )
@@ -1698,6 +2151,33 @@ def main() -> None:
     recent_stability = stability_summary.loc[
         stability_summary["submuestra"].eq("2020 en adelante")
     ].iloc[0]
+    bei_best_bic = bei_model_comparison.sort_values("bic").iloc[0]
+    bei_best_validation = bei_model_comparison.sort_values(
+        "rmse_log_condicional"
+    ).iloc[0]
+    bei_aggregation_sample = data.loc[
+        SAMPLE_START:SAMPLE_END,
+        [
+            "diferencial_bei_5y_pp",
+            "diferencial_bei_5y_comun_pp",
+            "diferencia_comun_menos_separada_pp",
+            "dias_comunes",
+        ],
+    ].dropna()
+    bei_adf_trend = bei_stationarity.loc[
+        bei_stationarity["agregacion"].eq("Medias mensuales separadas")
+        & bei_stationarity["transformacion"].eq("nivel")
+        & bei_stationarity["prueba"].eq("ADF")
+        & bei_stationarity["deterministico"].eq("constante_tendencia")
+    ].iloc[0]
+    bei_za_trend = bei_stationarity.loc[
+        bei_stationarity["agregacion"].eq("Medias mensuales separadas")
+        & bei_stationarity["transformacion"].eq("nivel")
+        & bei_stationarity["prueba"].eq("Zivot-Andrews")
+        & bei_stationarity["deterministico"].eq(
+            "constante_tendencia_con_quiebre"
+        )
+    ].iloc[0]
 
     metadata = {
         "muestra_inicio": model_data.index.min().strftime("%Y-%m-%d"),
@@ -1720,7 +2200,7 @@ def main() -> None:
         "ampliado_r_cuadrado_ajustado": float(
             selected_expanded.result.rsquared_adj
         ),
-        "ampliado_temporizacion": "Términos de intercambio, dólar amplio, VIX, EMBIG Colombia y monedas regionales contemporáneos; remesas, diferencial de tasas, déficit, reservas, balanza, flujos de capital y diferencial BEI rezagados un mes",
+        "ampliado_temporizacion": "Términos de intercambio, dólar amplio, VIX, EMBIG Colombia y monedas regionales contemporáneos; cambios de remesas, tasas, déficit, reservas, balanza, flujos de capital y diferencial BEI rezagados un mes",
         "pesos_metodo": "Shapley/LMG exacto del incremento del R2 sobre intercepto, dinamica de TRM y dummy de pandemia",
         "pesos_suma_pct": float(shapley_expanded["peso_entre_factores_pct"].sum()),
         "shapley_r2_base": float(shapley_expanded["r2_base"].iloc[0]),
@@ -1780,10 +2260,39 @@ def main() -> None:
                 "pen_usd_mensual_bcrp.json",
             ]
         },
-        "diferencial_bei_5y_transformacion": "Nivel rezagado un mes; bajo especificación con constante y rezagos BIC, ADF rechaza raíz unitaria y KPSS no rechaza estacionariedad",
-        "diferencial_bei_5y_advertencia_estacionariedad": "Conclusión sensible a tendencia y selección de rezagos; interpretar como evidencia favorable, no como estacionariedad definitiva",
+        "diferencial_bei_5y_transformacion": "Modelo vigente: primera diferencia rezagada un mes y promedios mensuales separados; nivel, fechas comunes, tendencia y quiebre se reportan como robustez",
+        "diferencial_bei_5y_advertencia_estacionariedad": "Las conclusiones cambian al permitir tendencia o quiebre; ninguna prueba aislada determina la transformación económica correcta",
         "diferencial_bei_5y_adf_p_nivel": float(bei_level_test["adf_p"]),
         "diferencial_bei_5y_kpss_p_nivel": float(bei_level_test["kpss_p"]),
+        "diferencial_bei_5y_adf_p_nivel_con_tendencia": float(
+            bei_adf_trend["p_valor"]
+        ),
+        "diferencial_bei_5y_za_p_nivel_con_tendencia_quiebre": float(
+            bei_za_trend["p_valor"]
+        ),
+        "diferencial_bei_5y_quiebre_za": str(bei_za_trend["fecha_quiebre"]),
+        "diferencial_bei_5y_correlacion_agregaciones": float(
+            bei_aggregation_sample["diferencial_bei_5y_pp"].corr(
+                bei_aggregation_sample["diferencial_bei_5y_comun_pp"]
+            )
+        ),
+        "diferencial_bei_5y_diferencia_media_comun_menos_separada_pp": float(
+            bei_aggregation_sample["diferencia_comun_menos_separada_pp"].mean()
+        ),
+        "diferencial_bei_5y_max_diferencia_abs_agregacion_pp": float(
+            bei_aggregation_sample[
+                "diferencia_comun_menos_separada_pp"
+            ].abs().max()
+        ),
+        "diferencial_bei_5y_min_dias_comunes_mes": int(
+            bei_aggregation_sample["dias_comunes"].min()
+        ),
+        "diferencial_bei_5y_mejor_bic_especificacion": str(
+            bei_best_bic["especificacion"]
+        ),
+        "diferencial_bei_5y_mejor_validacion_especificacion": str(
+            bei_best_validation["especificacion"]
+        ),
         "flujos_capital": "Movimientos netos de capital de la balanza cambiaria, BanRep serie 16706",
         "validacion_base_mape_pct": float(base_validation_row["mape_pct"]),
         "validacion_ampliado_mape_pct": float(expanded_validation_row["mape_pct"]),

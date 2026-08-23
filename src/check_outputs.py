@@ -150,7 +150,7 @@ def main() -> None:
         "D.embig_colombia_pp.L0",
         "D.asinh_balanza_comercial.L1",
         "D.asinh_flujos_capital.L1",
-        "diferencial_bei_5y_pp.L1",
+        "D.diferencial_bei_5y_pp.L1",
         "factor_monedas_regionales_4.L0",
     }
     missing_active_terms = required_active_terms.difference(expanded_terms)
@@ -193,6 +193,12 @@ def main() -> None:
         "bei_colombia_5y_pct",
         "bei_eeuu_5y_pct",
         "diferencial_bei_5y_pp",
+        "diferencial_bei_5y_comun_pp",
+        "diferencia_comun_menos_separada_pp",
+        "dias_comunes",
+        "tes_5y_pesos_comun_pct",
+        "tes_5y_uvr_comun_pct",
+        "bei_eeuu_5y_comun_pct",
         "ln_reservas_netas_sin_flar",
         "asinh_balanza_comercial",
         "asinh_flujos_capital",
@@ -223,6 +229,12 @@ def main() -> None:
             monthly["diferencial_bei_5y_pp"],
             monthly["bei_colombia_5y_pct"] - monthly["bei_eeuu_5y_pct"],
         ),
+        "diferencial BEI sobre fechas comunes": (
+            monthly["diferencial_bei_5y_comun_pp"],
+            monthly["tes_5y_pesos_comun_pct"]
+            - monthly["tes_5y_uvr_comun_pct"]
+            - monthly["bei_eeuu_5y_comun_pct"],
+        ),
     }
     for label, (actual, expected) in identities.items():
         comparable = actual.notna() & expected.notna()
@@ -230,6 +242,38 @@ def main() -> None:
             actual.loc[comparable], expected.loc[comparable], rtol=0.0, atol=1e-8
         ):
             raise AssertionError(f"No concilia la construcción de {label}.")
+
+    bei_aggregation = pd.read_csv(RESULTS / "comparacion_agregacion_bei_5y.csv")
+    if len(bei_aggregation) != 244 or bei_aggregation["dias_comunes"].isna().any():
+        raise AssertionError("La comparación BEI debe cubrir 244 meses con fechas comunes.")
+    if bei_aggregation["dias_comunes"].min() < 1:
+        raise AssertionError("Existe un mes sin cruce diario para las tres curvas BEI.")
+    if bei_aggregation["diferencial_bei_5y_pp"].corr(
+        bei_aggregation["diferencial_bei_5y_comun_pp"]
+    ) < 0.99:
+        raise AssertionError("Las dos agregaciones BEI divergen de forma inesperada.")
+
+    bei_stationarity = pd.read_csv(RESULTS / "pruebas_estacionariedad_bei_5y.csv")
+    if len(bei_stationarity) != 24:
+        raise AssertionError("Las pruebas BEI no cubren agregaciones, transformaciones y determinísticos.")
+    differenced_tests = bei_stationarity.loc[
+        bei_stationarity["transformacion"].eq("primera_diferencia")
+    ]
+    if not differenced_tests.loc[differenced_tests["prueba"].eq("ADF"), "p_valor"].lt(0.05).all():
+        raise AssertionError("ADF no respalda la primera diferencia BEI en todas las variantes.")
+    if not differenced_tests.loc[differenced_tests["prueba"].eq("KPSS"), "p_valor"].ge(0.05).all():
+        raise AssertionError("KPSS rechaza estacionariedad de una primera diferencia BEI.")
+
+    bei_trends = pd.read_csv(RESULTS / "tendencias_quiebres_bei_5y.csv")
+    if len(bei_trends) != 6 or bei_trends["fecha_quiebre_za"].nunique() != 1:
+        raise AssertionError("La comparación de tendencias/quiebres BEI está incompleta.")
+
+    bei_specs = pd.read_csv(RESULTS / "comparacion_especificaciones_bei_5y.csv")
+    if len(bei_specs) != 6 or bei_specs["observaciones"].nunique() != 1:
+        raise AssertionError("Las seis especificaciones BEI no usan una muestra común.")
+    active_bei = bei_specs.loc[bei_specs["especificacion"].str.contains("vigente")].iloc[0]
+    if active_bei["bic"] > bei_specs["bic"].min() + 1e-9:
+        raise AssertionError("La especificación BEI activa no minimiza el BIC comparado.")
 
     monthly["fecha"] = pd.to_datetime(monthly["fecha"])
     currency_levels = monthly.set_index("fecha")[[
@@ -324,6 +368,7 @@ def main() -> None:
         "ln_terminos_intercambio",
         "embig_colombia_pp",
         "diferencial_bei_5y_pp",
+        "diferencial_bei_5y_comun_pp",
         "factor_monedas_regionales_3",
         "factor_monedas_regionales_4",
     }
@@ -343,6 +388,7 @@ def main() -> None:
         "Modelo_ampliado",
         "Pesos_explicativos",
         "Robustez",
+        "BEI_robustez",
         "Validacion",
         "Pronostico",
         "ECM_exploratorio",
@@ -429,6 +475,47 @@ def main() -> None:
             expected,
         ):
             assert_close(actual, expected_value, f"Robustez {record['factor']} — {label}")
+
+    bei_sheet = workbook["BEI_robustez"]
+    bei_header = next(
+        (
+            row
+            for row in range(1, bei_sheet.max_row + 1)
+            if bei_sheet.cell(row, 1).value == "Especificación"
+            and bei_sheet.cell(row, 2).value == "Agregación"
+        ),
+        None,
+    )
+    if bei_header is None:
+        raise AssertionError("No se encontró la comparación de especificaciones en BEI_robustez.")
+    excel_bei = {
+        str(bei_sheet.cell(row, 1).value): [
+            bei_sheet.cell(row, column).value for column in range(5, 11)
+        ]
+        for row in range(bei_header + 1, bei_header + 1 + len(bei_specs))
+    }
+    for record in bei_specs.to_dict("records"):
+        values = excel_bei.get(record["especificacion"])
+        if values is None:
+            raise AssertionError(f"Falta {record['especificacion']} en BEI_robustez.")
+        expected = [
+            record["r_cuadrado_ajustado"],
+            record["bic"],
+            record["coeficiente_bei_pre_quiebre"],
+            record["p_valor_hac_bei_pre_quiebre"],
+            record["mape_condicional_pct"] / 100.0,
+            record["r2_validacion_condicional_vs_caminata"],
+        ]
+        for label, actual, expected_value in zip(
+            ["R² ajustado", "BIC", "coeficiente", "p HAC", "MAPE", "R² validación"],
+            values,
+            expected,
+        ):
+            assert_close(
+                actual,
+                expected_value,
+                f"BEI_robustez {record['especificacion']} — {label}",
+            )
 
     summary = workbook["Resumen"]
     comparison_header = next(
@@ -518,7 +605,7 @@ def main() -> None:
                 )
 
     print(
-        "OK: vintages, bootstrap Shapley, submuestras, pronóstico rezagado y archivo Excel sincronizado."
+        "OK: robustez BEI, vintages, bootstrap Shapley, submuestras, pronóstico rezagado y archivo Excel sincronizado."
     )
 
 
