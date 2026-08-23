@@ -15,19 +15,19 @@ El modelo ampliado distribuye la variación mensual entre 12 factores macroecon�
 | Término | Coeficiente | p-valor |
 |---|---:|---:|
 | Constante | 0,00318 | 0,0945 |
-| \(\Delta\ln\) términos de intercambio, mes actual | −0,09186 | 0,0014 |
-| \(\Delta\ln\) remesas 12 meses, rezago 1 | 0,10076 | 0,3217 |
-| \(\Delta\) diferencial de tasas, rezago 1 | −0,00496 | 0,2946 |
-| \(\Delta\) déficit fiscal 12 meses/PIB, rezago 1 | −0,00075 | 0,8276 |
-| \(\Delta\ln\) dólar amplio, mes actual | 0,24145 | 0,2524 |
-| \(\Delta\ln\) VIX, mes actual | 0,01144 | 0,2422 |
-| \(\Delta\) EMBIG Colombia, en puntos porcentuales, mes actual | 0,01710 | 0,1323 |
-| \(\Delta\ln\) reservas netas sin FLAR, rezago 1 | −0,29366 | 0,0131 |
-| \(\Delta\,\mathrm{asinh}\) balanza comercial cambiaria, rezago 1 | 0,04699 | <0,0001 |
-| \(\Delta\,\mathrm{asinh}\) movimientos netos de capital, rezago 1 | 0,00065 | 0,8505 |
-| \(\Delta\) diferencial de compensación inflacionaria 5 años, rezago 1 | −0,00627 | 0,1771 |
-| Factor regional BRL, CLP, MXN y PEN, mes actual | 0,01653 | <0,0001 |
-| Indicador de pandemia, marzo–mayo de 2020 | −0,00272 | 0,6686 |
+| Δln términos de intercambio, mes actual | −0,09186 | 0,0014 |
+| Δln remesas 12 meses, rezago 1 | 0,10076 | 0,3217 |
+| Δ diferencial de tasas, rezago 1 | −0,00496 | 0,2946 |
+| Δ déficit fiscal 12 meses/PIB, rezago 1 | −0,00075 | 0,8276 |
+| Δln dólar amplio, mes actual | 0,24145 | 0,2524 |
+| Δln VIX, mes actual | 0,01144 | 0,2422 |
+| Δ EMBIG Colombia (pp), mes actual | 0,01710 | 0,1323 |
+| Δln reservas netas sin FLAR, rezago 1 | −0,29366 | 0,0131 |
+| Δ asinh(balanza comercial), rezago 1 | 0,04699 | <0,0001 |
+| Δ asinh(flujos de capital), rezago 1 | 0,00065 | 0,8505 |
+| Δ diferencial BEI 5 años (pp), rezago 1 | −0,00627 | 0,1771 |
+| Factor regional BRL+CLP+MXN+PEN, mes actual | 0,01653 | <0,0001 |
+| Pandemia marzo–mayo 2020 | −0,00272 | 0,6686 |
 <!-- /AUTO:coeficientes_ampliado -->
 
 ## Descomposición Shapley (peso de cada factor)
@@ -74,13 +74,13 @@ La incertidumbre se evalúa con 200 réplicas de un *bootstrap* circular de bloq
 | Término | Coeficiente | p-valor HAC | Lectura aproximada |
 |---|---:|---:|---|
 | Constante | −0,00059 | 0,7250 | No hay evidencia de una deriva mensual adicional. |
-| \(\Delta\ln\) términos de intercambio, mes actual | −0,10008 | 0,0007 | Una mejora de 10% se asocia con una TRM cerca de 100.1% menor. |
-| \(\Delta\ln\) remesas 12 meses, rezago 1 | 0,27652 | 0,0243 | Un aumento de 10% se asocia con una TRM cerca de 276.5% mayor; el signo contrario al canal simple de oferta de divisas aconseja cautela por endogeneidad. |
-| \(\Delta\) diferencial de tasas, rezago 1 | −0,00990 | 0,0436 | Un aumento de 1 punto porcentual en el cambio del diferencial se asocia con una TRM cerca de 0.99% menor. |
-| \(\Delta\) déficit fiscal 12 meses/PIB, rezago 1 | 0,00485 | 0,1447 | Un aumento de 1 punto porcentual se asocia con una TRM cerca de 0.48% mayor, pero la estimación no es precisa al 5%. |
-| \(\Delta\ln\) dólar amplio, mes actual | 1,27461 | <0,0001 | Un aumento de 1% del dólar global se asocia con una TRM cerca de 127.46% mayor. |
-| \(\Delta\ln\) VIX, mes actual | 0,03836 | <0,0001 | Un aumento de 10% del VIX se asocia con una TRM cerca de 38.36% mayor. |
-| Indicador de pandemia, marzo–mayo de 2020 | 0,01081 | 0,0200 | Se asocia con una TRM alrededor de 1.1% mayor, condicionado a los demás factores. |
+| Δln términos de intercambio, mes actual | −0,10008 | 0,0007 | Una mejora de 10% se asocia con una TRM cerca de 100.1% menor. |
+| Δln remesas 12 meses, rezago 1 | 0,27652 | 0,0243 | Un aumento de 10% se asocia con una TRM cerca de 276.5% mayor; el signo contrario al canal simple de oferta de divisas aconseja cautela por endogeneidad. |
+| Δ diferencial de tasas, rezago 1 | −0,00990 | 0,0436 | Un aumento de 1 punto porcentual en el cambio del diferencial se asocia con una TRM cerca de 0.99% menor. |
+| Δ déficit fiscal 12 meses/PIB, rezago 1 | 0,00485 | 0,1447 | Un aumento de 1 punto porcentual se asocia con una TRM cerca de 0.48% mayor, pero la estimación no es precisa al 5%. |
+| Δln dólar amplio, mes actual | 1,27461 | <0,0001 | Un aumento de 1% del dólar global se asocia con una TRM cerca de 127.46% mayor. |
+| Δln VIX, mes actual | 0,03836 | <0,0001 | Un aumento de 10% del VIX se asocia con una TRM cerca de 38.36% mayor. |
+| Pandemia marzo–mayo 2020 | 0,01081 | 0,0200 | Se asocia con una TRM alrededor de 1.1% mayor, condicionado a los demás factores. |
 <!-- /AUTO:coeficientes_principal -->
 
 <!-- AUTO:metricas_principal -->
@@ -139,15 +139,25 @@ Ver [`graficos/README.md`](graficos/README.md) para cautelas de lectura.
 
 ```
 modelo-trm-colombia/
-├── data/raw/              19 fuentes activas
-├── data/vintages/         Snapshots inmutables + ALFRED (8537 filas)
+├── data/
+│   ├── raw/                 19 fuentes activas
+│   └── vintages/            Snapshots inmutables + ALFRED (8537 filas)
+├── deliverables/
+│   ├── modelo_trm_colombia.xlsx   Excel final (14 hojas)
+│   └── graficos/                  5 PNGs explicativos + metadata
 ├── results/
-│   ├── explicacion/       21 CSVs — modelos y Shapley
-│   ├── pronostico/        16 CSVs — pronóstico y validación
-│   └── robustez/          18 CSVs — ECM, BEI, rolling, threshold
-├── src/                   9 scripts + paquete model/ (9 módulos)
-├── graficos/              5 PNGs explicativos
-└── deliverables/          Excel final (14 hojas)
+│   ├── explicacion/         21 CSVs — modelos y Shapley
+│   ├── pronostico/          16 CSVs — pronóstico y validación
+│   └── robustez/            18 CSVs — ECM, BEI, rolling, threshold
+├── src/
+│   ├── model/               Paquete modular (9 módulos)
+│   ├── exploration/         Scripts de exploración (no-pipeline)
+│   ├── estimate_model.py    Orquestador principal
+│   ├── build_charts.py      Genera los 5 PNGs
+│   ├── build_workbook.mjs   Genera el Excel
+│   ├── archive_vintage.py   Descarga y archiva vintages
+│   └── check_*.py           3 scripts de validación
+└── requirements.txt
 ```
 
 ---

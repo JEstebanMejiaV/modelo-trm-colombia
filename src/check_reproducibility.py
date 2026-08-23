@@ -33,7 +33,7 @@ def tracked_outputs() -> list[Path]:
         "results/pronostico/*.csv",
         "results/robustez/*.csv",
         "results/metadata.json",
-        "graficos/metadata.json",
+        "deliverables/graficos/metadata.json",
     ).decode("utf-8").splitlines()
     return [ROOT / path for path in paths]
 

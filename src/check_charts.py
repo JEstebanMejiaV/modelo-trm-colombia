@@ -9,7 +9,7 @@ from PIL import Image
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CHARTS = ROOT / "graficos"
+CHARTS = ROOT / "deliverables" / "graficos"
 METADATA = CHARTS / "metadata.json"
 
 

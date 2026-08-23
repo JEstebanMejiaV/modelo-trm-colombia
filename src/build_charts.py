@@ -23,7 +23,7 @@ import pandas as pd
 
 
 RESULTS = ROOT / "results"
-CHARTS = ROOT / "graficos"
+CHARTS = ROOT / "deliverables" / "graficos"
 
 SOURCE_FILES = [
     RESULTS / "explicacion/pesos_explicativos_modelo_ampliado.csv",
