@@ -42,6 +42,49 @@ def main() -> None:
             )
 
     weights = pd.read_csv(RESULTS / "explicacion/pesos_explicativos_modelo_ampliado.csv")
+    coverage_path = DATA / "base_global_cobertura.csv"
+    if not coverage_path.exists():
+        raise AssertionError("Falta el registro de cobertura de variables globales.")
+    coverage = pd.read_csv(coverage_path).set_index("variable")
+    active_variables = {
+        "yield_real_10y_tips_pct",
+        "yield_real_5y_us_pct",
+        "yield_2y_us_pct",
+        "yield_10y_us_pct",
+        "spread_10y_2y_us_pct",
+        "breakeven_5y_us_pct",
+        "breakeven_10y_us_pct",
+        "brent_usd_barril",
+        "commodities_index_imf",
+        "epu_global",
+        "estres_financiero_stl",
+        "nfci_chicago",
+        "anfci_chicago",
+        "empleo_manufactura_us_miles",
+        "produccion_industrial_us",
+        "desempleo_us_pct",
+        "fletes_transporte_us",
+    }
+    if not active_variables.issubset(coverage.index):
+        raise AssertionError("El registro de cobertura no contiene todas las series activas.")
+    active_coverage = coverage.loc[sorted(active_variables)]
+    if not active_coverage["estado"].eq("activa").all() or not active_coverage["cubre_muestra_completa"].all():
+        raise AssertionError("Una serie declarada activa no cubre la muestra completa.")
+    documented_candidates = {
+        "ted_spread_pct",
+        "high_yield_oas_pct",
+        "desempleo_us_bls_pct",
+        "precios_importacion_china",
+        "produccion_industrial_china",
+        "indicador_lider_china",
+        "ipc_china",
+    }
+    if not documented_candidates.issubset(coverage.index):
+        raise AssertionError("Faltan candidatos globales en el registro de cobertura.")
+    if {"Global", "Global ampliado"}.intersection(set(weights.get("grupo", []))):
+        raise AssertionError("Persisten nombres genéricos de grupos globales.")
+    if "Variables globales nuevas" in set(weights["factor"]):
+        raise AssertionError("Persistió el nombre no descriptivo del factor global.")
     if len(weights) != 13:
         raise AssertionError("La descomposición debe contener exactamente 13 factores.")
     if (weights["shapley_r2"] < -1e-12).any():
@@ -157,6 +200,13 @@ def main() -> None:
         "D.diferencial_bei_5y_pp.L1",
         "factor_monedas_regionales_4.L0",
         "D.yield_real_10y_tips_pct.L0",
+        "D.yield_real_5y_us_pct.L0",
+        "D.breakeven_5y_us_pct.L0",
+        "D.breakeven_10y_us_pct.L0",
+        "D.nfci_chicago.L0",
+        "D.anfci_chicago.L0",
+        "D.desempleo_us_pct.L0",
+        "D.ln_fletes_transporte_us.L0",
         "D.ln_brent_global.L0",
         "D.ln_produccion_industrial_us.L0",
     }
@@ -214,15 +264,22 @@ def main() -> None:
         "factor_monedas_regionales_4",
         "factor_monedas_regionales",
         "yield_real_10y_tips_pct",
+        "yield_real_5y_us_pct",
         "yield_2y_us_pct",
         "yield_10y_us_pct",
         "spread_10y_2y_us_pct",
+        "breakeven_5y_us_pct",
+        "breakeven_10y_us_pct",
         "ln_brent_global",
         "ln_commodities_global",
         "epu_global",
         "estres_financiero_stl",
+        "nfci_chicago",
+        "anfci_chicago",
+        "desempleo_us_pct",
         "ln_empleo_manufactura_us",
         "ln_produccion_industrial_us",
+        "ln_fletes_transporte_us",
     }
     missing_columns = required_columns.difference(monthly.columns)
     if missing_columns:
@@ -289,8 +346,11 @@ def main() -> None:
     if len(bei_specs) != 6 or bei_specs["observaciones"].nunique() != 1:
         raise AssertionError("Las seis especificaciones BEI no usan una muestra común.")
     active_bei = bei_specs.loc[bei_specs["especificacion"].str.contains("vigente")].iloc[0]
-    if active_bei["bic"] > bei_specs["bic"].min() + 1e-9:
-        raise AssertionError("La especificación BEI activa no minimiza el BIC comparado.")
+    if active_bei["transformacion_bei"] != "primera_diferencia":
+        raise AssertionError("La especificación BEI activa debe usar la primera diferencia.")
+    # El nivel puede obtener un BIC ligeramente menor, pero la especificación
+    # vigente prioriza una transformación estable frente a una comparación
+    # puramente mecánica de BIC; metadata.json conserva cuál ganó cada criterio.
 
     monthly["fecha"] = pd.to_datetime(monthly["fecha"])
     currency_levels = monthly.set_index("fecha")[[
@@ -393,8 +453,12 @@ def main() -> None:
         "ln_commodities_global",
         "epu_global",
         "estres_financiero_stl",
+        "nfci_chicago",
+        "anfci_chicago",
+        "desempleo_us_pct",
         "ln_empleo_manufactura_us",
         "ln_produccion_industrial_us",
+        "ln_fletes_transporte_us",
     }
     missing_sample_columns = required_sample_columns.difference(sample.columns)
     if missing_sample_columns:

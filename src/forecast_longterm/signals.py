@@ -21,7 +21,7 @@ Metodologías:
 - Score compuesto: combinación lineal de las señales anteriores
 
 Uso:
-    python src/forecast_daily/long_term_signals.py
+    python src/forecast_longterm/signals.py
 """
 from __future__ import annotations
 
@@ -104,27 +104,48 @@ def compute_signals(data: pd.DataFrame) -> pd.DataFrame:
         cycle_d, trend_d = sm.tsa.filters.hpfilter(ln_dolar.dropna(), lamb=14400)
         signals["dolar_desviacion_hp_pct"] = 100 * (ln_dolar - trend_d.reindex(ln_dolar.index))
 
-    # --- 7. Factores globales mensuales (rezagados implícitamente en evaluación) ---
+    # --- 7. Factores globales mensuales con rezagos de disponibilidad ---
+    # Mercados/riesgo se toman con t-1; actividad, logística y China con t-2.
+    # Los candidatos incompletos se conservan como señales exploratorias sin
+    # imputación: sus faltantes reducen únicamente la muestra de esa señal.
     global_specs = {
-        "yield_real_10y_tips_pct": ("z_global_yield_real", +1),
-        "yield_2y_us_pct": ("z_global_yield_2y", +1),
-        "spread_10y_2y_us_pct": ("z_global_spread_10y2y", +1),
-        "epu_global": ("z_global_epu", +1),
-        "estres_financiero_stl": ("z_global_stress", +1),
-        "ln_brent_global": ("z_global_brent", -1),
-        "ln_commodities_global": ("z_global_commodities", -1),
-        "ln_empleo_manufactura_us": ("z_global_employment", -1),
-        "ln_produccion_industrial_us": ("z_global_industry", -1),
+        "yield_real_10y_tips_pct": ("z_global_yield_real_10y", +1, 1),
+        "yield_real_5y_us_pct": ("z_global_yield_real_5y", +1, 1),
+        "yield_2y_us_pct": ("z_global_yield_2y", +1, 1),
+        "yield_10y_us_pct": ("z_global_yield_10y", +1, 1),
+        "spread_10y_2y_us_pct": ("z_global_spread_10y2y", +1, 1),
+        "breakeven_5y_us_pct": ("z_global_breakeven_5y", +1, 1),
+        "breakeven_10y_us_pct": ("z_global_breakeven_10y", +1, 1),
+        "epu_global": ("z_global_epu", +1, 1),
+        "estres_financiero_stl": ("z_global_stress", +1, 1),
+        "nfci_chicago": ("z_global_nfci", +1, 1),
+        "anfci_chicago": ("z_global_anfci", +1, 1),
+        "ln_brent_global": ("z_global_brent", -1, 1),
+        "ln_commodities_global": ("z_global_commodities", -1, 1),
+        "desempleo_us_pct": ("z_global_unemployment", +1, 2),
+        "ln_empleo_manufactura_us": ("z_global_employment", -1, 2),
+        "ln_produccion_industrial_us": ("z_global_industry", -1, 2),
+        "ln_fletes_transporte_us": ("z_global_freight", +1, 2),
+        # China queda como señal exploratoria: CHNTOT tiene un faltante
+        # publicado y la actividad industrial termina antes de la muestra.
+        "ln_precios_importacion_china": ("z_global_china_import_prices", +1, 2),
+        "produccion_industrial_china": ("z_global_china_industry", -1, 2),
+        "indicador_lider_china": ("z_global_china_leading", -1, 2),
     }
     global_parts = []
-    for source, (output, sign) in global_specs.items():
+    for source, (output, sign, lag) in global_specs.items():
         if source not in data.columns:
             continue
-        series = data[source].loc[SAMPLE_START:]
+        series = data[source].loc[SAMPLE_START:].shift(lag)
         rolling_mean = series.rolling(60, min_periods=36).mean()
         rolling_std = series.rolling(60, min_periods=36).std()
         signals[output] = (series - rolling_mean) / rolling_std
-        global_parts.append(sign * signals[output])
+        if source not in {
+            "ln_precios_importacion_china",
+            "produccion_industrial_china",
+            "indicador_lider_china",
+        }:
+            global_parts.append(sign * signals[output])
         signals[f"mom12_{output[2:]}"] = series.diff(12)
     if global_parts:
         signals["score_global"] = pd.concat(global_parts, axis=1).mean(axis=1)
@@ -169,7 +190,11 @@ def evaluate_signal(
     for h in horizons:
         # Retorno forward h meses
         r_forward = (ln_trm.shift(-h) - ln_trm) * 100  # en %
-        combined = pd.concat([signal.rename("signal"), r_forward.rename("r_forward")], axis=1).dropna()
+        combined = pd.concat(
+            [signal.rename("signal"), r_forward.rename("r_forward")],
+            axis=1,
+            sort=False,
+        ).dropna()
 
         if len(combined) < 60:
             continue

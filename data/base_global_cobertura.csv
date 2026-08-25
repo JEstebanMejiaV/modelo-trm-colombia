@@ -1,0 +1,27 @@
+﻿fred_id,variable,declarada_activa,observaciones_mensuales,primera_fecha,ultima_fecha,observaciones_muestra,meses_faltantes_muestra,cubre_muestra_completa,estado,motivo
+DFII10,yield_real_10y_tips_pct,True,284,2003-01-01,2026-08-01,244,0,True,activa,Cobertura mensual completa en la muestra del modelo.
+DFII5,yield_real_5y_us_pct,True,284,2003-01-01,2026-08-01,244,0,True,activa,Cobertura mensual completa en la muestra del modelo.
+DGS2,yield_2y_us_pct,True,320,2000-01-01,2026-08-01,244,0,True,activa,Cobertura mensual completa en la muestra del modelo.
+DGS10,yield_10y_us_pct,True,320,2000-01-01,2026-08-01,244,0,True,activa,Cobertura mensual completa en la muestra del modelo.
+T10Y2Y,spread_10y_2y_us_pct,True,320,2000-01-01,2026-08-01,244,0,True,activa,Cobertura mensual completa en la muestra del modelo.
+T5YIE,breakeven_5y_us_pct,True,284,2003-01-01,2026-08-01,244,0,True,activa,Cobertura mensual completa en la muestra del modelo.
+T10YIE,breakeven_10y_us_pct,True,284,2003-01-01,2026-08-01,244,0,True,activa,Cobertura mensual completa en la muestra del modelo.
+DCOILBRENTEU,brent_usd_barril,True,320,2000-01-01,2026-08-01,244,0,True,activa,Cobertura mensual completa en la muestra del modelo.
+PALLFNFINDEXM,commodities_index_imf,True,319,2000-01-01,2026-07-01,244,0,True,activa,Cobertura mensual completa en la muestra del modelo.
+GOLDAMGBD228NLBM,oro_usd_oz,False,0,,,0,244,False,no_disponible,FRED no devolvió observaciones utilizables.
+GEPUCURRENT,epu_global,True,319,2000-01-01,2026-07-01,244,0,True,activa,Cobertura mensual completa en la muestra del modelo.
+STLFSI4,estres_financiero_stl,True,320,2000-01-01,2026-08-01,244,0,True,activa,Cobertura mensual completa en la muestra del modelo.
+NFCI,nfci_chicago,True,320,2000-01-01,2026-08-01,244,0,True,activa,Cobertura mensual completa en la muestra del modelo.
+ANFCI,anfci_chicago,True,320,2000-01-01,2026-08-01,244,0,True,activa,Cobertura mensual completa en la muestra del modelo.
+TEDRATE,ted_spread_pct,False,265,2000-01-01,2022-01-01,193,51,False,candidata_no_activa,TEDRATE termina antes del cierre de la muestra; no se completa con interpolación ni con otra serie.
+BAMLH0A0HYM2,high_yield_oas_pct,False,0,,,0,244,False,no_disponible,FRED no devolvió observaciones utilizables.
+MANEMP,empleo_manufactura_us_miles,True,319,2000-01-01,2026-07-01,244,0,True,activa,Cobertura mensual completa en la muestra del modelo.
+INDPRO,produccion_industrial_us,True,319,2000-01-01,2026-07-01,244,0,True,activa,Cobertura mensual completa en la muestra del modelo.
+UNRATE,desempleo_us_bls_pct,False,318,2000-01-01,2026-07-01,243,1,False,candidata_no_activa,"UNRATE tiene un faltante publicado en 2025-10; se conserva como referencia BLS, pero el modelo usa la serie OECD completa y no imputa."
+LRUN64TTUSM156S,desempleo_us_pct,True,319,2000-01-01,2026-07-01,244,0,True,activa,Cobertura mensual completa en la muestra del modelo.
+TSIFRGHT,fletes_transporte_us,True,317,2000-01-01,2026-05-01,244,0,True,activa,Cobertura mensual completa en la muestra del modelo.
+CHNTOT,precios_importacion_china,False,271,2003-12-01,2026-07-01,243,1,False,candidata_no_activa,"CHNTOT tiene un faltante publicado en 2025-10; se conserva como proxy de precios externos de China, pero no se imputa ni entra al modelo balanceado."
+CHNPRINTO01IXPYM,produccion_industrial_china,False,270,2000-01-01,2023-11-01,198,46,False,candidata_no_activa,La serie de actividad industrial china termina antes del cierre de la muestra; se conserva para futuras muestras cortas.
+CHNLORSGPRTSTSAM,indicador_lider_china,False,290,2000-01-01,2024-02-01,218,26,False,candidata_no_activa,El indicador líder de China no cubre todo 2006-01--2026-04; no se imputa para forzar su entrada.
+CHNCPIALLMINMEI,ipc_china,False,304,2000-01-01,2025-04-01,232,12,False,candidata_no_activa,El IPC de China tiene cobertura publicada incompleta para el cierre de la muestra vigente.
+TWEXBMTH,dolar_amplio_mensual,False,240,2000-01-01,2019-12-01,168,76,False,candidata_no_activa,Proxy mensual alternativo; el modelo activo construye el dólar amplio desde la serie diaria de raw.

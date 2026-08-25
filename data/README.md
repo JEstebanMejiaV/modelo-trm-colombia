@@ -131,16 +131,20 @@ Todas las columnas tienen frecuencia mensual después de la consolidación.
 
 ### Base global mensual FRED
 
-`base_global_mensual.csv` consolida 14 series mensuales internacionales desde FRED. Diez componentes entran al factor agrupado `Variables globales nuevas`: `yield_real_10y_tips_pct`, `yield_2y_us_pct`, `yield_10y_us_pct`, `spread_10y_2y_us_pct`, Brent, índice de commodities, EPU global, estrés financiero STLFSI, empleo manufacturero y producción industrial de EE. UU. Brent, commodities, empleo y producción industrial se transforman con logaritmos antes de diferenciarse; tasas, pendiente, EPU y estrés se diferencian en sus unidades de origen.
+`base_global_mensual.csv` consolida las series internacionales, sus candidatos y el identificador de cobertura. La especificación balanceada activa 17 términos en un único factor denominado `Condiciones financieras, commodities y actividad internacional`: rendimientos reales y nominales de EE. UU., expectativas de inflación a 5 y 10 años, pendiente 10Y–2Y, Brent, commodities, EPU global, STLFSI, NFCI, ANFCI, desempleo estadounidense, empleo manufacturero, producción industrial y fletes/logística. La cobertura de cada origen, incluidos los candidatos, se registra en `base_global_cobertura.csv`.
 
-| Serie | Transformación activa | Uso histórico | Uso de pronóstico |
+| Bloque | Series activas | Transformación histórica | Uso de pronóstico |
 |---|---|---|---|
-| TIPS real 10Y, Treasury 2Y/10Y y spread 10Y–2Y | Primera diferencia | Contemporáneo dentro del bloque global | Rezago `.L1` |
-| Brent y commodities | `D.ln` | Contemporáneo dentro del bloque global | Rezago `.L1` |
-| EPU global y estrés financiero STLFSI | Primera diferencia | Contemporáneo dentro del bloque global | Rezago `.L1` |
-| Empleo manufacturero y producción industrial de EE. UU. | `D.ln` | Contemporáneo dentro del bloque global | Rezago `.L2` |
+| Rendimientos y expectativas EE. UU. | `yield_real_10y_tips_pct`, `yield_real_5y_us_pct`, `yield_2y_us_pct`, `yield_10y_us_pct`, `spread_10y_2y_us_pct`, `breakeven_5y_us_pct`, `breakeven_10y_us_pct` | Primera diferencia en unidades de origen | `.L1` |
+| Commodities | `ln_brent_global`, `ln_commodities_global` | Logaritmo y primera diferencia | `.L1` |
+| Riesgo e incertidumbre | `epu_global`, `estres_financiero_stl`, `nfci_chicago`, `anfci_chicago` | Primera diferencia | `.L1` |
+| Actividad, empleo y logística | `desempleo_us_pct`, `ln_empleo_manufactura_us`, `ln_produccion_industrial_us`, `ln_fletes_transporte_us` | Desempleo en diferencia; las demás, logaritmo y primera diferencia | `.L2` por disponibilidad |
 
-La tasa de desempleo de EE. UU. queda fuera de la especificación activa por un faltante en 2025-10. TED spread, high-yield spread y dólar amplio alternativo no se usan por cobertura incompleta o descarga fallida. El identificador de oro solicitado devolvió HTTP 400 y no se sustituye silenciosamente. Estas decisiones preservan la política de faltantes y evitan imputaciones artificiales. Las series globales se agrupan para controlar colinealidad y mantener exacta la descomposición Shapley con 13 jugadores.
+La base conserva además candidatos sin forzar su entrada al modelo: `high_yield_oas_pct` (high-yield), `ted_spread_pct` (TED), `desempleo_us_bls_pct` (`UNRATE`) y cuatro indicadores de China (`precios_importacion_china`, `produccion_industrial_china`, `indicador_lider_china`, `ipc_china`). High-yield no tiene una descarga utilizable que cubra 2006–2026; TED termina en 2022-01; `UNRATE` conserva un faltante publicado en 2025-10; y los indicadores chinos terminan antes o tienen faltantes dentro de la muestra. Ninguna de estas series se interpola, se rellena con cero o se incluye en la matriz balanceada. El identificador de oro solicitado devuelve HTTP 400 y no se sustituye silenciosamente.
+
+El desempleo activo usa `LRUN64TTUSM156S`, una serie mensual completa en la ventana 2006-01–2026-04. El modelo histórico utiliza el bloque global con información contemporánea realizada; el pronóstico aplica rezagos de publicación: mercados, tasas, riesgo y commodities con `.L1`, y empleo, desempleo y fletes con `.L2`. Las señales de China se mantienen exploratorias y no entran en `score_global` completo cuando no cubren toda la ventana. Agrupar los 17 términos evita aumentar los jugadores Shapley, controla la colinealidad y conserva exactamente 13 factores.
+
+`data/base_global_cobertura.csv` exige para cada serie activa `estado=activa`, `cubre_muestra_completa=True` y 244 observaciones en la muestra. El registro conserva también las columnas de candidatos aunque estén vacías, para que una descarga fallida o una cobertura incompleta sea auditable en lugar de desaparecer.
 
 ### Logaritmos y controles
 

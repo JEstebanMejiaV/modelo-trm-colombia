@@ -44,35 +44,65 @@ RESULTS = ROOT / "results" / "pronostico"
 def load_monthly_global_features(index: pd.DatetimeIndex) -> pd.DataFrame:
     """Construye señales mensuales globales rezagadas para el modelo diario.
 
-    Las variables mensuales no se imputan contemporáneamente: cada día del mes
-    usa únicamente el último promedio mensual disponible (t-1). Así se evita
-    convertir una observación mensual revisada en información intradía.
+    Las variables mensuales no se imputan contemporáneamente: cada día usa el
+    último promedio mensual disponible (t-1). Los candidatos con cobertura
+    incompleta, como TED, high-yield y China, no se mezclan con estas señales
+    activas.
     """
     path = ROOT / "data" / "base_global_mensual.csv"
     raw = pd.read_csv(path, parse_dates=["fecha"]).set_index("fecha").sort_index()
     raw.index = raw.index.to_period("M").to_timestamp()
     raw = raw.groupby(level=0).mean()
 
-    features = pd.DataFrame(index=raw.index)
-    rate_columns = [
+    required_columns = [
         "yield_real_10y_tips_pct",
+        "yield_real_5y_us_pct",
         "yield_2y_us_pct",
         "yield_10y_us_pct",
         "spread_10y_2y_us_pct",
+        "breakeven_5y_us_pct",
+        "breakeven_10y_us_pct",
+        "brent_usd_barril",
+        "commodities_index_imf",
+        "epu_global",
+        "estres_financiero_stl",
+        "nfci_chicago",
+        "anfci_chicago",
+        "empleo_manufactura_us_miles",
+        "produccion_industrial_us",
+        "desempleo_us_pct",
+        "fletes_transporte_us",
+    ]
+    missing = [column for column in required_columns if column not in raw.columns]
+    if missing:
+        raise ValueError(f"Faltan variables globales activas para el corto plazo: {missing}")
+
+    features = pd.DataFrame(index=raw.index)
+    rate_columns = [
+        "yield_real_10y_tips_pct",
+        "yield_real_5y_us_pct",
+        "yield_2y_us_pct",
+        "yield_10y_us_pct",
+        "spread_10y_2y_us_pct",
+        "breakeven_5y_us_pct",
+        "breakeven_10y_us_pct",
     ]
     features["global_rates_mom"] = raw[rate_columns].diff().mean(axis=1)
     features["global_commodities_mom"] = (
         np.log(raw["brent_usd_barril"].where(raw["brent_usd_barril"] > 0)).diff()
         + np.log(raw["commodities_index_imf"].where(raw["commodities_index_imf"] > 0)).diff()
     ) / 2.0
-    features["global_risk_mom"] = (
-        np.log(raw["epu_global"].where(raw["epu_global"] > 0)).diff()
-        + raw["estres_financiero_stl"].diff()
-    ) / 2.0
+    features["global_risk_mom"] = raw[
+        ["epu_global", "estres_financiero_stl", "nfci_chicago", "anfci_chicago"]
+    ].diff().mean(axis=1)
     features["global_activity_mom"] = (
         np.log(raw["empleo_manufactura_us_miles"].where(raw["empleo_manufactura_us_miles"] > 0)).diff()
         + np.log(raw["produccion_industrial_us"].where(raw["produccion_industrial_us"] > 0)).diff()
-    ) / 2.0
+        + raw["desempleo_us_pct"].diff()
+    ) / 3.0
+    features["global_logistics_mom"] = np.log(
+        raw["fletes_transporte_us"].where(raw["fletes_transporte_us"] > 0)
+    ).diff()
 
     # El valor mensual t solo puede alimentar días de t+1 en el pronóstico.
     lagged = features.shift(1)
@@ -200,6 +230,7 @@ def build_designs(daily: pd.DataFrame) -> dict[str, tuple[pd.Series, pd.DataFram
         "global_commodities_mom_L1": daily["global_commodities_mom"].shift(1),
         "global_risk_mom_L1": daily["global_risk_mom"].shift(1),
         "global_activity_mom_L1": daily["global_activity_mom"].shift(1),
+        "global_logistics_mom_L1": daily["global_logistics_mom"].shift(1),
     }, index=daily.index)
     designs["HAR + globales mensuales"] = (y, x_har_global)
 
@@ -216,6 +247,7 @@ def build_designs(daily: pd.DataFrame) -> dict[str, tuple[pd.Series, pd.DataFram
         "global_commodities_mom_L1": daily["global_commodities_mom"].shift(1),
         "global_risk_mom_L1": daily["global_risk_mom"].shift(1),
         "global_activity_mom_L1": daily["global_activity_mom"].shift(1),
+        "global_logistics_mom_L1": daily["global_logistics_mom"].shift(1),
         "rv_5d_L1": daily["rv_5d"].shift(1),
     }, index=daily.index)
     designs["HAR + globales mensuales + vol"] = (y, x_full)
@@ -305,6 +337,7 @@ def weekly_backtest(daily: pd.DataFrame, holdout_weeks: int = 52) -> dict:
         "global_commodities_mom_L1": daily["global_commodities_mom"].shift(1),
         "global_risk_mom_L1": daily["global_risk_mom"].shift(1),
         "global_activity_mom_L1": daily["global_activity_mom"].shift(1),
+        "global_logistics_mom_L1": daily["global_logistics_mom"].shift(1),
         "rv_5d_L1": daily["rv_5d"].shift(1),
     }, index=daily.index)
 

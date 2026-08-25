@@ -4,20 +4,20 @@
 
 La señal de largo plazo más consistente sigue siendo la reversión multianual capturada por wavelets: D3+D4+D5 explica el **45,9% de la variación futura a 12 meses** out-of-sample, con dirección de 74,4% y DM p < 0,001. La nueva base global añade una señal independiente: `delta_actividad_us_12m` alcanza **12,8% de R² OOS** a 12 meses (DM p = 0,006). Estos resultados describen horizontes distintos y no convierten el pronóstico mensual en una estrategia de corto plazo.
 
-El análisis diario recalculado con variables globales también exige cautela: el mejor HAR obtiene R² OOS de 13,20%, pero dirección de 41,6% y Sharpe anualizado −4,03. El poder explicativo estadístico no equivale a rentabilidad ni a capacidad direccional.
+El análisis diario recalculado con mercados, condiciones financieras, commodities y logística también exige cautela: el mejor HAR obtiene R² OOS de 13,41%, pero dirección de 41,2% y Sharpe anualizado −3,91. El poder explicativo estadístico no equivale a rentabilidad ni a capacidad direccional.
 
 Este contraste entre frecuencias es el resultado central del proyecto:
 
 | Horizonte | Mejor R² OOS recalculado | p-valor DM | Interpretación |
 |---|---|---|---|
-| 1 día | 13,2%* | — | R² positivo, pero dirección y Sharpe desfavorables |
+| 1 día | 13,4%* | — | R² positivo, pero dirección y Sharpe desfavorables |
 | 1 mes | -13,4% | 0,21 | No supera la caminata |
 | **6 meses** | **-12,7%** | **0,16** | No supera la caminata |
 | **12 meses** | **-26,3%**† | **0,05** | No robusto en este backtest de señal agregada |
 | **18 meses** | **-41,3%** | **0,03** | No supera la caminata |
 | **24 meses** | **-135,9%** | **<0,001** | No supera la caminata |
 
-\* HAR con globales mensuales rezagadas; dirección 41,6% y Sharpe −4,03. † La señal global `delta_actividad_us_12m` evaluada por separado obtiene R² OOS de 12,8% y DM p = 0,006 a 12 meses; la diferencia ilustra que las especificaciones no son intercambiables.
+\* HAR con globales mensuales rezagadas; dirección 41,2% y Sharpe −3,91. † La señal global `delta_actividad_us_12m` evaluada por separado obtiene R² OOS de 12,8% y DM p = 0,006 a 12 meses; la diferencia ilustra que las especificaciones no son intercambiables.
 
 ---
 
@@ -36,9 +36,9 @@ Este contraste entre frecuencias es el resultado central del proyecto:
 | 9 | Cointegración TRM-dólar | -15,4% | -0,040 | 54,3% | 0,09 |
 | 10 | HP expanding | -17,8% | -0,021 | 57,8% | 0,13 |
 
-### Señales globales nuevas
+### Señales globales: condiciones financieras, actividad y logística
 
-La evaluación específica del bloque global está en `results/pronostico/variables_globales_evaluacion.csv`. `score_global` alcanza R² OOS de 22,5% en su ventana disponible; entre señales individuales, la variación de 12 meses de la producción industrial de EE. UU. alcanza 12,8% a 12 meses y DM p = 0,006. Las señales de niveles estandarizados de producción industrial y empleo también son positivas, pero cada fila usa una muestra y horizonte OOS propios.
+La evaluación específica del bloque global está en `results/pronostico/variables_globales_evaluacion.csv`. Las señales disponibles se evalúan por separado con la muestra que cubre cada serie: en el corte actual, la señal de fletes/logística alcanza R² OOS de 22,7% y la producción industrial estadounidense 22,0%. Las señales de actividad, empleo, desempleo y fletes usan rezagos de disponibilidad; los candidatos de China no se mezclan en el `score_global` completo cuando no cubren toda la ventana. Estas cifras no son equivalentes al pronóstico mensual de la TRM ni a las señales de 12 meses.
 
 ---
 

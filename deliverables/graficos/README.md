@@ -6,7 +6,7 @@ Esta carpeta presenta cinco lecturas visuales del modelo fuera del archivo Excel
 
 ![Peso explicativo Shapley](01_pesos_explicativos.png)
 
-Ordena los 13 factores por su participación en el R² incremental asignado mediante Shapley/LMG. Los bigotes añaden intervalos percentiles del 95% obtenidos con 200 réplicas de bloques circulares de 12 meses. El bloque `Variables globales nuevas` aparece como un único jugador y reúne diez términos. Los pesos suman 100% dentro del bloque de factores. No son porcentajes causales del precio del dólar: dependen de la muestra, la especificación y la información compartida entre variables correlacionadas.
+Ordena los 13 factores por su participación en el R² incremental asignado mediante Shapley/LMG. Los bigotes añaden intervalos percentiles del 95% obtenidos con 200 réplicas de bloques circulares de 12 meses. El bloque `Condiciones financieras, commodities y actividad internacional` aparece como un único jugador y reúne 17 términos activos. Los pesos suman 100% dentro del bloque de factores. No son porcentajes causales del precio del dólar: dependen de la muestra, la especificación y la información compartida entre variables correlacionadas.
 
 ## 2. Comparación de desempeño
 
@@ -53,4 +53,4 @@ El CSV de largo plazo contiene el vector cointegrante normalizado con coeficient
 - El diferencial BEI a cinco años se construye con compensaciones de mercado y entra en primera diferencia; su nivel es sensible a tendencias. Combina inflación esperada con primas por riesgo inflacionario y diferencias de liquidez entre bonos nominales e indexados; no es una expectativa pura.
 - EMBIG Colombia mide una prima de riesgo soberano de mercado; su coeficiente contemporáneo también puede recoger liquidez y aversión global al riesgo.
 - La balanza comercial tiene signo estimado positivo, contrario al esperado; esto puede reflejar simultaneidad o composición de los flujos.
-- ARCH-LM y Jarque–Bera alertan sobre volatilidad condicional y colas no normales; RESET no rechaza la forma funcional al 5% en el ampliado.
+- Jarque–Bera rechaza normalidad al 5%, mientras ARCH-LM no rechaza heterocedasticidad condicional al 5% (p = 0,147); RESET no rechaza la forma funcional.

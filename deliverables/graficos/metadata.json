@@ -1,7 +1,7 @@
 {
   "generator": {
     "path": "src/build_charts.py",
-    "sha256": "4df623426b26687c66d4f51b8a8465c6d5d8d4b2c86e9566f536a4c666262f42"
+    "sha256": "26b6323e87ea919a62da4404c96ba4f43c939c85811497536b2ba7b14b4adf27"
   },
   "hash_method": "CSV canónico con 6 cifras significativas",
   "images": {
@@ -27,18 +27,18 @@
     }
   },
   "sources": {
-    "results/explicacion/coeficientes_modelo_ampliado.csv": "f26b11c4e277cf572b39468aaae357f0cb2faa64d4fb943ee94bc4fc0f5013c4",
-    "results/explicacion/comparacion_factor_regional.csv": "e70cb36d7355ae7d24f130e4044970ca5007478f6bb96d5e6a567fbcc7d68706",
-    "results/explicacion/comparacion_modelos.csv": "23e8ca9eb7a756880a0539b14fafd68770e9286fcd8dcb256709260f0ee76c71",
-    "results/explicacion/contribuciones_modelo_ampliado.csv": "56c9bb7a53fd78cda6bd11983a445520d13d38eab76e2665da69acafda567507",
-    "results/explicacion/estabilidad_submuestras_resumen.csv": "e7da2454f437c2aa4b15005df46b25f7a57fa61ccca122a29fd24fdbf868be34",
-    "results/explicacion/intervalos_bootstrap_pesos_shapley.csv": "54f8634234ef254734c41102a9a3e68f52dd52af5d575ed1c33ed17a78998731",
-    "results/explicacion/pesos_explicativos_modelo_ampliado.csv": "70e4ef7b37b50395c60211cbdef598a7733f000e4a00a9d90cf8c74c0ad24c13",
-    "results/explicacion/validacion_metricas_modelo_ampliado.csv": "0ae117cdb51250a959eeade8bcc46a998f050ecfc403a496d373f063a9c82e98",
-    "results/explicacion/validacion_predicciones_modelo_ampliado.csv": "1e64335298cdd84bd8b9200c75eb305a10b66a712bc2acb6fd0a582716a898d0",
+    "results/explicacion/coeficientes_modelo_ampliado.csv": "0c26f57938e58944b9e996538cbc1796026d5cfe30b7121a0b83621ecc507c48",
+    "results/explicacion/comparacion_factor_regional.csv": "50c747a5e62f629a767ecf10d6757deb2e682251c46b051b10163a8f55822c08",
+    "results/explicacion/comparacion_modelos.csv": "7eea68c08b9526df6ef2f39d4060c73c81913d68a7cde387fc074f527ba8572a",
+    "results/explicacion/contribuciones_modelo_ampliado.csv": "2ba15d6b8a61c27823c6a3e5151551b03ae32b0a0776047aa5564c3f8557836f",
+    "results/explicacion/estabilidad_submuestras_resumen.csv": "05d540ae2bd06993055c91bd0cb142e7c7a733f2c4ac530ef17962480f9e429a",
+    "results/explicacion/intervalos_bootstrap_pesos_shapley.csv": "3604ebc4e928ff13615806f1d788d4ca2deb194ab231b1ffc1b0ce9fe9370482",
+    "results/explicacion/pesos_explicativos_modelo_ampliado.csv": "d68750f1322eba92c17e8443c3a1ea1b3d0844b9c5422146a93e28472b18e015",
+    "results/explicacion/validacion_metricas_modelo_ampliado.csv": "5a04ca5c3b1c352553a8022e0f9270e774f7bfb2fcb737dfaf0f8263118b0c12",
+    "results/explicacion/validacion_predicciones_modelo_ampliado.csv": "9b03055b4bcfc39ca10a72637e3871ec5621823a19516370b686384d71e16e49",
     "results/explicacion/validacion_predicciones_modelo_principal.csv": "f27903fbb89f7cb966ec327f991d101c9dd92d402f344b6f3a3ab53d28be5cce",
-    "results/pronostico/validacion_metricas_pronostico.csv": "28657d902c7bfe2fed9415ff46bba3d70317a25296b3be6ed33fa3defd16c4b3",
-    "results/pronostico/validacion_predicciones_pronostico.csv": "6671d2170cc184dc956535f1b5a3f9dab1d4e325cf7d39011a5363a62971d711",
+    "results/pronostico/validacion_metricas_pronostico.csv": "7fcc2f7e6322b0146378c50028b22b7f287c739c09599bbf7457125101c96843",
+    "results/pronostico/validacion_predicciones_pronostico.csv": "41105a7072dfb69059d48777a24d6fe588b04af337910e03d800fe4d31badd21",
     "results/robustez/bounds_resumen.csv": "093f1e9b5f3c733ba8832dff1a534dc8a425e9c2d88e26edb0df64153feecc0a",
     "results/robustez/coeficientes_corto_plazo_ecm.csv": "6e86e6a4a16a735c15cc9a45d14572e49cb10fbea971503cb7a32a67bdfad820",
     "results/robustez/coeficientes_largo_plazo_ecm.csv": "60f7b80384872c3950acc775847d945b2c0f77c053f056b0f058b12d3938ee0a"

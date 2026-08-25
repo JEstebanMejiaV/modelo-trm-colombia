@@ -6,7 +6,7 @@
 
 1. **Resumen**: principales métricas del modelo principal y el ampliado, lectura económica de la especificación base, comparación de desempeño, pesos Shapley destacados y cautelas de interpretación.
 2. **Datos_fuente**: niveles mensuales de todas las series activas. Incluye PEN por USD, términos de intercambio, EMBIG Colombia, curvas TES nominal y UVR a cinco años, compensación de inflación estadounidense y la base global FRED consolidada.
-3. **Transformaciones**: fórmulas enlazadas a `Datos_fuente` para logaritmos, primeras diferencias, rezagos auditables, transformaciones `asinh`, diferencial BEI, factores regionales y el bloque de variables globales nuevas.
+3. **Transformaciones**: fórmulas enlazadas a `Datos_fuente` para logaritmos, primeras diferencias, rezagos auditables, transformaciones `asinh`, diferencial BEI, factores regionales y el bloque `Condiciones financieras, commodities y actividad internacional`.
 4. **Modelo_principal**: coeficientes con errores HAC, métricas del ajuste y reconstrucción mensual por contribuciones. Las referencias a coeficientes se determinan por nombre del término, no por una posición fija.
 5. **Modelo_ampliado**: coeficientes y diagnósticos de la especificación ampliada, ajuste histórico, contribución mensual de cada término y control que reconcilia la suma de contribuciones con el cambio ajustado.
 6. **Pesos_explicativos**: descomposición Shapley/LMG del R² incremental, tabla completa, gráfico de columnas y controles de suma del R² y de las participaciones.
@@ -42,9 +42,9 @@ No equivale al tamaño del coeficiente, a su p-valor ni a un porcentaje causal d
 
 - Las regresiones describen asociaciones dinámicas; no prueban causalidad.
 - `Validacion` es condicional porque usa realizaciones contemporáneas. `Pronostico` usa rezagos de publicación, pero solo 3 de 13 factores activos tienen vintages versionados completos para los 48 orígenes; por eso sigue siendo pseudo-tiempo-real.
-- En la muestra actual, el ampliado alcanza R² ajustado de `0,611`, MAPE condicional de `1,62%` y acierto de dirección de `79,17%`; el peso Shapley del bloque global es `17,33%`.
-- El pronóstico mensual obtiene MAPE de `2,68%`, frente a `2,39%` de la caminata aleatoria, y R² frente a ese benchmark de `−13,38%`.
-- En el ampliado, ARCH-LM y Jarque–Bera rechazan sus hipótesis nulas; RESET no rechaza al 5%. No se detecta autocorrelación ni inestabilidad CUSUM.
+- En la muestra actual, el ampliado alcanza R² ajustado de `0,628`, R² de `0,675`, MAPE condicional de `1,51%` y acierto de dirección de `83,33%`; el peso Shapley del bloque `Condiciones financieras, commodities y actividad internacional` es `21,62%`.
+- El pronóstico mensual obtiene MAPE de `2,58%`, frente a `2,39%` de la caminata aleatoria, y R² frente a ese benchmark de `−4,84%`.
+- En el ampliado, Jarque–Bera rechaza normalidad al 5%, pero ARCH-LM no rechaza heterocedasticidad condicional (p = `0,147`); RESET no rechaza al 5%. No se detecta autocorrelación ni inestabilidad CUSUM.
 - Remesas, flujos de capital, reservas y variables fiscales pueden responder a la propia TRM; sus coeficientes pueden reflejar endogeneidad.
 - Los términos de intercambio se usan contemporáneamente para explicación *ex post*, pero suelen publicarse con cerca de dos meses de rezago.
 - EMBIG Colombia procede de BCRPData, que identifica como fuentes originales a Reuters/J.P. Morgan. Debe conservarse esa atribución; la disponibilidad de la descarga no constituye una licencia abierta sobre la metodología o la marca EMBIG.
@@ -54,7 +54,9 @@ No equivale al tamaño del coeficiente, a su p-valor ni a un porcentaje causal d
 
 ## Resultados de corto y largo plazo
 
-El archivo Excel documenta el modelo mensual y sus salidas auditables. Los análisis diarios y de largo plazo se mantienen tabulares en `results/pronostico/`: el mejor HAR con señales globales tiene R² OOS de 13,20%, aunque dirección 41,6% y Sharpe −4,03; la señal global de actividad a 12 meses alcanza R² OOS de 12,8% (DM p = 0,006), y la wavelet D3+D4+D5 45,9%. No se deben comparar estas cifras sin considerar frecuencia, horizonte y benchmark.
+El archivo Excel documenta el modelo mensual y sus salidas auditables. Los análisis diarios y de largo plazo se mantienen tabulares en `results/pronostico/`: el mejor HAR con señales globales ampliadas tiene R² OOS de 13,41%, aunque dirección 41,2% y Sharpe −3,91; la señal global de actividad a 12 meses alcanza R² OOS de 12,8% (DM p = 0,006), y la wavelet D3+D4+D5 45,9%. No se deben comparar estas cifras sin considerar frecuencia, horizonte y benchmark.
+
+Cuando `@oai/artifact-tool` no está disponible, `src/sync_workbook_openpyxl.py` reconstruye las tablas auditables del entregable desde los CSV actuales y deja el workbook marcado para recálculo al abrirlo en Excel.
 
 ## Uso recomendado
 

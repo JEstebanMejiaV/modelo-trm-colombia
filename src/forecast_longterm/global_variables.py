@@ -1,19 +1,14 @@
 """
-Variables de la literatura académica para pronóstico de la TRM.
+Evaluación de variables globales para pronóstico de la TRM.
 
-Descarga 6 series de FRED con respaldo en papers:
-1. DFII10: US 10Y real yield (TIPS) — dollar smile
-2. GOLDAMGBD228NLBM: Gold price — refugio/risk-off extremo
-3. GEPUCURRENT: Global Economic Policy Uncertainty — incertidumbre
-4. PALLFNFINDEXM: All Commodities Index — más amplio que TI Colombia
-5. MANEMP: US Manufacturing Employment — ciclo real US
-6. DGS2: US 2Y Treasury yield — expectativas de Fed forward
-
-Evalúa cada una como señal de largo plazo (6-12 meses) y la combina
-con el CF filter para ver si hay mejora incremental.
+Usa la base mensual consolidada de FRED y evalúa, por separado y en un score,
+rendimientos reales, expectativas de inflación, condiciones financieras,
+commodities, actividad estadounidense, desempleo y logística. China se reporta
+como señal exploratoria cuando existe, pero sus candidatos incompletos no entran
+al modelo balanceado.
 
 Uso:
-    python src/forecast_longterm/academic_variables.py
+    python src/forecast_longterm/global_variables.py
 """
 from __future__ import annotations
 
@@ -38,11 +33,21 @@ API_KEY = "dd22ac6406a29199a86edafc2f267524"
 
 SERIES_TO_DOWNLOAD = {
     "DFII10": "yield_real_10y_tips",
-    "GOLDAMGBD228NLBM": "gold_usd",
-    "GEPUCURRENT": "epu_global",
-    "PALLFNFINDEXM": "commodities_index",
-    "MANEMP": "us_manufacturing_emp",
+    "DFII5": "yield_real_5y",
     "DGS2": "yield_2y_us",
+    "DGS10": "yield_10y_us",
+    "T10Y2Y": "spread_10y_2y_us",
+    "T5YIE": "breakeven_5y_us",
+    "T10YIE": "breakeven_10y_us",
+    "GEPUCURRENT": "epu_global",
+    "STLFSI4": "estres_financiero_stl",
+    "NFCI": "nfci_chicago",
+    "ANFCI": "anfci_chicago",
+    "MANEMP": "us_manufacturing_emp",
+    "INDPRO": "us_industrial_production",
+    "LRUN64TTUSM156S": "desempleo_us",
+    "TSIFRGHT": "fletes_transporte_us",
+    "CHNTOT": "precios_importacion_china",
 }
 
 
@@ -100,14 +105,23 @@ def build_academic_signals(data: pd.DataFrame, new_series: dict[str, pd.Series])
     # Yield real alto + gold alto + EPU alto + commodities bajo = depreciación
     z_cols = {
         "z_yield_real_10y_tips": +1,
+        "z_yield_real_5y": +1,
         "z_yield_2y_us": +1,
         "z_yield_10y_us": +1,
         "z_spread_10y_2y_us": +1,
-        "z_gold_usd": +1,
+        "z_breakeven_5y_us": +1,
+        "z_breakeven_10y_us": +1,
         "z_epu_global": +1,
+        "z_estres_financiero_stl": +1,
+        "z_nfci_chicago": +1,
+        "z_anfci_chicago": +1,
+        "z_desempleo_us": +1,
+        "z_fletes_transporte_us": +1,
+        "z_precios_importacion_china": +1,
+        "z_produccion_industrial_china": -1,
+        "z_indicador_lider_china": -1,
         "z_commodities_index": -1,
         "z_brent_usd": -1,
-        "z_estres_financiero_stl": +1,
         "z_us_manufacturing_emp": -1,
         "z_us_industrial_production": -1,
     }
@@ -217,15 +231,27 @@ def main():
     data = build_dataset()
     source_map = {
         "yield_real_10y_tips": "yield_real_10y_tips_pct",
+        "yield_real_5y": "yield_real_5y_us_pct",
         "yield_2y_us": "yield_2y_us_pct",
         "yield_10y_us": "yield_10y_us_pct",
         "spread_10y_2y_us": "spread_10y_2y_us_pct",
+        "breakeven_5y_us": "breakeven_5y_us_pct",
+        "breakeven_10y_us": "breakeven_10y_us_pct",
         "commodities_index": "ln_commodities_global",
         "brent_usd": "ln_brent_global",
         "epu_global": "epu_global",
         "estres_financiero_stl": "estres_financiero_stl",
+        "nfci_chicago": "nfci_chicago",
+        "anfci_chicago": "anfci_chicago",
         "us_manufacturing_emp": "ln_empleo_manufactura_us",
         "us_industrial_production": "ln_produccion_industrial_us",
+        "desempleo_us": "desempleo_us_pct",
+        "fletes_transporte_us": "ln_fletes_transporte_us",
+        # Estas señales chinas se evalúan solo en la ventana que cubren;
+        # permanecen fuera de la muestra balanceada por faltantes publicados.
+        "precios_importacion_china": "ln_precios_importacion_china",
+        "produccion_industrial_china": "produccion_industrial_china",
+        "indicador_lider_china": "indicador_lider_china",
     }
     new_series = {
         name: data[column].loc[SAMPLE_START:].rename(name)

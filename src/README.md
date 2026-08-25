@@ -9,7 +9,8 @@ Esta carpeta contiene el pipeline de estimación, validación y documentación d
 | `estimate_model.py` | Orquestador principal. Importa del paquete `model/`, estima los modelos base, ampliado y de pronóstico, calcula Shapley, Diebold-Mariano, modelos parsimoniosos y actualiza `data/`, `results/` y `README.md`. |
 | `archive_vintage.py` | Crea snapshots inmutables por fecha de origen. Descarga vintages FRED via API (`FRED_API_KEY`) y genera la matriz de cobertura. |
 | `build_charts.py` | Construye cinco gráficos PNG desde los CSV de `results/` y los guarda en `graficos/`. |
-| `build_workbook.mjs` | Construye el archivo Excel de 14 hojas y actualiza `deliverables/modelo_trm_colombia.xlsx`. |
+| `build_workbook.mjs` | Construye el archivo Excel de 14 hojas y actualiza `deliverables/modelo_trm_colombia.xlsx` cuando está disponible `@oai/artifact-tool`. |
+| `sync_workbook_openpyxl.py` | Fallback reproducible: sincroniza el workbook versionado con los CSV actuales usando `openpyxl`, incluido el bloque global, tablas de robustez, coeficientes y pronóstico. |
 | `check_outputs.py` | Comprueba integridad: conciliación Shapley, sincronización CSV-Excel, cobertura de vintages. |
 | `check_reproducibility.py` | Compara resultados regenerados vs versión comprometida con tolerancias numéricas. |
 | `check_charts.py` | Verifica que los PNG correspondan a los CSV y al generador actual via SHA-256. |
@@ -62,9 +63,9 @@ deliverables/modelo_trm_colombia.xlsx
 
 `BASE_FACTOR_SPECS`, `EXPANDED_FACTOR_SPECS_3/4` y `FORECAST_FACTOR_SPECS_3/4` declaran cada factor, su grupo, transformación y rezago. `make_timed_difference_design()` usa esas especificaciones para mantener una sola ruta de construcción.
 
-- Factores contemporáneos del histórico: términos de intercambio, dólar amplio, VIX, EMBIG Colombia, factor regional de cuatro monedas y los diez términos del bloque `Variables globales nuevas`.
+- Factores contemporáneos del histórico: términos de intercambio, dólar amplio, VIX, EMBIG Colombia, factor regional de cuatro monedas y los 17 términos del bloque `Condiciones financieras, commodities y actividad internacional`.
 - Factores rezagados un mes: remesas, diferencial de tasas, déficit fiscal, reservas, balanza cambiaria, capitales y primera diferencia del BEI a cinco años.
-- En el pronóstico, los precios, rendimientos y medidas de riesgo globales usan `.L1`; empleo y producción industrial de EE. UU. usan `.L2` conforme al calendario de disponibilidad.
+- En el pronóstico, mercados, tasas, riesgo y commodities usan `.L1`; empleo, desempleo y fletes/logística de EE. UU. usan `.L2` conforme al calendario de disponibilidad. Los candidatos de China quedan fuera del score completo por cobertura incompleta.
 - Variable dependiente: cambio mensual del logaritmo de la TRM.
 - Inferencia: OLS con errores estándar HAC de seis meses.
 - Selección dinámica: BIC entre cero y tres rezagos de la variación de la TRM; la selección actual es cero.
@@ -82,7 +83,7 @@ En las validaciones recursivas se reestiman los coeficientes, pero se conserva l
 
 ## Pesos explicativos
 
-`exact_shapley_r2()` calcula los **8.192 subconjuntos de 13 factores**. Cada factor entra con todos sus términos y recibe su aporte marginal medio al R². El factor `Variables globales nuevas` se conserva como un único jugador, aunque sus contribuciones mensuales se calculan término por término. El control automático exige que:
+`exact_shapley_r2()` calcula los **8.192 subconjuntos de 13 factores**. Cada factor entra con todos sus términos y recibe su aporte marginal medio al R². El factor `Condiciones financieras, commodities y actividad internacional` se conserva como un único jugador, aunque sus contribuciones mensuales se calculan término por término. El control automático exige que:
 
 - los aportes sumen el R² incremental;
 - los pesos entre factores sumen 100%;
@@ -109,12 +110,18 @@ python .\src\estimate_model.py
 python .\src\build_charts.py
 ```
 
-La construcción del archivo Excel requiere un entorno Node compatible con `@oai/artifact-tool`:
+La construcción del archivo Excel puede usar el generador Node cuando el entorno privado está disponible. En este workspace `@oai/artifact-tool` no está publicado, por lo que la ruta reproducible es el fallback local:
+
+```powershell
+python .\src\sync_workbook_openpyxl.py
+python .\src\check_outputs.py
+python .\src\check_reproducibility.py
+```
+
+El generador Node original sigue disponible para entornos que sí tengan el paquete:
 
 ```powershell
 node .\src\build_workbook.mjs
-python .\src\check_outputs.py
-python .\src\check_reproducibility.py
 ```
 
 Por defecto, las vistas previas y el reporte de inspección quedan en `outputs/modelo_trm_colombia/`. Se puede cambiar esa carpeta con la variable `MODEL_OUTPUT_DIR`. El constructor actualiza además el archivo versionado en `deliverables/` para reducir el riesgo de desincronización.

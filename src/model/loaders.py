@@ -14,6 +14,8 @@ from .config import (
     MONTH_NUMBERS_ES,
     GLOBAL_BASE_FILE,
     GLOBAL_RAW_COMPONENTS,
+    SAMPLE_START,
+    SAMPLE_END,
 )
 
 
@@ -40,7 +42,7 @@ def read_fred(path: Path, output_name: str, daily: bool = False) -> pd.Series:
 
 
 def load_global_base() -> pd.DataFrame:
-    """Carga la base global mensual y aplica solo series completas en la muestra."""
+    """Carga las series globales activas sin imputar faltantes estructurales."""
     if not GLOBAL_BASE_FILE.exists():
         raise FileNotFoundError(
             f"No existe la base global mensual: {GLOBAL_BASE_FILE}. "
@@ -52,21 +54,38 @@ def load_global_base() -> pd.DataFrame:
     raw = raw.groupby(level=0).mean().sort_index()
     source_columns = [
         "yield_real_10y_tips_pct",
+        "yield_real_5y_us_pct",
         "yield_2y_us_pct",
         "yield_10y_us_pct",
         "spread_10y_2y_us_pct",
+        "breakeven_5y_us_pct",
+        "breakeven_10y_us_pct",
         "brent_usd_barril",
         "commodities_index_imf",
         "epu_global",
         "estres_financiero_stl",
+        "nfci_chicago",
+        "anfci_chicago",
         "empleo_manufactura_us_miles",
         "produccion_industrial_us",
         "desempleo_us_pct",
+        "fletes_transporte_us",
+    ]
+    optional_columns = [
+        "high_yield_oas_pct",
+        "ted_spread_pct",
+        "desempleo_us_bls_pct",
+        "precios_importacion_china",
+        "produccion_industrial_china",
+        "indicador_lider_china",
+        "ipc_china",
     ]
     missing = [column for column in source_columns if column not in raw.columns]
     if missing:
-        raise ValueError(f"Faltan series globales requeridas: {missing}")
-    global_data = raw[source_columns].copy()
+        raise ValueError(f"Faltan series globales activas requeridas: {missing}")
+
+    available_optional = [column for column in optional_columns if column in raw.columns]
+    global_data = raw[source_columns + available_optional].copy()
     global_data["ln_brent_global"] = np.log(
         global_data.pop("brent_usd_barril").where(lambda value: value > 0)
     )
@@ -79,6 +98,25 @@ def load_global_base() -> pd.DataFrame:
     global_data["ln_produccion_industrial_us"] = np.log(
         global_data.pop("produccion_industrial_us").where(lambda value: value > 0)
     )
+    global_data["ln_fletes_transporte_us"] = np.log(
+        global_data.pop("fletes_transporte_us").where(lambda value: value > 0)
+    )
+    if "precios_importacion_china" in global_data:
+        global_data["ln_precios_importacion_china"] = np.log(
+            global_data["precios_importacion_china"].where(lambda value: value > 0)
+        )
+
+    sample = global_data.loc[SAMPLE_START:SAMPLE_END, GLOBAL_RAW_COMPONENTS]
+    if sample.isna().any().any():
+        missing_sample = {
+            column: sample.index[sample[column].isna()].strftime("%Y-%m").tolist()
+            for column in sample.columns
+            if sample[column].isna().any()
+        }
+        raise ValueError(
+            "Las series globales activas no cubren la muestra completa; "
+            f"no se imputan faltantes: {missing_sample}"
+        )
     return global_data
 
 

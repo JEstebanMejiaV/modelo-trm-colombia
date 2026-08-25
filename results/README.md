@@ -106,9 +106,9 @@ El ECM es exploratorio: la prueba bounds no confirma cointegración al 5%, por l
 
 ## Resultados globales y de horizonte largo
 
-La base mensual global se integra como un factor agrupado en la explicación histórica para evitar una explosión de jugadores Shapley y controlar colinealidad. Sus diez términos activos se describen en `data/base_global_mensual.csv`; las series excluidas por cobertura o descarga fallida quedan documentadas en `data/README.md`.
+La base mensual global se integra como un factor agrupado en la explicación histórica para evitar una explosión de jugadores Shapley y controlar colinealidad. El factor `Condiciones financieras, commodities y actividad internacional` reúne 17 términos activos: rendimientos y expectativas de EE. UU., commodities, incertidumbre, condiciones financieras, desempleo, actividad industrial y fletes/logística. Sus series y transformaciones se describen en `data/base_global_mensual.csv` y su cobertura en `data/base_global_cobertura.csv`; high-yield, TED, `UNRATE` y China quedan como candidatos documentados cuando no cubren la muestra completa. No se imputa ningún faltante.
 
-La señal `delta_actividad_us_12m` obtiene R² OOS de 12,8% a 12 meses (DM p = 0,006). La wavelet D3+D4+D5 alcanza 45,9% y el panel EM aproximadamente 43,8%. En el corto plazo diario, el mejor HAR con señales globales tiene R² OOS de 13,2%, pero dirección de 41,6% y Sharpe −4,03. Estas métricas no son intercambiables: cada una corresponde a una frecuencia, horizonte y benchmark distintos.
+La señal `delta_actividad_us_12m` obtiene R² OOS de 12,8% a 12 meses (DM p = 0,006). La wavelet D3+D4+D5 alcanza 45,9% y el panel EM aproximadamente 43,8%. En el corto plazo diario, el mejor HAR con globales mensuales y señales globales ampliadas tiene R² OOS de 13,4%, pero dirección de 41,2% y Sharpe −3,91. Estas métricas no son intercambiables: cada una corresponde a una frecuencia, horizonte y benchmark distintos.
 
 
 - `D.variable` = primera diferencia mensual.

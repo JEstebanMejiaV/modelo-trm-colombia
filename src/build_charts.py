@@ -63,8 +63,8 @@ POSITIVE = "#C95D3A"
 NEGATIVE = "#277DA1"
 
 GROUP_COLORS = {
-    "Global": "#2D6FA3",
-    "Global ampliado": "#4C78A8",
+    "Mercados financieros globales": "#2D6FA3",
+    "Condiciones financieras y actividad internacional": "#4C78A8",
     "Regional": "#7A5195",
     "Riesgo local": "#D97732",
     "Sector externo Colombia": "#23866F",
@@ -85,7 +85,9 @@ LABELS = {
         "Diferencial BEI\nde inflación · 5 años"
     ),
     "Diferencial de tasas": "Diferencial de tasas",
-    "Variables globales nuevas": "Variables globales\nnuevas",
+    "Condiciones financieras, commodities y actividad internacional": (
+        "Condiciones financieras,\ncommodities y actividad internacional"
+    ),
     "Déficit fiscal": "Déficit fiscal",
 }
 

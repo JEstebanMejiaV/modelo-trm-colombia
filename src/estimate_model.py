@@ -794,7 +794,7 @@ def main() -> None:
         "ampliado_r_cuadrado_ajustado": float(
             selected_expanded.result.rsquared_adj
         ),
-        "ampliado_temporizacion": "Términos de intercambio, dólar amplio, VIX, EMBIG Colombia, monedas regionales y variables globales nuevas contemporáneos; cambios de remesas, tasas, déficit, reservas, balanza, flujos de capital y diferencial BEI rezagados un mes",
+        "ampliado_temporizacion": "Términos de intercambio, dólar amplio, VIX, EMBIG Colombia, monedas regionales y condiciones financieras, commodities y actividad internacional contemporáneos; cambios de remesas, tasas, déficit, reservas, balanza, flujos de capital y diferencial BEI rezagados un mes",
         "pesos_metodo": "Shapley/LMG exacto del incremento del R2 sobre intercepto, dinamica de TRM y dummy de pandemia",
         "pesos_suma_pct": float(shapley_expanded["peso_entre_factores_pct"].sum()),
         "shapley_r2_base": float(shapley_expanded["r2_base"].iloc[0]),
@@ -1067,7 +1067,7 @@ def parsimonious_forecasts(
     """
     Estima modelos de pronóstico parsimoniosos con los top-N factores por Shapley.
 
-    Compara: top-3, top-5, top-7 y el modelo completo (12 factores).
+    Compara: top-3, top-5, top-7 y el modelo completo (13 factores).
     Todos usan rezagos de publicación (FORECAST_FACTOR_SPECS).
     """
     from copy import deepcopy
@@ -1082,7 +1082,7 @@ def parsimonious_forecasts(
     )[0].index
 
     results_rows: list[dict[str, object]] = []
-    for n_factors in [3, 5, 7, 12]:
+    for n_factors in [3, 5, 7, 13]:
         selected_names = set(ranked_factors[:n_factors])
         # Filtrar FORECAST_FACTOR_SPECS_3 a solo los factores seleccionados
         specs_subset = {

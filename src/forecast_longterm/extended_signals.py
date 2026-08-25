@@ -97,7 +97,11 @@ def markov_switching_beta(data: pd.DataFrame, horizon: int = 12) -> pd.DataFrame
 
     # Retorno forward
     r_forward = (ln_trm.shift(-horizon) - ln_trm) * 100
-    dataset = pd.concat([deviation.rename("dev"), r_forward.rename("r_fwd")], axis=1).dropna()
+    dataset = pd.concat(
+        [deviation.rename("dev"), r_forward.rename("r_fwd")],
+        axis=1,
+        sort=False,
+    ).dropna()
 
     if len(dataset) < 80:
         return pd.DataFrame()
@@ -244,7 +248,11 @@ def evaluate_signal_oos(
     Usa la señal directamente (sin HP, sin look-ahead).
     """
     r_forward = (ln_trm.shift(-horizon) - ln_trm) * 100
-    dataset = pd.concat([signal.rename("signal"), r_forward.rename("r_fwd")], axis=1).dropna()
+    dataset = pd.concat(
+        [signal.rename("signal"), r_forward.rename("r_fwd")],
+        axis=1,
+        sort=False,
+    ).dropna()
 
     if len(dataset) < min_train + 30:
         return {"senal": signal.name, "horizonte": horizon, "error": "muestra insuficiente"}

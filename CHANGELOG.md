@@ -7,10 +7,11 @@ Todos los cambios relevantes del proyecto están documentados aquí. El formato 
 ### Pendiente de merge
 
 - Reestimación completa con la base global mensual FRED: explicación histórica, pronóstico mensual y diario, señales de largo plazo, robustez, gráficos, Excel y documentación.
-- El modelo ampliado queda en 13 factores con el bloque `Variables globales nuevas`; el cálculo Shapley usa 8.192 subconjuntos.
-- Resultados principales: R² ajustado 61,10%, MAPE condicional 1,62% y peso Shapley global 17,33%. El pronóstico mensual mantiene MAPE 2,68% y R² −13,38% frente a la caminata.
+- El modelo ampliado queda en 13 factores con el bloque `Condiciones financieras, commodities y actividad internacional`; el cálculo Shapley usa 8.192 subconjuntos.
+- Resultados principales: R² ajustado 62,80%, R² 67,47%, MAPE condicional 1,51%, dirección histórica 83,33% y peso Shapley del bloque global 21,62%. El pronóstico mensual obtiene MAPE 2,58%, dirección 50,00% y R² −4,84% frente a la caminata.
+- La especificación global activa suma 17 términos: expectativas de inflación a 5/10 años, rendimiento real a 5 años, NFCI/ANFCI, desempleo estadounidense completo, fletes y actividad industrial, entre otros. High-yield, TED, `UNRATE` y China permanecen como candidatos sin imputación cuando no cubren la muestra.
 - La mejor señal global de largo plazo obtiene R² OOS 12,8% a 12 meses (DM p = 0,006); wavelet D3+D4+D5 alcanza 45,9%. GARCH + VIX presenta el menor BIC y VaR 95% con 6,2% de violaciones.
-- Limitaciones documentadas: oro no disponible con el identificador solicitado, series con cobertura incompleta excluidas, y vintages históricos completos para solo 3 de 13 factores activos.
+- Limitaciones documentadas: series candidatas incompletas o con descargas fallidas, primera diferencia BEI elegida por estabilidad aunque el nivel tenga menor BIC en la comparación, y vintages históricos completos para solo 3 de 13 factores activos.
 
 ---
 

@@ -47,6 +47,20 @@ _TERM_LABELS: dict[str, str] = {
     "D.estres_financiero_stl.L1": "Δ estrés financiero STL, rezago 1",
     "D.ln_empleo_manufactura_us.L2": "Δln empleo manufacturero EE. UU., rezago 2",
     "D.ln_produccion_industrial_us.L2": "Δln producción industrial EE. UU., rezago 2",
+    "D.yield_real_5y_us_pct.L0": "Δ rendimiento real EE. UU. 5 años, mes actual",
+    "D.breakeven_5y_us_pct.L0": "Δ compensación inflacionaria EE. UU. 5 años, mes actual",
+    "D.breakeven_10y_us_pct.L0": "Δ compensación inflacionaria EE. UU. 10 años, mes actual",
+    "D.nfci_chicago.L0": "Δ índice de condiciones financieras Chicago, mes actual",
+    "D.anfci_chicago.L0": "Δ índice ajustado de condiciones financieras Chicago, mes actual",
+    "D.desempleo_us_pct.L0": "Δ desempleo EE. UU. armonizado, mes actual",
+    "D.ln_fletes_transporte_us.L0": "Δln fletes de transporte, mes actual",
+    "D.yield_real_5y_us_pct.L1": "Δ rendimiento real EE. UU. 5 años, rezago 1",
+    "D.breakeven_5y_us_pct.L1": "Δ compensación inflacionaria EE. UU. 5 años, rezago 1",
+    "D.breakeven_10y_us_pct.L1": "Δ compensación inflacionaria EE. UU. 10 años, rezago 1",
+    "D.nfci_chicago.L1": "Δ índice de condiciones financieras Chicago, rezago 1",
+    "D.anfci_chicago.L1": "Δ índice ajustado de condiciones financieras Chicago, rezago 1",
+    "D.desempleo_us_pct.L2": "Δ desempleo EE. UU. armonizado, rezago 2",
+    "D.ln_fletes_transporte_us.L2": "Δln fletes de transporte, rezago 2",
     "dummy_pandemia_2020": "Pandemia marzo–mayo 2020",
 }
 
@@ -172,7 +186,7 @@ def update_readme_fragments(
     lines_metricas_base = [
         f"- MAPE condicional: **{_pct_str(mape_base)}**.",
         f"- Acierto de dirección: **{_pct_str(acierto_base)}**.",
-        f"- R² condicional frente a caminata aleatoria: **{_pct_str(r2_vs_walk_base)}**.",
+        f"- R² condicional frente a caminata aleatoria: **{_pct_str(r2_vs_walk_base * 100)}**.",
     ]
     text = _replace_auto_block(text, "metricas_principal", "\n".join(lines_metricas_base))
 
@@ -216,9 +230,9 @@ def update_readme_fragments(
     for _, row in shapley_sorted.iterrows():
         peso = float(row["peso_entre_factores_pct"])
         aporte = float(row["aporte_r2_puntos_porcentuales"])
+        aporte_str = f"{aporte:.2f}".replace(".", ",")
         rows_shapley.append(
-            f"| {row['factor']} | {_pct_str(peso)} | "
-            f"{aporte:.2f} p.p. |".replace(".", ",")
+            f"| {row['factor']} | {_pct_str(peso)} | {aporte_str} p.p. |"
         )
     text = _replace_auto_block(text, "pesos_shapley", "\n".join(rows_shapley))
 
