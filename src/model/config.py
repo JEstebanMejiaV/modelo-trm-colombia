@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from trm_model.paths import find_project_root
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = find_project_root()
 RAW = ROOT / "data" / "raw"
 RESULTS = ROOT / "results"
 DATA = ROOT / "data"

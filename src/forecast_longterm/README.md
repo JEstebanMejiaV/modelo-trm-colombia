@@ -203,8 +203,9 @@ results/pronostico/
 
 ## Uso
 
+Los módulos se ejecutan desde el checkout con el paquete instalable ya configurado (`python -m pip install -e .`); así se conservan imports absolutos sin mutar `sys.path`.
+
 ```bash
-# Señal principal (CF filter) — 30 segundos
 python src/forecast_longterm/cf_markov_strategy.py
 
 # Análisis completo de wavelets — 1 minuto

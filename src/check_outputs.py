@@ -9,6 +9,9 @@ import numpy as np
 import pandas as pd
 from openpyxl import load_workbook
 
+from trm_model.data.registry import load_source_registry
+from trm_model.paths import project_paths
+
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS = ROOT / "results"
@@ -158,10 +161,29 @@ def main() -> None:
     )
     if baseline_manifest["origin_date"] != "2026-08-23" or not baseline_manifest["immutable"]:
         raise AssertionError("El baseline de vintages no está marcado como inmutable.")
+    registry = load_source_registry(paths=project_paths(ROOT))
+    expected_sources = {
+        (str(source["source_id"]), str(source["raw_path"]))
+        for source in registry.active_sources
+    }
+    baseline_sources = {
+        (str(record.get("id") or record.get("source_id")), str(record["raw_path"]))
+        for record in baseline_manifest["files"]
+    }
+    if baseline_sources != expected_sources:
+        raise AssertionError(
+            "El baseline de vintages no concilia IDs/rutas con las 26 fuentes activas: "
+            f"missing={sorted(expected_sources - baseline_sources)}, "
+            f"extra={sorted(baseline_sources - expected_sources)}"
+        )
+    if len(baseline_sources) != len(registry.active_sources):
+        raise AssertionError("El baseline de vintages contiene fuentes activas duplicadas.")
     for record in baseline_manifest["files"]:
         path = ROOT / record["raw_path"]
         if sha256_file(path) != record["sha256"]:
-            raise AssertionError(f"No concilia el baseline de vintages: {record['id']}.")
+            raise AssertionError(
+                f"No concilia el baseline de vintages: {record.get('id', record.get('source_id'))}."
+            )
 
     alfred_manifest_path = (
         VINTAGES / "historical" / "alfred_factores_pronostico.manifest.json"
@@ -190,6 +212,16 @@ def main() -> None:
     vintage_coverage = pd.read_csv(RESULTS / "pronostico/cobertura_vintages_pronostico.csv")
     if len(vintage_coverage) != 14:
         raise AssertionError("La cobertura de vintages debe reportar los 14 factores.")
+    from model.config import FORECAST_AVAILABILITY
+
+    expected_vintage_factors = {row[0] for row in FORECAST_AVAILABILITY}
+    actual_vintage_factors = set(vintage_coverage["factor"])
+    if actual_vintage_factors != expected_vintage_factors:
+        raise AssertionError(
+            "La cobertura de vintages no concilia con los factores de pronóstico: "
+            f"missing={sorted(expected_vintage_factors - actual_vintage_factors)}, "
+            f"extra={sorted(actual_vintage_factors - expected_vintage_factors)}"
+        )
     complete_vintage = vintage_coverage["apto_backtest_genuino"].astype("string").str.lower().eq("true")
     alfred_csv = DATA / "vintages" / "historical" / "alfred_factores_pronostico.csv"
     expected_complete = 3 if alfred_csv.exists() else 0

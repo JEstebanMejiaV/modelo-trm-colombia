@@ -27,8 +27,6 @@ RESULTS = ROOT / "results"
 DATA = ROOT / "data"
 
 # Importar del pipeline existente
-import sys
-sys.path.insert(0, str(ROOT / "src"))
 from estimate_model import (
     build_dataset,
     difference_components,

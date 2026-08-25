@@ -5,6 +5,8 @@ on:
   push:
     branches:
       - main
+      - "refactor/**"
+  workflow_dispatch:
 
 jobs:
   reproducibilidad:
@@ -19,17 +21,97 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - name: Instalar dependencias
-        run: pip install -r requirements.txt
+      - name: Instalar runtime y QA fijados
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.lock
+          python -m pip install -e . --no-deps
 
-      - name: Reestimar modelo
-        run: python src/estimate_model.py
+      - name: Comprobar wheel de código checkout-bound
+        shell: bash
+        run: |
+          wheel_dir="$RUNNER_TEMP/trm-wheel"
+          mkdir -p "$wheel_dir"
+          python -m pip wheel . --no-deps --no-build-isolation --wheel-dir "$wheel_dir"
+          python -S - "$wheel_dir" <<'PY'
+          import sys
+          from pathlib import Path
+          from zipfile import ZipFile
 
-      - name: Comprobar sincronización de gráficos versionados
-        run: python src/check_charts.py
+          wheel = next(Path(sys.argv[1]).glob("*.whl"))
+          names = ZipFile(wheel).namelist()
+          assert any(name.endswith("trm_model/output_contract.py") for name in names)
+          assert not any(name.startswith("configs/") for name in names)
+          assert not any(name.startswith("data/raw/") for name in names)
+          sys.path[:0] = [str(wheel)]
+          import trm_model
+          from trm_model.output_contract import MONTHLY_GENERATED_OUTPUT_COUNT
+
+          assert trm_model.__version__ == "0.1.0"
+          assert MONTHLY_GENERATED_OUTPUT_COUNT == 42
+          print(f"OK: {wheel.name} importa fuera del checkout de datos")
+          PY
+
+      - name: Compilar fuentes
+        run: python -m compileall -q src pipelines research tests
+
+      - name: Validar arquitectura, seguridad y ownership
+        run: python src/check_architecture.py
+
+      - name: Validar contratos y leakage
+        run: trm-model validate
+
+      - name: Ejecutar smoke tests
+        run: python -m pytest
+
+      - name: Ejecutar pipeline mensual con manifest
+        run: trm-model run-monthly
+
+      - name: Verificar manifest de corrida y ownership mensual
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          from trm_model.output_contract import (
+              flatten_output_ownership,
+              monthly_generated_output_ownership,
+              validate_run_output_ownership,
+          )
+
+          manifests = sorted(Path("artifacts/runs").glob("*/manifest.json"))
+          assert manifests, "No se generó ningún manifest de corrida"
+          manifest = json.loads(manifests[-1].read_text(encoding="utf-8"))
+          assert manifest["status"] == "success"
+          assert manifest["product_id"] == "monthly_bundle"
+          assert len(manifest["input_files"]) == 26
+          assert {item["product_id"] for item in manifest["products"]} == {
+              "monthly_explanation", "monthly_forecast", "robustness"
+          }
+          expected_outputs = set(
+              flatten_output_ownership(monthly_generated_output_ownership())
+          )
+          actual_outputs = {item["path"] for item in manifest["output_files"]}
+          assert len(actual_outputs) == 42
+          assert actual_outputs == expected_outputs
+          validate_run_output_ownership(
+              manifest,
+              expected_product_ids={"monthly_explanation", "monthly_forecast", "robustness"},
+          )
+          assert manifest["config_records"]
+          assert manifest["contract_tree_sha256"]
+          assert manifest["source_tree_sha256"]
+          PY
 
       - name: Reconstruir gráficos explicativos
         run: python src/build_charts.py
+
+      - name: Sincronizar workbook por fallback reproducible
+        run: python src/sync_workbook_openpyxl.py
+
+      - name: Comprobar sincronización de gráficos versionados
+        run: python src/check_charts.py
 
       - name: Comprobar reproducibilidad de resultados versionados
         run: python src/check_reproducibility.py

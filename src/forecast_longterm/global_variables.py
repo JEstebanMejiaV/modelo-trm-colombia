@@ -12,24 +12,19 @@ Uso:
 """
 from __future__ import annotations
 
-import json
-import time
-import urllib.request
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 from scipy import stats
 
-import sys
-ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "src"))
+from trm_model.data.curated import build_monthly_dataset
+from trm_model.data.fred import download_fred_series as _download_fred_series
+from trm_model.paths import project_paths
+from model.config import SAMPLE_START
 
-from estimate_model import build_dataset, SAMPLE_START
-
-RESULTS = ROOT / "results" / "pronostico"
-API_KEY = "dd22ac6406a29199a86edafc2f267524"
+PATHS = project_paths()
+ROOT = PATHS.root
+RESULTS = PATHS.results / "pronostico"
 
 SERIES_TO_DOWNLOAD = {
     "DFII10": "yield_real_10y_tips",
@@ -51,36 +46,9 @@ SERIES_TO_DOWNLOAD = {
 }
 
 
-def download_fred_series(series_id: str, name: str) -> pd.Series:
-    """Descarga una serie de FRED y la convierte a mensual."""
-    url = (
-        f"https://api.stlouisfed.org/fred/series/observations"
-        f"?series_id={series_id}&observation_start=2003-01-01"
-        f"&file_type=json&api_key={API_KEY}"
-    )
-    req = urllib.request.Request(url, headers={"User-Agent": "modelo-trm/1.0"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        data = json.loads(resp.read())
-
-    rows = []
-    for obs in data["observations"]:
-        if obs["value"] == ".":
-            continue
-        rows.append({"fecha": pd.Timestamp(obs["date"]), "valor": float(obs["value"])})
-
-    if not rows:
-        return pd.Series(dtype=float, name=name)
-
-    df = pd.DataFrame(rows).set_index("fecha")
-    series = df["valor"]
-    # Si diaria, agregar a mensual
-    if len(series) > 300:
-        series = series.resample("MS").mean()
-    else:
-        series.index = series.index.to_period("M").to_timestamp()
-        series = series.groupby(level=0).mean()
-    series.name = name
-    return series
+def download_fred_series(series_id: str, name: str) -> pd.Series | None:
+    """Compatibilidad local sobre el cliente centralizado de FRED."""
+    return _download_fred_series(series_id, name, observation_start="2003-01-01")
 
 
 def build_academic_signals(data: pd.DataFrame, new_series: dict[str, pd.Series]) -> pd.DataFrame:
@@ -228,7 +196,7 @@ def main():
     print("=" * 70)
 
     print("\n[1/4] Cargando la base global mensual consolidada...")
-    data = build_dataset()
+    data = build_monthly_dataset()
     source_map = {
         "yield_real_10y_tips": "yield_real_10y_tips_pct",
         "yield_real_5y": "yield_real_5y_us_pct",

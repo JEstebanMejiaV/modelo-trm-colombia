@@ -171,6 +171,63 @@
       "sha256": "1f36d9f1f9a5d4b56d032c3f6ba7eb2462d1d86e8e88ee63d11e82637da636b0",
       "storage": "referencia_inmutable_al_raw_versionado",
       "url": "https://www.minhacienda.gov.co/documents/d/portal/balance-fiscal-gnc-mensual-y-trimestral?download=true"
+    },
+    {
+      "bytes": 67932,
+      "id": "banrep_ipc_15000",
+      "provider": "Banco de la República",
+      "raw_path": "data/raw/ipc_colombia_banrep.json",
+      "sha256": "04d073081a64bc9b7d7c4dfe4b07efac2636a86f2339efbe689bf48bc7b5f4fb",
+      "storage": "referencia_inmutable_al_raw_versionado",
+      "url": "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15000"
+    },
+    {
+      "bytes": 766015,
+      "id": "dane_ise_12_actividades",
+      "provider": "DANE",
+      "raw_path": "data/raw/ise_dane_12actividades_jun2026.xlsx",
+      "sha256": "68df89502109b12f5d9a9123c4c7926f8f987848eb98fd5b60303680749cf434",
+      "storage": "referencia_inmutable_al_raw_versionado"
+    },
+    {
+      "bytes": 3631333,
+      "id": "dane_geih",
+      "provider": "DANE",
+      "raw_path": "data/raw/geih_dane_jun2026.xlsx",
+      "sha256": "85a800b97a7bc55d2b7d0bed0cbf21e9662518b524f4cdc369724abce8bf0db1",
+      "storage": "referencia_inmutable_al_raw_versionado"
+    },
+    {
+      "bytes": 386241,
+      "id": "dane_geih_desestacionalizada",
+      "provider": "DANE",
+      "raw_path": "data/raw/geih_dane_desestacionalizado_jun2026.xlsx",
+      "sha256": "e79415f41105faeb3cc79bac9d800725de51454cc7e3bd896922c76a9e2d4029",
+      "storage": "referencia_inmutable_al_raw_versionado"
+    },
+    {
+      "bytes": 287842,
+      "id": "dane_ipi",
+      "provider": "DANE",
+      "raw_path": "data/raw/ipi_dane_jun2026.xlsx",
+      "sha256": "8bea191a09783e25f3f81f73a47fc00afa8ecbb3d265517f35143dfec1b0502e",
+      "storage": "referencia_inmutable_al_raw_versionado"
+    },
+    {
+      "bytes": 7285113,
+      "id": "dane_ipp",
+      "provider": "DANE",
+      "raw_path": "data/raw/ipp_dane_jul2026.xlsx",
+      "sha256": "ae3277c70469b4cdf0832feae5ffe65505a2b3157c29d7f8125b50eb19d4ca5c",
+      "storage": "referencia_inmutable_al_raw_versionado"
+    },
+    {
+      "bytes": 58560,
+      "id": "global_base_mensual",
+      "provider": "Curaduría de datos globales",
+      "raw_path": "data/base_global_mensual.csv",
+      "sha256": "a6cb4a4903e65767c8c80640851eaf038a5c578e441ec93b7e7cdae452c053af",
+      "storage": "referencia_inmutable_al_raw_versionado"
     }
   ],
   "immutable": true,

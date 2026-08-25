@@ -13,10 +13,13 @@ from pathlib import Path
 
 import pandas as pd
 
+from trm_model.data.fred import redact_fred_api_key, require_fred_api_key
+from trm_model.paths import project_paths
 
-ROOT = Path(__file__).resolve().parents[1]
+
+ROOT = project_paths().root
 VINTAGES = ROOT / "data" / "vintages"
-SOURCES = VINTAGES / "sources.json"
+SOURCES = ROOT / "data" / "catalog" / "sources.json"
 HISTORICAL = VINTAGES / "historical"
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -58,7 +61,8 @@ def sha256_file(path: Path) -> str:
 
 
 def load_sources() -> list[dict[str, str]]:
-    return json.loads(SOURCES.read_text(encoding="utf-8"))["sources"]
+    payload = json.loads(SOURCES.read_text(encoding="utf-8"))
+    return [source for source in payload["sources"] if source.get("status") == "active"]
 
 
 def request_bytes(url: str) -> tuple[bytes, dict[str, str]]:
@@ -125,6 +129,7 @@ def baseline(origin_date: str) -> None:
         files.append(
             {
                 **source,
+                "id": source["source_id"],
                 "storage": "referencia_inmutable_al_raw_versionado",
                 "bytes": path.stat().st_size,
                 "sha256": sha256_file(path),
@@ -153,14 +158,35 @@ def snapshot(origin_date: str) -> None:
     files = []
     try:
         for source in load_sources():
+            if source.get("input_kind", "raw") == "derived" or not source.get("url"):
+                path = ROOT / source["raw_path"]
+                if not path.exists():
+                    raise FileNotFoundError(path)
+                suffix = Path(source["raw_path"]).suffix
+                output = files_dir / f"{source['source_id']}{suffix}"
+                output.write_bytes(path.read_bytes())
+                files.append(
+                    {
+                        **source,
+                        "id": source["source_id"],
+                        "requested_url": None,
+                        "archived_path": output.relative_to(ROOT).as_posix(),
+                        "storage": "copia_local_versionada",
+                        "retrieved_utc": datetime.now(timezone.utc).isoformat(),
+                        "bytes": output.stat().st_size,
+                        "sha256": sha256_file(output),
+                    }
+                )
+                continue
             requested_url = dated_url(source["url"], origin_date)
             content, response = request_bytes(requested_url)
             suffix = Path(source["raw_path"]).suffix
-            output = files_dir / f"{source['id']}{suffix}"
+            output = files_dir / f"{source['source_id']}{suffix}"
             output.write_bytes(content)
             files.append(
                 {
                     **source,
+                    "id": source["source_id"],
                     "requested_url": requested_url,
                     "archived_path": output.relative_to(ROOT).as_posix(),
                     "retrieved_utc": datetime.now(timezone.utc).isoformat(),
@@ -266,7 +292,10 @@ def download_alfred_vintage(
             f"&file_type=json"
             f"&api_key={api_key}"
         )
-        content, _ = request_bytes_with_retries(url)
+        try:
+            content, _ = request_bytes_with_retries(url)
+        except Exception as error:
+            raise RuntimeError(redact_fred_api_key(error, api_key)) from None
         data = json.loads(content)
         cache_dir.mkdir(parents=True, exist_ok=True)
         cache_path.write_text(
@@ -294,15 +323,7 @@ def download_alfred_vintage(
 
 def alfred_history(start: str, end: str, force: bool) -> None:
     """Descarga vintages completos de las series FRED via API oficial."""
-    import os
-
-    api_key = os.environ.get("FRED_API_KEY", "")
-    if not api_key:
-        raise EnvironmentError(
-            "Variable FRED_API_KEY no definida. Regístrese en "
-            "https://fred.stlouisfed.org/docs/api/api_key.html "
-            "y defina: $env:FRED_API_KEY = 'su_clave'"
-        )
+    api_key = require_fred_api_key()
 
     HISTORICAL.mkdir(parents=True, exist_ok=True)
     output = HISTORICAL / "alfred_factores_pronostico.csv"
@@ -324,7 +345,8 @@ def alfred_history(start: str, end: str, force: bool) -> None:
                 rows = download_alfred_vintage(origin, series_id, api_key)
                 all_rows.extend(rows)
             except Exception as error:
-                errors.append(f"{origin:%Y-%m-%d} {series_id}: {error}")
+                message = redact_fred_api_key(error, api_key)
+                errors.append(f"{origin:%Y-%m-%d} {series_id}: {message}")
             count += 1
             if count % 24 == 0 or count == total:
                 print(
@@ -448,7 +470,7 @@ def coverage() -> None:
         ("Flujos netos de capital", "BanRep 16706", "No disponible", 0, "BanRep no publica vintages"),
         ("Diferencial de compensación inflacionaria 5 años", "BanRep 15273/15276 + Fed GSW", "No disponible", 0, "Ningún componente tiene vintages completos"),
         ("Actividad y precios domésticos", "DANE ISE total + BanRep IPC 15000", "No disponible", 0, "ISE e IPC no publican vintages históricos; se conserva el snapshot actual sin imputación"),
-        ("Variables globales nuevas", "FRED: TIPS, Treasury, Brent, commodities, EPU, STLFSI, empleo y producción industrial", "No disponible", 0, "Base global mensual sin vintages históricos consolidados"),
+        ("Condiciones financieras, commodities y actividad internacional", "FRED: TIPS, Treasury, Brent, commodities, EPU, STLFSI, empleo y producción industrial", "No disponible", 0, "Base global mensual sin vintages históricos consolidados"),
         ("Monedas regionales", "FRED BRL/CLP/MXN", "Completo" if regional_origins == 48 else "Parcial", regional_origins, "Factor de 3 monedas; API FRED con realtime vintage"),
     ]
     frame = pd.DataFrame(

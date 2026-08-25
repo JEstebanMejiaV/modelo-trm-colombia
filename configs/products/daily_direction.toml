@@ -1,0 +1,13 @@
+schema_version = 1
+product_id = "daily_direction"
+label = "Pronóstico diario direccional"
+frequency = "daily"
+horizon_days = 1
+information_set = "pseudo_real_time"
+vintage_policy = "latest_available"
+status = "supporting"
+benchmark = "random_walk"
+source_of_truth = "artifacts/runs"
+
+[validation]
+holdout_days = 250

@@ -1,0 +1,30 @@
+schema_version = 1
+project_id = "modelo-trm-colombia"
+sample_start = "2006-01-01"
+sample_end = "2026-04-01"
+frequency = "monthly"
+
+[paths]
+raw = "data/raw"
+staging = "data/staging"
+curated = "data/curated"
+vintages = "data/vintages"
+artifacts = "artifacts"
+results_legacy = "results"
+deliverables_legacy = "deliverables"
+
+[provenance]
+manifest_schema = "schemas/run_manifest.json"
+source_registry = "data/catalog/sources.json"
+information_sets = ["ex_post", "pseudo_real_time", "vintage_backtest", "in_sample", "exploratory"]
+
+[model]
+monthly_hac_maxlags = 6
+forecast_holdout_months = 48
+shapley_players = 14
+
+[shapley]
+bootstrap_replications = 200
+bootstrap_block_months = 12
+bootstrap_permutations = 64
+bootstrap_seed = 20260823

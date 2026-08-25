@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "product_id": "daily_direction",
+  "label": "Pronóstico diario direccional",
+  "frequency": "daily",
+  "horizon_days": 1,
+  "information_set": "pseudo_real_time",
+  "vintage_policy": "latest_available",
+  "status": "supporting",
+  "benchmark": "random_walk",
+  "source_of_truth": "artifacts/runs",
+  "factor_specs": [
+    "src/forecast_daily",
+    "src/forecast_short_term.py"
+  ],
+  "outputs": [
+    {
+      "path": "results/pronostico/coeficientes_pronostico_corto_plazo.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/comparacion_modelos_diarios.csv",
+      "kind": "primary",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/feature_importance_ml_diario.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/lightgbm_grid_search_top20.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/lightgbm_mejores_parametros.json",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/lightgbm_optimizado_feature_importance.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/lightgbm_optimizado_vs_default.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/pronostico_corto_plazo_diario.csv",
+      "kind": "primary",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/pronostico_corto_plazo_semanal.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/xgboost_grid_search_top20.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/xgboost_mejores_parametros.json",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/xgboost_optimizado_feature_importance.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/xgboost_optimizado_vs_default.csv",
+      "kind": "research",
+      "status": "versioned"
+    }
+  ],
+  "caveats": [
+    "Es un producto de apoyo y no modifica la especificación mensual.",
+    "Su desempeño direccional y económico debe evaluarse fuera del producto mensual."
+  ]
+}

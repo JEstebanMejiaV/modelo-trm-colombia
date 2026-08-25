@@ -1,0 +1,20 @@
+schema_version = 1
+product_id = "monthly_forecast"
+label = "Pronóstico mensual pseudo-tiempo-real"
+frequency = "monthly"
+horizon_months = 1
+information_set = "pseudo_real_time"
+vintage_policy = "latest_available"
+status = "primary"
+benchmark = "random_walk"
+source_of_truth = "artifacts/runs"
+
+[model]
+estimator = "ols_hac"
+hac_maxlags = 6
+factor_count = 14
+availability_calendar = "results/pronostico/calendario_disponibilidad_pronostico.csv"
+
+[validation]
+holdout_months = 48
+requires_complete_vintages = false

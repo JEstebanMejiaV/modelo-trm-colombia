@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "product_id": "monthly_forecast",
+  "label": "Pronóstico mensual pseudo-tiempo-real",
+  "frequency": "monthly",
+  "horizon_months": 1,
+  "information_set": "pseudo_real_time",
+  "vintage_policy": "latest_available",
+  "status": "primary",
+  "benchmark": "random_walk",
+  "source_of_truth": "artifacts/runs",
+  "factor_specs": [
+    "model.config.FORECAST_FACTOR_SPECS_3",
+    "model.config.FORECAST_FACTOR_SPECS_4"
+  ],
+  "outputs": [
+    {
+      "path": "results/pronostico/backtest_genuino_parcial.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/calendario_disponibilidad_pronostico.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/cobertura_vintages_pronostico.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/coeficientes_modelo_pronostico.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/coeficientes_pronostico_parsimonioso.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/comparacion_forecast_combination.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/comparacion_parsimoniosos_pronostico.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/diagnosticos_modelo_pronostico.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/diagnosticos_pronostico_parsimonioso.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/diebold_mariano_pronostico.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/pronostico_multihorizonte.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/seleccion_rezagos_modelo_pronostico.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/validacion_metricas_parsimonioso.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/validacion_metricas_pronostico.csv",
+      "kind": "primary",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/validacion_predicciones_parsimonioso.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/validacion_predicciones_pronostico.csv",
+      "kind": "primary",
+      "status": "versioned"
+    }
+  ],
+  "caveats": [
+    "Respeta rezagos de publicación, pero usa la última revisión disponible de las fuentes.",
+    "No debe rotularse como backtest genuino hasta completar vintages históricos de todos los factores."
+  ]
+}

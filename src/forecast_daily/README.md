@@ -83,14 +83,16 @@ src/forecast_daily/
 ## Uso
 
 ```bash
-# Comparación completa (11 modelos)
-python src/forecast_daily/run.py
+# Comparación completa (11 modelos); requiere instalar el paquete y extras opcionales
+python -m forecast_daily.run
 
 # Solo optimización de XGBoost
-python src/forecast_daily/optimize_xgboost.py
+python -m forecast_daily.optimize_xgboost
 ```
 
-Requiere: `pip install xgboost lightgbm scikit-learn torch`
+Requiere los extras opcionales del producto: `python -m pip install -e ".[daily,rnn]"`.
+Para una instalación completamente fijada, instale primero `requirements.lock` y
+luego `requirements-optional.lock`.
 
 ## Interpretación
 

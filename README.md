@@ -174,37 +174,60 @@ Ver [`deliverables/graficos/README.md`](deliverables/graficos/README.md) para ca
 
 ```
 modelo-trm-colombia/
+├── configs/              Configuración común y contratos por producto
 ├── data/
-│   ├── raw/                 19 fuentes activas
-│   └── vintages/            Snapshots inmutables + ALFRED (8537 filas)
-├── deliverables/
-│   ├── modelo_trm_colombia.xlsx   Excel final (14 hojas)
-│   └── graficos/                  5 PNGs explicativos + metadata
-├── results/
-│   ├── explicacion/         21 CSVs — modelos y Shapley
-│   ├── pronostico/          16 CSVs — pronóstico y validación
-│   └── robustez/            18 CSVs — ECM, BEI, rolling, threshold
+│   ├── raw/              Fuentes originales versionadas
+│   ├── catalog/          Registro canónico de fuentes
+│   └── vintages/         Snapshots inmutables y cobertura histórica
+├── deliverables/         Workbook y gráficos publicables
+├── pipelines/            Wrappers y manifests de productos
+├── research/             Señales exploratorias y manifests long-term
+├── results/              Exportador legacy + output_catalog.json
+├── schemas/              Contratos JSON ejecutables
 ├── src/
-│   ├── model/               Paquete modular (9 módulos)
-│   ├── exploration/         Scripts de exploración (no-pipeline)
-│   ├── estimate_model.py    Orquestador principal
-│   ├── build_charts.py      Genera los 5 PNGs
-│   ├── build_workbook.mjs   Genera el Excel
-│   ├── archive_vintage.py   Descarga y archiva vintages
-│   └── check_*.py           3 scripts de validación
-└── requirements.txt
+│   ├── trm_model/        Paquete instalable, CLI y provenance
+│   ├── model/            Econometría mensual validada, conservada
+│   ├── forecast_daily/   Producto diario opcional
+│   ├── forecast_longterm/ Investigación separada
+│   └── estimate_model.py Entry point legacy compatible
+├── tests/                Smoke/contract tests
+├── pyproject.toml        Instalación y extras opcionales
+├── requirements.lock     Runtime base + QA fijado
+└── requirements-optional.lock  ML/RNN/wavelets/riesgo opcional
 ```
 
 ---
 
 # Reproducir
 
+## Alcance de la distribución instalable
+
+El wheel contiene el código Python y los entry points (`trm-model`, `trm-monthly` y
+los wrappers opcionales), pero no empaqueta `data/raw`, `data/catalog`,
+`configs/`, `schemas/`, `results/` ni los manifests del checkout. Por diseño, la
+CLI de validación y la estimación son **checkout-bound**: ejecútelas desde la raíz
+del repositorio o defina `TRM_MODEL_ROOT` apuntando a un checkout completo. El
+wheel se prueba fuera del checkout para importación y entry points; la
+reproducción de datos, contratos y resultados se valida contra el repositorio
+versionado.
+
 ```powershell
-pip install -r requirements.txt
-python .\src\estimate_model.py
-node .\src\build_workbook.mjs
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.lock
+python -m pip install -e . --no-deps
+trm-model validate
+python -m pytest
+trm-model run-monthly
 python .\src\build_charts.py
 ```
+
+`trm-model run-monthly` conserva el entry point legacy, escribe los CSV existentes
+y registra un manifest de corrida en `artifacts/runs/<run_id>/manifest.json`.
+También sigue disponible `python .\src\estimate_model.py` para compatibilidad.
+Los productos diario, volatilidad y long-term tienen wrappers en `pipelines/` y
+requieren sus extras opcionales. No se descarga ninguna fuente durante una
+estimación; para FRED, defina `FRED_API_KEY` solo al ejecutar descargas.
 
 Los datos fuente están en `data/raw/`. El detalle de cada serie está en [`data/README.md`](data/README.md).
 

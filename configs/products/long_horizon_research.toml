@@ -1,0 +1,14 @@
+schema_version = 1
+product_id = "long_horizon_research"
+label = "Investigación de señales de largo plazo"
+frequency = "monthly"
+horizon_months = 6
+information_set = "exploratory"
+vintage_policy = "latest_available"
+status = "research"
+benchmark = "random_walk"
+source_of_truth = "artifacts/runs"
+
+[validation]
+requires_full_signal_reconstruction = true
+allow_full_sample_filters = false

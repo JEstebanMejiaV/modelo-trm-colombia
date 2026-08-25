@@ -1,0 +1,53 @@
+{
+  "title": "TRM product manifest",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "product_id",
+    "label",
+    "frequency",
+    "information_set",
+    "status",
+    "source_of_truth",
+    "outputs"
+  ],
+  "properties": {
+    "schema_version": {"type": "integer", "minimum": 1},
+    "product_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]+$"},
+    "label": {"type": "string", "minLength": 1},
+    "frequency": {"type": "string", "enum": ["daily", "monthly", "quarterly", "annual"]},
+    "horizon_months": {"type": "integer", "minimum": 0},
+    "horizon_days": {"type": "integer", "minimum": 0},
+    "information_set": {
+      "type": "string",
+      "enum": ["ex_post", "pseudo_real_time", "vintage_backtest", "in_sample", "exploratory"]
+    },
+    "vintage_policy": {"type": "string", "minLength": 1},
+    "status": {"type": "string", "enum": ["primary", "supporting", "research", "legacy"]},
+    "benchmark": {"type": "string", "minLength": 1},
+    "source_of_truth": {"type": "string", "minLength": 1},
+    "factor_specs": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "outputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["path", "kind", "status"],
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "kind": {"type": "string", "enum": ["primary", "diagnostic", "compatibility", "research"]},
+          "status": {"type": "string", "enum": ["versioned", "generated", "legacy"]}
+        },
+        "additionalProperties": false
+      }
+    },
+    "caveats": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  },
+  "additionalProperties": false
+}

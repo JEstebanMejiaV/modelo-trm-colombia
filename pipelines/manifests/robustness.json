@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "product_id": "robustness",
+  "label": "Robustez y diagnósticos econométricos",
+  "frequency": "monthly",
+  "horizon_months": 0,
+  "information_set": "in_sample",
+  "vintage_policy": "latest_available",
+  "status": "supporting",
+  "benchmark": "reference_specification",
+  "source_of_truth": "artifacts/runs",
+  "factor_specs": [
+    "src/model/bei.py",
+    "src/exploration",
+    "src/model/validation.py"
+  ],
+  "outputs": [
+    {
+      "path": "results/robustez/bounds_criticos.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/robustez/bounds_resumen.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/robustez/coeficientes_corto_plazo_ecm.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/robustez/coeficientes_largo_plazo_ecm.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/robustez/coeficientes_robustos_vs_ols.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/robustez/comparacion_agregacion_bei_5y.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/robustez/comparacion_especificaciones_bei_5y.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/robustez/comparacion_estimadores_robustos.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/robustez/comparacion_mejoras_explicacion.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/robustez/diagnosticos_ecm.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/robustez/evaluacion_variables_candidatas.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/robustez/garch_residuos_marco_macro_integral.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/robustez/outliers_huber_identificados.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/robustez/pruebas_estacionariedad_bei_5y.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/robustez/rolling_window_coeficientes.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/robustez/rolling_window_estabilidad.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/robustez/seleccion_rezagos_ecm.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/robustez/tendencias_quiebres_bei_5y.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/robustez/threshold_regression.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    }
+  ],
+  "caveats": [
+    "Informa decisiones de especificación y no reemplaza los productos mensuales primarios.",
+    "Los resultados son asociaciones estadísticas y no identifican causalidad."
+  ]
+}

@@ -11,17 +11,16 @@ Uso:
 """
 from __future__ import annotations
 
-import json
 import time
-import urllib.request
 from pathlib import Path
 
 import pandas as pd
 
+from trm_model.data.fred import download_fred_series as _download_fred_series
+from trm_model.data.fred import require_fred_api_key
+
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
-
-API_KEY = "dd22ac6406a29199a86edafc2f267524"
 SAMPLE_START = pd.Timestamp("2006-01-01")
 SAMPLE_END = pd.Timestamp("2026-04-01")
 
@@ -121,43 +120,11 @@ INACTIVE_REASONS = {
 
 def download_fred(series_id: str, name: str) -> pd.Series | None:
     """Descarga una serie de FRED y la convierte a frecuencia mensual."""
-    url = (
-        "https://api.stlouisfed.org/fred/series/observations"
-        f"?series_id={series_id}&observation_start=2000-01-01"
-        f"&file_type=json&api_key={API_KEY}"
-    )
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "modelo-trm/1.0"})
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            data = json.loads(resp.read())
+        return _download_fred_series(series_id, name)
     except Exception as error:
         print(f"  ERROR {series_id}: {error}")
         return None
-
-    rows = []
-    for observation in data.get("observations", []):
-        if observation["value"] == ".":
-            continue
-        rows.append(
-            {
-                "fecha": pd.Timestamp(observation["date"]),
-                "valor": float(observation["value"]),
-            }
-        )
-
-    if not rows:
-        return None
-
-    frame = pd.DataFrame(rows).set_index("fecha")
-    series = frame["valor"]
-    # Series con muchos puntos son diarias/semanales y se promedian por mes.
-    if len(series) > 400:
-        series = series.resample("MS").mean()
-    else:
-        series.index = series.index.to_period("M").to_timestamp()
-        series = series.groupby(level=0).mean()
-    series.name = name
-    return series
 
 
 def coverage_record(
@@ -213,6 +180,7 @@ def coverage_record(
 
 
 def main() -> None:
+    require_fred_api_key()
     print("=" * 70)
     print("DESCARGA DE VARIABLES GLOBALES DESDE FRED")
     print("=" * 70)

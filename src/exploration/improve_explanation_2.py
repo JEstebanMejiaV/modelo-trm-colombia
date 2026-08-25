@@ -20,11 +20,8 @@ import pandas as pd
 import statsmodels.api as sm
 from scipy import stats
 
-import sys
-
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS = ROOT / "results"
-sys.path.insert(0, str(ROOT / "src"))
 
 from estimate_model import (
     build_dataset,

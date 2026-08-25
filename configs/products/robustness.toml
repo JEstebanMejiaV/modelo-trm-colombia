@@ -1,0 +1,14 @@
+schema_version = 1
+product_id = "robustness"
+label = "Robustez y diagnósticos econométricos"
+frequency = "monthly"
+horizon_months = 0
+information_set = "in_sample"
+vintage_policy = "latest_available"
+status = "supporting"
+benchmark = "reference_specification"
+source_of_truth = "artifacts/runs"
+
+[validation]
+causal_interpretation = false
+requires_same_sample = true
