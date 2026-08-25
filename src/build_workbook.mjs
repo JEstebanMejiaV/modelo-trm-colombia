@@ -105,33 +105,33 @@ sampleStart.setUTCMonth(sampleStart.getUTCMonth() - 1);
 const sourceStart = sampleStart.toISOString().slice(0, 10);
 const raw = (await readCsv("data/modelo_trm_datos_mensuales.csv"))
   .filter((r) => r.fecha >= sourceStart && r.fecha <= metadata.muestra_fin);
-const coefs = await readCsv("results/explicacion/coeficientes_modelo_principal.csv");
-const diagnostics = await readCsv("results/explicacion/diagnosticos_modelo_principal.csv");
-const validationMetrics = await readCsv("results/explicacion/validacion_metricas_modelo_principal.csv");
-const validationPredictions = await readCsv("results/explicacion/validacion_predicciones_modelo_principal.csv");
+const coefs = await readCsv("results/explicacion/coeficientes_controles_externos.csv");
+const diagnostics = await readCsv("results/explicacion/diagnosticos_controles_externos.csv");
+const validationMetrics = await readCsv("results/explicacion/validacion_metricas_controles_externos.csv");
+const validationPredictions = await readCsv("results/explicacion/validacion_predicciones_controles_externos.csv");
 const integration = await readCsv("results/explicacion/pruebas_integracion.csv");
 const adlLags = await readCsv("results/explicacion/seleccion_rezagos_adl_diferencias.csv");
 const bounds = await readCsv("results/robustez/bounds_resumen.csv");
 const boundsCritical = await readCsv("results/robustez/bounds_criticos.csv");
 const ecmLong = await readCsv("results/robustez/coeficientes_largo_plazo_ecm.csv");
 const ecmShort = await readCsv("results/robustez/coeficientes_corto_plazo_ecm.csv");
-const fit = await readCsv("results/explicacion/ajuste_historico_modelo_principal.csv");
-const expandedCoefs = await readCsv("results/explicacion/coeficientes_modelo_ampliado.csv");
-const expandedDiagnostics = await readCsv("results/explicacion/diagnosticos_modelo_ampliado.csv");
-const expandedFit = await readCsv("results/explicacion/ajuste_historico_modelo_ampliado.csv");
-const expandedContributions = await readCsv("results/explicacion/contribuciones_modelo_ampliado.csv");
-const expandedValidationMetrics = await readCsv("results/explicacion/validacion_metricas_modelo_ampliado.csv");
-const expandedValidationPredictions = await readCsv("results/explicacion/validacion_predicciones_modelo_ampliado.csv");
-const explanatoryWeights = await readCsv("results/explicacion/pesos_explicativos_modelo_ampliado.csv");
+const fit = await readCsv("results/explicacion/ajuste_historico_controles_externos.csv");
+const integratedCoefs = await readCsv("results/explicacion/coeficientes_marco_macro_integral.csv");
+const integratedDiagnostics = await readCsv("results/explicacion/diagnosticos_marco_macro_integral.csv");
+const integratedFit = await readCsv("results/explicacion/ajuste_historico_marco_macro_integral.csv");
+const integratedContributions = await readCsv("results/explicacion/contribuciones_marco_macro_integral.csv");
+const integratedValidationMetrics = await readCsv("results/explicacion/validacion_metricas_marco_macro_integral.csv");
+const integratedValidationPredictions = await readCsv("results/explicacion/validacion_predicciones_marco_macro_integral.csv");
+const explanatoryWeights = await readCsv("results/explicacion/pesos_explicativos_marco_macro_integral.csv");
 const shapleyIntervals = await readCsv("results/explicacion/intervalos_bootstrap_pesos_shapley.csv");
-const stabilityDetail = await readCsv("results/explicacion/estabilidad_submuestras_modelo_ampliado.csv");
+const stabilityDetail = await readCsv("results/explicacion/estabilidad_submuestras_marco_macro_integral.csv");
 const stabilitySummary = await readCsv("results/explicacion/estabilidad_submuestras_resumen.csv");
 const vintageCoverage = await readCsv("results/pronostico/cobertura_vintages_pronostico.csv");
 const beiAggregation = await readCsv("results/robustez/comparacion_agregacion_bei_5y.csv");
 const beiStationarity = await readCsv("results/robustez/pruebas_estacionariedad_bei_5y.csv");
 const beiTrends = await readCsv("results/robustez/tendencias_quiebres_bei_5y.csv");
 const beiSpecifications = await readCsv("results/robustez/comparacion_especificaciones_bei_5y.csv");
-const modelComparison = await readCsv("results/explicacion/comparacion_modelos.csv");
+const modelComparison = await readCsv("results/explicacion/comparacion_especificaciones.csv");
 const regionalComparison = await readCsv("results/explicacion/comparacion_factor_regional.csv");
 const forecastAvailability = await readCsv("results/pronostico/calendario_disponibilidad_pronostico.csv");
 const forecastCoefs = await readCsv("results/pronostico/coeficientes_modelo_pronostico.csv");
@@ -144,9 +144,9 @@ const coefRecordByTerm = Object.fromEntries(coefs.map((r) => [r.termino, r]));
 const coefRowByTerm = Object.fromEntries(coefs.map((r, i) => [r.termino, 6 + i]));
 const modelMetric = validationMetrics.find((r) => r.modelo.startsWith("ADL"));
 const rwMetric = validationMetrics.find((r) => r.modelo.startsWith("Caminata"));
-const expandedModelMetric = expandedValidationMetrics.find((r) => !r.modelo.toLowerCase().includes("caminata")) ?? expandedValidationMetrics[0];
-const baseComparison = modelComparison.find((r) => /principal|base/i.test(r.modelo)) ?? modelComparison[0];
-const expandedComparison = modelComparison.find((r) => /ampli/i.test(r.modelo)) ?? modelComparison.at(-1);
+const integratedModelMetric = integratedValidationMetrics.find((r) => !r.modelo.toLowerCase().includes("caminata")) ?? integratedValidationMetrics[0];
+const baseComparison = modelComparison.find((r) => r.modelo === "Controles externos y financieros") ?? modelComparison[0];
+const integratedComparison = modelComparison.find((r) => r.modelo === "Marco macroeconómico integral") ?? modelComparison.at(-1);
 const forecastMetric = forecastMetrics.find((r) => !r.modelo.toLowerCase().includes("caminata")) ?? forecastMetrics[0];
 const forecastWalkMetric = forecastMetrics.find((r) => r.modelo.toLowerCase().includes("caminata")) ?? forecastMetrics.at(-1);
 
@@ -164,6 +164,10 @@ const TERM_LABELS = {
   "D.asinh_flujos_capital.L1": "Δ asinh flujo neto de capital (t−1)",
   "diferencial_bei_5y_pp.L1": "Diferencial BEI 5 años (t−1)",
   "D.diferencial_bei_5y_pp.L1": "Δ diferencial BEI 5 años (t−1)",
+  "D.ln_ise_total_dane.L0": "Δ ln ISE total DANE (t)",
+  "D.ln_ipc_colombia.L0": "Δ ln IPC Colombia (t)",
+  "D.ln_ise_total_dane.L2": "Δ ln ISE total DANE (t−2)",
+  "D.ln_ipc_colombia.L2": "Δ ln IPC Colombia (t−2)",
   "factor_monedas_regionales_4.L0": "Factor regional BRL, CLP, MXN y PEN (t)",
   "factor_monedas_regionales_3.L1": "Factor regional BRL, CLP y MXN (t−1)",
   factor_monedas_regionales_3: "Factor regional de tres monedas",
@@ -210,8 +214,8 @@ const sheetNames = [
   "Resumen",
   "Datos_fuente",
   "Transformaciones",
-  "Modelo_principal",
-  "Modelo_ampliado",
+  "Controles_externos",
+  "Marco_macro_integral",
   "Pesos_explicativos",
   "Robustez",
   "BEI_robustez",
@@ -321,14 +325,14 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
     "Se separan dos usos: explicación histórica con información contemporánea y pronóstico de un mes con rezagos de publicación. Muestra común: enero de 2006 a abril de 2026."
   );
 
-  card(s, "A5:B5", "A6:B7", "Observaciones modelo ampliado", n(expandedComparison.observaciones));
-  card(s, "C5:D5", "C6:D7", "R² ajustado principal", pct(baseComparison.r_cuadrado_ajustado));
-  card(s, "E5:F5", "E6:F7", "R² ajustado ampliado", pct(expandedComparison.r_cuadrado_ajustado), COLORS.green);
-  card(s, "A9:B9", "A10:B11", "MAPE explicación histórica", `${Number(expandedComparison.mape_pct).toFixed(2)}%`, COLORS.green);
+  card(s, "A5:B5", "A6:B7", "Observaciones marco macroeconómico integral", n(integratedComparison.observaciones));
+  card(s, "C5:D5", "C6:D7", "R² ajustado: controles externos", pct(baseComparison.r_cuadrado_ajustado));
+  card(s, "E5:F5", "E6:F7", "R² ajustado: marco macroeconómico integral", pct(integratedComparison.r_cuadrado_ajustado), COLORS.green);
+  card(s, "A9:B9", "A10:B11", "MAPE explicación histórica", `${Number(integratedComparison.mape_pct).toFixed(2)}%`, COLORS.green);
   card(s, "C9:D9", "C10:D11", "MAPE pronóstico publicado", `${Number(forecastMetric.mape_pct).toFixed(2)}%`, COLORS.amber);
   card(s, "E9:F9", "E10:F11", "R² pronóstico vs. caminata", pct(metadata.pronostico_r2_vs_caminata), COLORS.red);
 
-  section(s, "A13:F13", "Especificación principal");
+  section(s, "A13:F13", "Especificación de controles externos y financieros");
   subtitle(
     s,
     "A14:F16",
@@ -369,7 +373,7 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
     ["4", "El resultado positivo de remesas puede reflejar respuesta de los hogares a depreciaciones u otros shocks simultáneos."],
     ["5", "La prueba bounds no confirma cointegración al 5%; el ECM se muestra solo como contraste exploratorio."],
     ["6", "El déficit fiscal y los demás factores deben interpretarse con sus intervalos de confianza; el signo aislado no basta."],
-    ["7", "En el ampliado, ARCH-LM y Jarque–Bera rechazan al 5%; RESET no rechaza la forma funcional."],
+    ["7", "En el marco macroeconómico integral, ARCH-LM y Jarque–Bera rechazan al 5%; RESET no rechaza la forma funcional."],
     ["8", "El backtest del pronóstico usa el último vintage disponible: respeta rezagos, pero sigue siendo pseudo-tiempo-real hasta archivar versiones históricas de cada publicación."],
   ];
   s.mergeCells("B30:F30"); s.mergeCells("B31:F31"); s.mergeCells("B32:F32");
@@ -406,7 +410,7 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
   s.getRange(`K31:L${30 + summaryComparison.length}`).format.numberFormat = "0.00";
   s.getRange(`M31:N${30 + summaryComparison.length}`).format.numberFormat = "0.0%";
 
-  section(s, "A38:F38", "Peso explicativo Shapley del modelo ampliado");
+  section(s, "A38:F38", "Peso explicativo Shapley del marco macroeconómico integral");
   const summaryWeights = orderedWeights.slice(0, 8);
   s.getRange("A39:F39").values = [["Factor", "Grupo", "Contribución al R²", "Peso entre factores", "Peso del R² total", "Lectura"]];
   s.getRange(`A40:F${39 + summaryWeights.length}`).values = summaryWeights.map((r) => [
@@ -431,7 +435,7 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
   const helperStart = 38;
   s.getRange(`H${helperStart}:J${helperStart + helperRows.length - 1}`).formulas = helperRows.map((i) => {
     const modelRow = 18 + i;
-    return [`='Modelo_principal'!A${modelRow}`, `='Modelo_principal'!M${modelRow}`, `='Modelo_principal'!N${modelRow}`];
+    return [`='Controles_externos'!A${modelRow}`, `='Controles_externos'!M${modelRow}`, `='Controles_externos'!N${modelRow}`];
   });
   header(s, "H37:J37");
   s.getRange(`I${helperStart}:J${helperStart + helperRows.length - 1}`).format.numberFormat = "#,##0";
@@ -459,17 +463,17 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
 // Datos fuente
 {
   const s = sheets.Datos_fuente;
-  title(s, "A1:AC1", "Datos fuente mensuales");
-  subtitle(s, "A2:AC3", "Niveles utilizados para construir la explicación histórica y el pronóstico con rezagos de publicación. Las series diarias se promedian por mes sin imputar faltantes. El diferencial BEI usa promedios mensuales separados de cada curva; mide compensación inflacionaria de mercado, no una expectativa pura.");
+  title(s, "A1:AE1", "Datos fuente mensuales");
+  subtitle(s, "A2:AE3", "Niveles utilizados para construir la explicación histórica y el pronóstico con rezagos de publicación. Las series diarias se promedian por mes sin imputar faltantes. El diferencial BEI usa promedios mensuales separados de cada curva; mide compensación inflacionaria de mercado, no una expectativa pura. ISE total DANE e IPC Colombia se conservan en sus niveles oficiales y no se rellenan artificialmente.");
   const heads = [
     "Mes", "TRM (COP/USD)", "Términos de intercambio", "Remesas (USD mill.)", "Remesas 12m (USD mill.)",
     "Tasa política Colombia (%)", "Fed funds (%)", "Diferencial tasas (pp)", "Balance fiscal mensual (miles mill. COP)",
     "Déficit fiscal 12m (% PIB)", "Índice dólar amplio", "VIX", "Dummy pandemia", "Reservas netas sin FLAR (USD mill.)",
     "EMBIG Colombia (pb)", "EMBIG Colombia (pp)", "Balanza comercial cambiaria (USD mill.)", "Flujo neto total de capital (USD mill.)",
     "TES pesos cero cupón 5 años (%)", "TES UVR cero cupón 5 años (%)", "BEI Colombia 5 años (%)", "BEI EE. UU. 5 años (%)", "Diferencial BEI 5 años (pp)",
-    "BRL por USD", "CLP por USD", "MXN por USD", "PEN por USD", "Factor regional 3 monedas", "Factor regional 4 monedas",
+    "BRL por USD", "CLP por USD", "MXN por USD", "PEN por USD", "Factor regional 3 monedas", "Factor regional 4 monedas", "ISE total DANE (índice)", "IPC Colombia (índice)",
   ];
-  s.getRange("A5:AC5").values = [heads];
+  s.getRange("A5:AE5").values = [heads];
   const matrix = raw.map((r) => [
     r.fecha.slice(0, 7), n(r.trm_cop_usd), n(r.terminos_intercambio), n(r.remesas_usd_millones), n(r.remesas_12m_usd_millones),
     n(r.tasa_politica_colombia_pct), n(r.fed_funds_eeuu_pct), n(r.diferencial_tasas_pp), n(r.balance_fiscal_miles_millones_cop),
@@ -481,11 +485,12 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
     n(r.tes_5y_pesos_colombia_pct), n(r.tes_5y_uvr_colombia_pct), n(r.bei_colombia_5y_pct), n(r.bei_eeuu_5y_pct), n(r.diferencial_bei_5y_pp),
     n(r.brl_por_usd), n(r.clp_por_usd), n(r.mxn_por_usd), n(r.pen_por_usd),
     n(r.factor_monedas_regionales_3), n(r.factor_monedas_regionales_4),
+    n(r.ise_total_dane), n(r.ipc_colombia_indice),
   ]);
   const end = 5 + matrix.length;
-  s.getRange(`A6:AC${end}`).values = matrix;
-  header(s, "A5:AC5");
-  addTable(s, `A5:AC${end}`, "DatosFuenteTable");
+  s.getRange(`A6:AE${end}`).values = matrix;
+  header(s, "A5:AE5");
+  addTable(s, `A5:AE${end}`, "DatosFuenteTable");
   s.getRange(`B6:C${end}`).format.numberFormat = "#,##0.00";
   s.getRange(`D6:E${end}`).format.numberFormat = "#,##0.00";
   s.getRange(`F6:H${end}`).format.numberFormat = "0.00";
@@ -498,7 +503,8 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
   s.getRange(`S6:W${end}`).format.numberFormat = "0.00";
   s.getRange(`X6:AA${end}`).format.numberFormat = "#,##0.0000";
   s.getRange(`AB6:AC${end}`).format.numberFormat = "0.000000";
-  s.getRange(`A5:AC${end}`).format.verticalAlignment = "center";
+  s.getRange(`AD6:AE${end}`).format.numberFormat = "#,##0.00";
+  s.getRange(`A5:AE${end}`).format.verticalAlignment = "center";
   s.getRange("A:A").format.columnWidth = 12;
   s.getRange("B:C").format.columnWidth = 16;
   s.getRange("D:E").format.columnWidth = 18;
@@ -506,8 +512,8 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
   s.getRange("I:I").format.columnWidth = 24;
   s.getRange("J:N").format.columnWidth = 18;
   s.getRange("O:W").format.columnWidth = 21;
-  s.getRange("X:AC").format.columnWidth = 18;
-  s.getRange("A5:AC5").format.rowHeight = 54;
+  s.getRange("X:AE").format.columnWidth = 18;
+  s.getRange("A5:AE5").format.rowHeight = 54;
   s.freezePanes.freezeRows(5);
   s.freezePanes.freezeColumns(1);
 
@@ -536,6 +542,8 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
     AA5: "Fuente: BCRPData PN01207PM, tipo de cambio interbancario promedio; soles peruanos por dólar. https://estadisticas.bcrp.gob.pe/estadisticas/series/mensuales/resultados/PN01207PM/html",
     AB5: "Construcción: promedio igual ponderado de retornos mensuales estandarizados de BRL, CLP y MXN por USD. Medias y desviaciones calibradas con 2006–2019.",
     AC5: "Construcción activa de la explicación histórica: promedio igual ponderado de retornos mensuales estandarizados de BRL, CLP, MXN y PEN por USD. Medias y desviaciones calibradas con 2006–2019.",
+    AD5: "Fuente: DANE, Indicador de Seguimiento a la Economía (ISE) total, Cuadro 2; índice ajustado por efecto estacional y calendario. Se conserva el nivel oficial y no se imputan meses.",
+    AE5: "Fuente: Banco de la República, IPC Colombia, serie 15000; índice mensual. Se conserva el nivel oficial y no se imputan meses. https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15000",
   };
   for (const [cell, text] of Object.entries(comments)) wb.comments.addThread({ cell: s.getRange(cell) }, text);
 }
@@ -543,13 +551,14 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
 // Transformaciones auditables
 {
   const s = sheets.Transformaciones;
-  title(s, "A1:AB1", "Transformaciones del modelo");
-  subtitle(s, "A2:AB3", "Todas las transformaciones son fórmulas enlazadas a Datos_fuente. Δ indica cambio mensual; ln indica logaritmo natural; asinh conserva el signo de los flujos y reduce el peso de valores extremos. Los rezagos cambian entre la explicación histórica y el pronóstico.");
+  title(s, "A1:AF1", "Transformaciones del modelo");
+  subtitle(s, "A2:AF3", "Todas las transformaciones son fórmulas enlazadas a Datos_fuente. Δ indica cambio mensual; ln indica logaritmo natural; asinh conserva el signo de los flujos y reduce el peso de valores extremos. ISE total DANE e IPC Colombia entran como ln(x) y primera diferencia; los rezagos cambian entre la explicación histórica y el pronóstico.");
   const heads = [
     "Mes", "ln TRM", "Δln TRM", "ln términos de intercambio", "Δln términos de intercambio", "ln remesas 12m", "Δln remesas 12m", "Diferencial tasas", "Δ diferencial", "Déficit 12m/PIB", "Δ déficit", "ln dólar amplio", "Δln dólar amplio", "ln VIX", "Δln VIX", "Pandemia",
     "ln reservas netas sin FLAR", "Δln reservas", "EMBIG Colombia (pp)", "Δ EMBIG Colombia", "asinh balanza (USD miles de millones)", "Δ asinh balanza", "asinh flujos (USD miles de millones)", "Δ asinh flujos", "Diferencial BEI 5 años", "Δ diferencial BEI", "Factor regional 3 monedas", "Factor regional 4 monedas",
+    "ln ISE total DANE", "Δln ISE total DANE", "ln IPC Colombia", "Δln IPC Colombia",
   ];
-  s.getRange("A5:AB5").values = [heads];
+  s.getRange("A5:AF5").values = [heads];
   const formulas = raw.map((_, i) => {
     const r = 6 + i;
     const src = r;
@@ -583,12 +592,16 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
       first ? "" : `=IF(OR(Y${r}="",Y${r - 1}=""),"",Y${r}-Y${r - 1})`,
       `='Datos_fuente'!AB${src}`,
       `='Datos_fuente'!AC${src}`,
+      `=IF('Datos_fuente'!AD${src}="","",LN('Datos_fuente'!AD${src}))`,
+      first ? "" : `=IF(OR(AC${r}="",AC${r - 1}=""),"",AC${r}-AC${r - 1})`,
+      `=IF('Datos_fuente'!AE${src}="","",LN('Datos_fuente'!AE${src}))`,
+      first ? "" : `=IF(OR(AE${r}="",AE${r - 1}=""),"",AE${r}-AE${r - 1})`,
     ];
   });
   const end = 5 + formulas.length;
-  s.getRange(`A6:AB${end}`).formulas = formulas;
-  header(s, "A5:AB5");
-  addTable(s, `A5:AB${end}`, "TransformacionesTable");
+  s.getRange(`A6:AF${end}`).formulas = formulas;
+  header(s, "A5:AF5");
+  addTable(s, `A5:AF${end}`, "TransformacionesTable");
   s.getRange(`B6:G${end}`).format.numberFormat = "0.000000";
   s.getRange(`H6:K${end}`).format.numberFormat = "0.0000";
   s.getRange(`L6:O${end}`).format.numberFormat = "0.000000";
@@ -598,21 +611,24 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
   s.getRange(`U6:X${end}`).format.numberFormat = "0.000000";
   s.getRange(`Y6:Z${end}`).format.numberFormat = "0.0000";
   s.getRange(`AA6:AB${end}`).format.numberFormat = "0.000000";
+  s.getRange(`AC6:AF${end}`).format.numberFormat = "0.000000";
   s.getRange("A:A").format.columnWidth = 12;
-  s.getRange("B:AB").format.columnWidth = 18;
-  s.getRange("A5:AB5").format.rowHeight = 48;
+  s.getRange("B:AF").format.columnWidth = 18;
+  s.getRange("A5:AF5").format.rowHeight = 48;
   s.freezePanes.freezeRows(5);
   s.freezePanes.freezeColumns(1);
   wb.comments.addThread({ cell: s.getRange("U5") }, "Escala auditable: el flujo original en USD millones se divide por 1.000 antes de aplicar asinh, igual que en la estimación en Python.");
   wb.comments.addThread({ cell: s.getRange("W5") }, "Escala auditable: el flujo original en USD millones se divide por 1.000 antes de aplicar asinh, igual que en la estimación en Python.");
   wb.comments.addThread({ cell: s.getRange("AA5") }, "Promedio igual ponderado de retornos mensuales estandarizados de BRL, CLP y MXN por USD. Medias y desviaciones calibradas entre enero de 2006 y diciembre de 2019.");
   wb.comments.addThread({ cell: s.getRange("AB5") }, "Promedio igual ponderado de retornos mensuales estandarizados de BRL, CLP, MXN y PEN por USD. Es la composición activa de la explicación histórica.");
+  wb.comments.addThread({ cell: s.getRange("AC5") }, "Transformación auditable: ln del ISE total DANE; la primera diferencia queda en la columna AD y no se imputan meses.");
+  wb.comments.addThread({ cell: s.getRange("AE5") }, "Transformación auditable: ln del IPC Colombia serie 15000; la primera diferencia queda en la columna AF y no se imputan meses.");
 }
 
-// Modelo principal
+// Controles externos y financieros
 {
-  const s = sheets.Modelo_principal;
-  title(s, "A1:W1", "Modelo principal: variación mensual de la TRM");
+  const s = sheets.Controles_externos;
+  title(s, "A1:W1", "Controles externos y financieros: variación mensual de la TRM");
   subtitle(s, "A2:W3", "OLS con errores estándar HAC (6 meses). BIC seleccionó cero rezagos adicionales de Δln(TRM). Términos de intercambio, dólar amplio y VIX entran en t; remesas, diferencial de tasas y déficit fiscal entran con un mes de rezago.");
   s.getRange("A5:G5").values = [["Variable", "Coeficiente", "EE HAC", "t", "p-valor", "IC 95% inferior", "IC 95% superior"]];
   const labels = {
@@ -709,20 +725,20 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
   s.freezePanes.freezeColumns(1);
 }
 
-// Modelo ampliado
+// Marco macroeconómico integral
 {
-  const s = sheets.Modelo_ampliado;
-  title(s, "A1:W1", "Modelo ampliado: nuevos canales domésticos y regionales");
+  const s = sheets.Marco_macro_integral;
+  title(s, "A1:W1", "Marco macroeconómico integral: nuevos canales domésticos y regionales");
   subtitle(
     s,
     "A2:W3",
-    "Explicación histórica ex post. Extiende el modelo principal con EMBIG Colombia, reservas, balanza comercial cambiaria, flujos de capital, diferencial de compensación inflacionaria a 5 años y un factor regional de BRL, CLP, MXN y PEN. Los coeficientes y pesos describen asociaciones; no identifican efectos causales.",
+    "Explicación histórica ex post. Extiende el controles externos y financieros con EMBIG Colombia, reservas, balanza comercial cambiaria, flujos de capital, diferencial de compensación inflacionaria a 5 años y un factor regional de BRL, CLP, MXN y PEN. Los coeficientes y pesos describen asociaciones; no identifican efectos causales.",
     COLORS.paleBlue
   );
 
   s.getRange("A5:G5").values = [["Variable", "Coeficiente", "EE HAC", "t", "p-valor", "IC 95% inferior", "IC 95% superior"]];
-  const expandedCoefEnd = 5 + expandedCoefs.length;
-  s.getRange(`A6:G${expandedCoefEnd}`).values = expandedCoefs.map((r) => [
+  const integratedCoefEnd = 5 + integratedCoefs.length;
+  s.getRange(`A6:G${integratedCoefEnd}`).values = integratedCoefs.map((r) => [
     termLabel(r.termino),
     n(r.coeficiente),
     n(r.error_estandar_hac),
@@ -732,9 +748,9 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
     n(r.ic_95_superior),
   ]);
   header(s, "A5:G5");
-  addTable(s, `A5:G${expandedCoefEnd}`, "CoeficientesModeloAmpliadoTable");
-  s.getRange(`B6:G${expandedCoefEnd}`).format.numberFormat = "0.000000";
-  s.getRange(`E6:E${expandedCoefEnd}`).conditionalFormats.add("cellIs", {
+  addTable(s, `A5:G${integratedCoefEnd}`, "CoeficientesMarcoMacroIntegralTable");
+  s.getRange(`B6:G${integratedCoefEnd}`).format.numberFormat = "0.000000";
+  s.getRange(`E6:E${integratedCoefEnd}`).conditionalFormats.add("cellIs", {
     operator: "lessThan",
     formula: 0.05,
     format: { fill: COLORS.green, font: { bold: true, color: "#006100" } },
@@ -742,10 +758,10 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
 
   s.getRange("I5:N5").values = [["Indicador", "Valor", "Lectura", "Indicador", "Valor", "Lectura"]];
   s.getRange("I6:N9").values = [
-    ["R²", n(expandedComparison.r_cuadrado), "Variación explicada dentro de muestra", "AIC", n(expandedComparison.aic), "Comparación relativa"],
-    ["R² ajustado", n(expandedComparison.r_cuadrado_ajustado), "Penaliza el número de parámetros", "BIC", n(expandedComparison.bic), "Comparación relativa"],
-    ["Observaciones", n(expandedComparison.observaciones), "Muestra común completa", "MAPE condicional", n(expandedComparison.mape_pct) / 100, "Ventana de validación"],
-    ["Acierto dirección", n(expandedComparison.acierto_direccion_pct) / 100, "Signo del cambio mensual", "Inferencia", "HAC", "Errores robustos"],
+    ["R²", n(integratedComparison.r_cuadrado), "Variación explicada dentro de muestra", "AIC", n(integratedComparison.aic), "Comparación relativa"],
+    ["R² ajustado", n(integratedComparison.r_cuadrado_ajustado), "Penaliza el número de parámetros", "BIC", n(integratedComparison.bic), "Comparación relativa"],
+    ["Observaciones", n(integratedComparison.observaciones), "Muestra común completa", "MAPE condicional", n(integratedComparison.mape_pct) / 100, "Ventana de validación"],
+    ["Acierto dirección", n(integratedComparison.acierto_direccion_pct) / 100, "Signo del cambio mensual", "Inferencia", "HAC", "Errores robustos"],
   ];
   header(s, "I5:N5");
   s.getRange("I5:N9").format = { wrapText: true, borders: { preset: "all", style: "thin", color: "#D9E1F2" } };
@@ -754,9 +770,9 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
   s.getRange("M6:M7").format.numberFormat = "0.00";
   s.getRange("M8:M8").format.numberFormat = "0.0%";
 
-  section(s, "I12:L12", "Diagnósticos del modelo ampliado");
+  section(s, "I12:L12", "Diagnósticos del marco macroeconómico integral");
   s.getRange("I13:L13").values = [["Prueba", "Estadístico", "p-valor", "Lectura"]];
-  const expandedDiagRows = expandedDiagnostics.map((r) => {
+  const integratedDiagRows = integratedDiagnostics.map((r) => {
     const p = n(r.p_valor);
     let reading = "Referencia";
     if (/Jarque/i.test(r.prueba)) reading = p < 0.05 ? "Residuos no normales" : "No se rechaza normalidad";
@@ -767,24 +783,24 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
     else reading = p >= 0.05 ? "Sin autocorrelación detectada" : "Autocorrelación residual";
     return [r.prueba, n(r.estadistico), p, reading];
   });
-  const expandedDiagEnd = 13 + expandedDiagRows.length;
-  s.getRange(`I14:L${expandedDiagEnd}`).values = expandedDiagRows;
+  const integratedDiagEnd = 13 + integratedDiagRows.length;
+  s.getRange(`I14:L${integratedDiagEnd}`).values = integratedDiagRows;
   header(s, "I13:L13");
-  addTable(s, `I13:L${expandedDiagEnd}`, "DiagnosticosModeloAmpliadoTable");
-  s.getRange(`J14:K${expandedDiagEnd}`).format.numberFormat = "0.0000";
+  addTable(s, `I13:L${integratedDiagEnd}`, "DiagnosticosMarcoMacroIntegralTable");
+  s.getRange(`J14:K${integratedDiagEnd}`).format.numberFormat = "0.0000";
 
-  const contributionKeys = Object.keys(expandedContributions[0] ?? {}).filter((key) => key !== "fecha");
-  const contributionByDate = new Map(expandedContributions.map((r) => [r.fecha, r]));
+  const contributionKeys = Object.keys(integratedContributions[0] ?? {}).filter((key) => key !== "fecha");
+  const contributionByDate = new Map(integratedContributions.map((r) => [r.fecha, r]));
   const contributionHeaders = contributionKeys.map((key) => key === "ajuste_total" ? "Ajuste total de contribuciones" : termLabel(key));
-  const fitHeaderRow = Math.max(22, expandedCoefEnd + 3, expandedDiagEnd + 3);
-  const expandedHeads = [
+  const fitHeaderRow = Math.max(22, integratedCoefEnd + 3, integratedDiagEnd + 3);
+  const integratedHeads = [
     "Mes", "Δln TRM observado", "Δln TRM ajustado", "Residuo", "TRM observada", "TRM ajustada 1 paso",
     ...contributionHeaders,
     "Diferencia de control",
   ];
-  const expandedLastCol = columnLetter(expandedHeads.length);
-  s.getRange(`A${fitHeaderRow}:${expandedLastCol}${fitHeaderRow}`).values = [expandedHeads];
-  const expandedRows = expandedFit.map((r) => {
+  const integratedLastCol = columnLetter(integratedHeads.length);
+  s.getRange(`A${fitHeaderRow}:${integratedLastCol}${fitHeaderRow}`).values = [integratedHeads];
+  const integratedRows = integratedFit.map((r) => {
     const contributions = contributionByDate.get(r.fecha) ?? {};
     return [
       r.fecha.slice(0, 7),
@@ -797,37 +813,37 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
       null,
     ];
   });
-  const expandedDataStart = fitHeaderRow + 1;
-  const expandedDataEnd = fitHeaderRow + expandedRows.length;
-  s.getRange(`A${expandedDataStart}:${expandedLastCol}${expandedDataEnd}`).values = expandedRows;
+  const integratedDataStart = fitHeaderRow + 1;
+  const integratedDataEnd = fitHeaderRow + integratedRows.length;
+  s.getRange(`A${integratedDataStart}:${integratedLastCol}${integratedDataEnd}`).values = integratedRows;
   const adjustmentIndex = contributionKeys.indexOf("ajuste_total");
   if (adjustmentIndex >= 0) {
     const adjustmentCol = columnLetter(7 + adjustmentIndex);
-    s.getRange(`${expandedLastCol}${expandedDataStart}:${expandedLastCol}${expandedDataEnd}`).formulas = expandedRows.map((_, i) => {
-      const row = expandedDataStart + i;
+    s.getRange(`${integratedLastCol}${integratedDataStart}:${integratedLastCol}${integratedDataEnd}`).formulas = integratedRows.map((_, i) => {
+      const row = integratedDataStart + i;
       return [`=C${row}-${adjustmentCol}${row}`];
     });
   }
-  header(s, `A${fitHeaderRow}:${expandedLastCol}${fitHeaderRow}`);
-  addTable(s, `A${fitHeaderRow}:${expandedLastCol}${expandedDataEnd}`, "AjusteModeloAmpliadoTable");
-  s.getRange(`B${expandedDataStart}:D${expandedDataEnd}`).format.numberFormat = "0.000000";
-  s.getRange(`E${expandedDataStart}:F${expandedDataEnd}`).format.numberFormat = "#,##0.00";
-  if (expandedHeads.length > 6) s.getRange(`G${expandedDataStart}:${expandedLastCol}${expandedDataEnd}`).format.numberFormat = "0.000000";
-  s.getRange(`${expandedLastCol}${expandedDataStart}:${expandedLastCol}${expandedDataEnd}`).format.fill = COLORS.paleBlue;
+  header(s, `A${fitHeaderRow}:${integratedLastCol}${fitHeaderRow}`);
+  addTable(s, `A${fitHeaderRow}:${integratedLastCol}${integratedDataEnd}`, "AjusteMarcoMacroIntegralTable");
+  s.getRange(`B${integratedDataStart}:D${integratedDataEnd}`).format.numberFormat = "0.000000";
+  s.getRange(`E${integratedDataStart}:F${integratedDataEnd}`).format.numberFormat = "#,##0.00";
+  if (integratedHeads.length > 6) s.getRange(`G${integratedDataStart}:${integratedLastCol}${integratedDataEnd}`).format.numberFormat = "0.000000";
+  s.getRange(`${integratedLastCol}${integratedDataStart}:${integratedLastCol}${integratedDataEnd}`).format.fill = COLORS.paleBlue;
 
-  const expandedChart = s.charts.add("line", { chartType: "line", title: "TRM observada y ajuste ampliado", hasLegend: true });
-  const observedSeries = expandedChart.series.add("TRM observada");
-  observedSeries.categoryFormula = `'Modelo_ampliado'!$A$${expandedDataStart}:$A$${expandedDataEnd}`;
-  observedSeries.formula = `'Modelo_ampliado'!$E$${expandedDataStart}:$E$${expandedDataEnd}`;
+  const integratedChart = s.charts.add("line", { chartType: "line", title: "TRM observada y ajuste del marco macroeconómico integral", hasLegend: true });
+  const observedSeries = integratedChart.series.add("TRM observada");
+  observedSeries.categoryFormula = `'Marco_macro_integral'!$A$${integratedDataStart}:$A$${integratedDataEnd}`;
+  observedSeries.formula = `'Marco_macro_integral'!$E$${integratedDataStart}:$E$${integratedDataEnd}`;
   observedSeries.fill = COLORS.navy;
-  const fittedSeries = expandedChart.series.add("TRM ajustada");
-  fittedSeries.categoryFormula = `'Modelo_ampliado'!$A$${expandedDataStart}:$A$${expandedDataEnd}`;
-  fittedSeries.formula = `'Modelo_ampliado'!$F$${expandedDataStart}:$F$${expandedDataEnd}`;
+  const fittedSeries = integratedChart.series.add("TRM ajustada");
+  fittedSeries.categoryFormula = `'Marco_macro_integral'!$A$${integratedDataStart}:$A$${integratedDataEnd}`;
+  fittedSeries.formula = `'Marco_macro_integral'!$F$${integratedDataStart}:$F$${integratedDataEnd}`;
   fittedSeries.fill = COLORS.teal;
-  expandedChart.titleTextStyle.fontSize = 12;
-  expandedChart.xAxis = { axisType: "textAxis", textStyle: { fontSize: 8 } };
-  expandedChart.yAxis = { numberFormatCode: "#,##0" };
-  expandedChart.setPosition("O5", "W18");
+  integratedChart.titleTextStyle.fontSize = 12;
+  integratedChart.xAxis = { axisType: "textAxis", textStyle: { fontSize: 8 } };
+  integratedChart.yAxis = { numberFormatCode: "#,##0" };
+  integratedChart.setPosition("O5", "W18");
 
   s.getRange("A:A").format.columnWidth = 12;
   s.getRange("B:G").format.columnWidth = 18;
@@ -836,8 +852,8 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
   s.getRange("H:H").format.columnWidth = 18;
   s.getRange("I:N").format.columnWidth = 18;
   s.getRange("O:W").format.columnWidth = 13;
-  s.getRange(`A${fitHeaderRow}:${expandedLastCol}${fitHeaderRow}`).format.rowHeight = 48;
-  s.getRange(`A5:${expandedLastCol}${expandedDataEnd}`).format.wrapText = true;
+  s.getRange(`A${fitHeaderRow}:${integratedLastCol}${fitHeaderRow}`).format.rowHeight = 48;
+  s.getRange(`A5:${integratedLastCol}${integratedDataEnd}`).format.wrapText = true;
   s.freezePanes.freezeRows(fitHeaderRow);
   s.freezePanes.freezeColumns(1);
 }
@@ -968,7 +984,7 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
 
   section(s, "J5:P5", "Estabilidad por submuestras");
   s.getRange("J6:P6").values = [[
-    "Submuestra", "Obs.", "R² ajustado", "Spearman rangos", "Mediana |Δ peso|", "Máx. |Δ peso|", "Mismo signo / 12",
+    "Submuestra", "Obs.", "R² ajustado", "Spearman rangos", "Mediana |Δ peso|", "Máx. |Δ peso|", "Mismo signo / 14",
   ]];
   s.getRange(`J7:P${6 + stabilitySummary.length}`).values = stabilitySummary.map((r) => [
     r.submuestra,
@@ -1060,7 +1076,7 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
     COLORS.amber
   );
 
-  section(s, "A5:L5", "Comparación dentro del modelo ampliado — misma muestra de 240 meses");
+  section(s, "A5:L5", "Comparación dentro del marco macroeconómico integral — misma muestra de 240 meses");
   s.getRange("A6:L6").values = [[
     "Especificación", "Agregación", "Transformación", "Extensión", "R² ajustado", "BIC", "Coef. BEI", "p HAC", "MAPE cond.", "R² validación", "Quiebre", "Cautela",
   ]];
@@ -1177,8 +1193,8 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
 
   s.getRange("A5:F5").values = [["Modelo", "Observaciones", "MAE (log)", "RMSE (log)", "MAPE", "Acierto dirección"]];
   const displayedValidationMetrics = [
-    ["Modelo principal", modelMetric],
-    ["Modelo ampliado", expandedModelMetric],
+    ["Controles externos y financieros", modelMetric],
+    ["Marco macroeconómico integral", integratedModelMetric],
     ["Caminata aleatoria", rwMetric],
   ];
   s.getRange("A6:F8").values = displayedValidationMetrics.map(([label, r]) => [label, n(r.observaciones), n(r.mae_log), n(r.rmse_log), n(r.mape_pct) / 100, n(r.acierto_direccion_pct) === null ? null : n(r.acierto_direccion_pct) / 100]);
@@ -1192,10 +1208,10 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
 
   s.getRange("H5:J5").values = [["Comparación", "Resultado", "Lectura"]];
   s.getRange("H6:J9").values = [
-    ["Reducción de MAE ampliado", 1 - n(expandedModelMetric.mae_log) / n(rwMetric.mae_log), "Mejora frente a la caminata aleatoria"],
-    ["Reducción de RMSE ampliado", 1 - n(expandedModelMetric.rmse_log) / n(rwMetric.rmse_log), "Mejora frente a la caminata aleatoria"],
-    ["Dirección correcta ampliado", n(expandedModelMetric.acierto_direccion_pct) / 100, "Signo mensual acertado"],
-    ["Mejora de MAPE vs. principal (p.p.)", n(modelMetric.mape_pct) - n(expandedModelMetric.mape_pct), "Diferencia en puntos porcentuales; positivo indica mejora"],
+    ["Reducción de MAE: marco macroeconómico integral", 1 - n(integratedModelMetric.mae_log) / n(rwMetric.mae_log), "Mejora frente a la caminata aleatoria"],
+    ["Reducción de RMSE: marco macroeconómico integral", 1 - n(integratedModelMetric.rmse_log) / n(rwMetric.rmse_log), "Mejora frente a la caminata aleatoria"],
+    ["Dirección correcta: marco macroeconómico integral", n(integratedModelMetric.acierto_direccion_pct) / 100, "Signo mensual acertado"],
+    ["Mejora de MAPE: integral vs. controles externos (p.p.)", n(modelMetric.mape_pct) - n(integratedModelMetric.mape_pct), "Diferencia en puntos porcentuales; positivo indica mejora"],
   ];
   header(s, "H5:J5");
   s.getRange("H5:J9").format.borders = { preset: "all", style: "thin", color: "#D9E1F2" };
@@ -1204,37 +1220,37 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
   s.getRange("H5:J9").format.wrapText = true;
   s.getRange("H6:J9").format.rowHeight = 38;
 
-  const baseHeads = ["Mes", "ln TRM observada", "ln TRM modelo principal", "ln TRM caminata", "Δln observado", "Δln modelo principal", "TRM observada", "TRM modelo principal", "TRM caminata"];
-  const expandedHeads = ["Mes", "ln TRM observada", "ln TRM modelo ampliado", "ln TRM caminata", "Δln observado", "Δln modelo ampliado", "TRM observada", "TRM modelo ampliado", "TRM caminata"];
+  const baseHeads = ["Mes", "ln TRM observada", "ln TRM controles externos y financieros", "ln TRM caminata", "Δln observado", "Δln controles externos y financieros", "TRM observada", "TRM controles externos y financieros", "TRM caminata"];
+  const integratedHeads = ["Mes", "ln TRM observada", "ln TRM marco macroeconómico integral", "ln TRM caminata", "Δln observado", "Δln marco macroeconómico integral", "TRM observada", "TRM marco macroeconómico integral", "TRM caminata"];
   s.getRange("A11:I11").values = [baseHeads];
   const valRows = validationPredictions.map((r) => [
     r.fecha.slice(0, 7), n(r.ln_trm_observada), n(r.ln_trm_modelo_condicional), n(r.ln_trm_caminata_aleatoria), n(r.cambio_log_observado), n(r.cambio_log_modelo), n(r.trm_observada), n(r.trm_modelo_condicional), n(r.trm_caminata_aleatoria),
   ]);
   const valEnd = 11 + valRows.length;
-  const expandedValHeader = valEnd + 3;
-  const expandedValRows = expandedValidationPredictions.map((r) => [
+  const integratedValHeader = valEnd + 3;
+  const integratedValRows = integratedValidationPredictions.map((r) => [
     r.fecha.slice(0, 7),
     n(r.ln_trm_observada),
-    n(firstValue(r, "ln_trm_modelo_condicional", "ln_trm_modelo_ampliado_condicional")),
+    n(firstValue(r, "ln_trm_modelo_condicional", "ln_trm_marco_macro_integral_condicional")),
     n(r.ln_trm_caminata_aleatoria),
     n(r.cambio_log_observado),
-    n(firstValue(r, "cambio_log_modelo", "cambio_log_modelo_ampliado")),
+    n(firstValue(r, "cambio_log_modelo", "cambio_log_marco_macro_integral")),
     n(r.trm_observada),
-    n(firstValue(r, "trm_modelo_condicional", "trm_modelo_ampliado_condicional")),
+    n(firstValue(r, "trm_modelo_condicional", "trm_marco_macro_integral_condicional")),
     n(r.trm_caminata_aleatoria),
   ]);
-  const expandedValEnd = expandedValHeader + expandedValRows.length;
+  const integratedValEnd = integratedValHeader + integratedValRows.length;
   s.getRange(`A12:I${valEnd}`).values = valRows;
   header(s, "A11:I11");
   addTable(s, `A11:I${valEnd}`, "PrediccionesValidacionTable");
   s.getRange(`B12:F${valEnd}`).format.numberFormat = "0.000000";
   s.getRange(`G12:I${valEnd}`).format.numberFormat = "#,##0.00";
 
-  s.getRange("K25:O25").values = [["Mes", "TRM observada", "Modelo principal condicional", "Modelo ampliado condicional", "Caminata aleatoria"]];
+  s.getRange("K25:O25").values = [["Mes", "TRM observada", "Controles externos y financieros condicional", "Marco macroeconómico integral condicional", "Caminata aleatoria"]];
   s.getRange(`K26:O${25 + valRows.length}`).formulas = valRows.map((_, i) => {
     const r = 12 + i;
-    const expandedRow = expandedValHeader + 1 + i;
-    return [`=A${r}`, `=G${r}`, `=H${r}`, `=H${expandedRow}`, `=I${r}`];
+    const integratedRow = integratedValHeader + 1 + i;
+    return [`=A${r}`, `=G${r}`, `=H${r}`, `=H${integratedRow}`, `=I${r}`];
   });
   header(s, "K25:O25");
   s.getRange(`L26:O${25 + valRows.length}`).format.numberFormat = "#,##0";
@@ -1246,13 +1262,13 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
   chart.yAxis = { numberFormatCode: "#,##0" };
   chart.setPosition("K5", "R22");
 
-  section(s, `A${expandedValHeader - 1}:I${expandedValHeader - 1}`, "Predicciones condicionales del modelo ampliado");
-  s.getRange(`A${expandedValHeader}:I${expandedValHeader}`).values = [expandedHeads];
-  s.getRange(`A${expandedValHeader + 1}:I${expandedValEnd}`).values = expandedValRows;
-  header(s, `A${expandedValHeader}:I${expandedValHeader}`);
-  addTable(s, `A${expandedValHeader}:I${expandedValEnd}`, "PrediccionesValidacionAmpliadaTable");
-  s.getRange(`B${expandedValHeader + 1}:F${expandedValEnd}`).format.numberFormat = "0.000000";
-  s.getRange(`G${expandedValHeader + 1}:I${expandedValEnd}`).format.numberFormat = "#,##0.00";
+  section(s, `A${integratedValHeader - 1}:I${integratedValHeader - 1}`, "Predicciones condicionales del marco macroeconómico integral");
+  s.getRange(`A${integratedValHeader}:I${integratedValHeader}`).values = [integratedHeads];
+  s.getRange(`A${integratedValHeader + 1}:I${integratedValEnd}`).values = integratedValRows;
+  header(s, `A${integratedValHeader}:I${integratedValHeader}`);
+  addTable(s, `A${integratedValHeader}:I${integratedValEnd}`, "PrediccionesValidacionMarcoMacroIntegralTable");
+  s.getRange(`B${integratedValHeader + 1}:F${integratedValEnd}`).format.numberFormat = "0.000000";
+  s.getRange(`G${integratedValHeader + 1}:I${integratedValEnd}`).format.numberFormat = "#,##0.00";
 
   s.getRange("A:A").format.columnWidth = 28;
   s.getRange("B:B").format.columnWidth = 15;
@@ -1468,9 +1484,9 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
 {
   const s = sheets.Diagnosticos;
   title(s, "A1:N1", "Diagnósticos y selección del modelo");
-  subtitle(s, "A2:N3", "Las pruebas se interpretan al 5%. No se detecta autocorrelación residual. El ampliado presenta ARCH y residuos no normales, mientras RESET no rechaza la forma funcional. HAC fortalece la inferencia de la media, pero no modela la volatilidad condicional.");
+  subtitle(s, "A2:N3", "Las pruebas se interpretan al 5%. No se detecta autocorrelación residual. El marco macroeconómico integral presenta ARCH y residuos no normales, mientras RESET no rechaza la forma funcional. HAC fortalece la inferencia de la media, pero no modela la volatilidad condicional.");
 
-  section(s, "A5:D5", "Diagnósticos del modelo principal");
+  section(s, "A5:D5", "Diagnósticos del controles externos y financieros");
   s.getRange("A6:D6").values = [["Prueba", "Estadístico", "p-valor", "Lectura"]];
   const diagRows = diagnostics.map((r) => {
     const p = n(r.p_valor);
@@ -1513,16 +1529,16 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
     ["Autocorrelación", "p>0,05", "Cumple", "Dinámica adecuada", "Mantener especificación"],
     ["ARCH", "p>0,05", "Cumple", "Sin ARCH detectado", "Mantener HAC"],
     ["Normalidad", "p>0,05", "No cumple", "Colas extremas", "No basar conclusiones en normalidad"],
-    ["Bounds", "p I(1)<0,05", "No cumple", "Sin cointegración firme", "Usar diferencias como modelo principal"],
+    ["Bounds", "p I(1)<0,05", "No cumple", "Sin cointegración firme", "Usar diferencias como controles externos y financieros"],
   ];
   header(s, "J6:N6");
   s.getRange("J6:N11").format = { wrapText: true, borders: { preset: "all", style: "thin", color: "#D9E1F2" } };
   s.getRange("J10:N11").format.fill = COLORS.amber;
   s.getRange("J7:N11").format.rowHeight = 38;
 
-  section(s, "J14:M14", "Diagnósticos del modelo ampliado");
+  section(s, "J14:M14", "Diagnósticos del marco macroeconómico integral");
   s.getRange("J15:M15").values = [["Prueba", "Estadístico", "p-valor", "Lectura"]];
-  const expandedDiagnosticRows = expandedDiagnostics.map((r) => {
+  const integratedDiagnosticRows = integratedDiagnostics.map((r) => {
     const p = n(r.p_valor);
     let reading = "Referencia";
     if (/Jarque/i.test(r.prueba)) reading = p < 0.05 ? "Residuos no normales" : "No se rechaza normalidad";
@@ -1533,15 +1549,15 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
     else reading = p >= 0.05 ? "Sin autocorrelación detectada" : "Autocorrelación residual";
     return [r.prueba, n(r.estadistico), p, reading];
   });
-  const expandedDiagnosticEnd = 15 + expandedDiagnosticRows.length;
-  s.getRange(`J16:M${expandedDiagnosticEnd}`).values = expandedDiagnosticRows;
+  const integratedDiagnosticEnd = 15 + integratedDiagnosticRows.length;
+  s.getRange(`J16:M${integratedDiagnosticEnd}`).values = integratedDiagnosticRows;
   header(s, "J15:M15");
-  addTable(s, `J15:M${expandedDiagnosticEnd}`, "DiagnosticosAmpliadosTable");
-  s.getRange(`K16:L${expandedDiagnosticEnd}`).format.numberFormat = "0.0000";
-  for (let i = 0; i < expandedDiagnostics.length; i += 1) {
-    if (/ARCH|Jarque/i.test(expandedDiagnostics[i].prueba)) s.getRange(`J${16 + i}:M${16 + i}`).format.fill = COLORS.red;
+  addTable(s, `J15:M${integratedDiagnosticEnd}`, "DiagnosticosMarcoMacroIntegralResumenTable");
+  s.getRange(`K16:L${integratedDiagnosticEnd}`).format.numberFormat = "0.0000";
+  for (let i = 0; i < integratedDiagnostics.length; i += 1) {
+    if (/ARCH|Jarque/i.test(integratedDiagnostics[i].prueba)) s.getRange(`J${16 + i}:M${16 + i}`).format.fill = COLORS.red;
   }
-  subtitle(s, `J${expandedDiagnosticEnd + 2}:N${expandedDiagnosticEnd + 4}`, "HAC protege la inferencia sobre la ecuación de media frente a heterocedasticidad y autocorrelación moderadas; no modela la dinámica de volatilidad detectada por ARCH-LM.", COLORS.amber);
+  subtitle(s, `J${integratedDiagnosticEnd + 2}:N${integratedDiagnosticEnd + 4}`, "HAC protege la inferencia sobre la ecuación de media frente a heterocedasticidad y autocorrelación moderadas; no modela la dinámica de volatilidad detectada por ARCH-LM.", COLORS.amber);
 
   s.getRange("A:B").format.columnWidth = 24;
   s.getRange("C:H").format.columnWidth = 14;
@@ -1553,23 +1569,25 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
 // Variables incluidas y propuestas
 {
   const s = sheets.Variables;
-  title(s, "A1:I1", "Mapa de variables: núcleo y extensiones");
-  subtitle(s, "A2:I3", "El modelo principal conserva el núcleo parsimonioso; el ampliado integra seis canales adicionales. La comparación y los pesos Shapley permiten evaluar cuánto añaden sin confundir asociación con causalidad.");
+  title(s, "A1:I1", "Mapa de variables: agrupaciones descriptivas y candidatas");
+  subtitle(s, "A2:I3", "Las agrupaciones separan controles externos y financieros, condiciones internas y el marco macroeconómico integral. El bloque interno activa únicamente ISE total DANE e IPC Colombia por cobertura completa; GEIH, IPI e IPP quedan auditables como candidatas sin imputación.");
   const rows = [
-    ["Objetivo", "TRM promedio mensual", "Modelo principal", "COP por USD", "Δln", "+ = depreciación", "Variable dependiente", "Precio del dólar en Colombia", "Promedios mensuales ocultan movimientos diarios"],
-    ["Externo", "Términos de intercambio", "Modelo principal", "BanRep 15360", "Δln contemporáneo", "−", "Poder de compra externo", "Precios relativos de exportaciones e importaciones", "Su publicación tiene rezago; el uso contemporáneo es explicativo ex post"],
-    ["Divisas", "Remesas recibidas", "Modelo principal", "Acumulado 12m en USD", "Δln, rezago 1", "− esperado", "Oferta de divisas", "Flujo estable de dólares", "Puede responder a la propia depreciación"],
-    ["Monetario", "Diferencial tasas CO−EE. UU.", "Modelo principal", "Tasa política − Fed funds", "Δ pp, rezago 1", "−", "Retorno relativo", "Carry e ingreso de capital", "Tasas nominales; endógenas a inflación y TRM"],
-    ["Fiscal", "Déficit GNC", "Modelo principal", "Acumulado 12m / PIB", "Δ pp, rezago 1", "+", "Riesgo fiscal", "Financiación y prima de riesgo", "Dato observado no es un shock fiscal exógeno"],
-    ["Global", "Índice amplio del dólar", "Modelo principal", "Fed DTWEXBGS", "Δln contemporáneo", "+", "Fortaleza global USD", "Factor global común", "No es el DXY comercial de ICE"],
-    ["Global", "VIX", "Modelo principal", "Promedio mensual", "Δln contemporáneo", "+", "Aversión al riesgo", "Risk-off y salida de emergentes", "Correlacionado con dólar global"],
-    ["Riesgo", "EMBIG Colombia", "Modelo ampliado", "BCRPData PD04715XD", "Δ pp, contemporáneo", "+", "Riesgo soberano externo", "Prima de bonos soberanos frente a Treasuries", "Canasta con duración y composición variables; no es CDS a 5 años"],
-    ["Reservas", "Reservas internacionales netas sin FLAR", "Modelo ampliado", "BanRep 15053", "Δln, rezago 1", "−", "Colchón externo", "Capacidad de intervención y liquidez", "La acumulación de reservas puede responder a la TRM"],
-    ["Comercio", "Balanza comercial cambiaria", "Modelo ampliado", "BanRep 16702", "Δ asinh, rezago 1", "−", "Oferta neta de divisas", "Exportaciones menos importaciones canalizadas", "Es simultánea con la depreciación"],
-    ["Precios", "Diferencial BEI 5 años CO−EE. UU.", "Modelo ampliado", "BanRep 15273−15276 menos Fed BKEVEN05", "Primera diferencia en pp, rezago 1", "+", "Cambio en la compensación inflacionaria relativa", "La diferencia es robustamente estacionaria y mejora BIC", "Incluye primas de riesgo de inflación y liquidez; el nivel es sensible a tendencia y quiebre"],
-    ["Mercado", "Monedas regionales", "Modelo ampliado", "BRL, CLP, MXN y PEN por USD", "Promedio igual de z(Δln), base 2006–2019", "+", "Contagio regional", "PEN mejora la explicación histórica frente a tres monedas", "Comparte información con VIX y dólar global"],
+    ["Objetivo", "TRM promedio mensual", "Controles externos y financieros", "COP por USD", "Δln", "+ = depreciación", "Variable dependiente", "Precio del dólar en Colombia", "Promedios mensuales ocultan movimientos diarios"],
+    ["Externo", "Términos de intercambio", "Controles externos y financieros", "BanRep 15360", "Δln contemporáneo", "−", "Poder de compra externo", "Precios relativos de exportaciones e importaciones", "Su publicación tiene rezago; el uso contemporáneo es explicativo ex post"],
+    ["Divisas", "Remesas recibidas", "Controles externos y financieros", "Acumulado 12m en USD", "Δln, rezago 1", "− esperado", "Oferta de divisas", "Flujo estable de dólares", "Puede responder a la propia depreciación"],
+    ["Monetario", "Diferencial tasas CO−EE. UU.", "Controles externos y financieros", "Tasa política − Fed funds", "Δ pp, rezago 1", "−", "Retorno relativo", "Carry e ingreso de capital", "Tasas nominales; endógenas a inflación y TRM"],
+    ["Fiscal", "Déficit GNC", "Controles externos y financieros", "Acumulado 12m / PIB", "Δ pp, rezago 1", "+", "Riesgo fiscal", "Financiación y prima de riesgo", "Dato observado no es un shock fiscal exógeno"],
+    ["Global", "Índice amplio del dólar", "Controles externos y financieros", "Fed DTWEXBGS", "Δln contemporáneo", "+", "Fortaleza global USD", "Factor global común", "No es el DXY comercial de ICE"],
+    ["Global", "VIX", "Controles externos y financieros", "Promedio mensual", "Δln contemporáneo", "+", "Aversión al riesgo", "Risk-off y salida de emergentes", "Correlacionado con dólar global"],
+    ["Actividad interna", "ISE total DANE", "Marco macroeconómico integral", "DANE; índice 2015=100; total nacional", "Δln contemporáneo; rezago 2 en pronóstico", "− esperado", "Actividad doméstica", "Resume el ciclo mensual colombiano sin activar sectores simultáneamente", "Asociación histórica; no implica causalidad ni permite imputar meses"],
+    ["Precios internos", "IPC Colombia", "Marco macroeconómico integral", "Banco de la República, serie 15000; índice mensual", "Δln contemporáneo; rezago 2 en pronóstico", "+ esperado", "Inflación y precios relativos", "Añade la dinámica de precios internos al bloque doméstico", "Puede responder a la TRM y a shocks comunes; no es un shock exógeno"],
+    ["Riesgo", "EMBIG Colombia", "Marco macroeconómico integral", "BCRPData PD04715XD", "Δ pp, contemporáneo", "+", "Riesgo soberano externo", "Prima de bonos soberanos frente a Treasuries", "Canasta con duración y composición variables; no es CDS a 5 años"],
+    ["Reservas", "Reservas internacionales netas sin FLAR", "Marco macroeconómico integral", "BanRep 15053", "Δln, rezago 1", "−", "Colchón externo", "Capacidad de intervención y liquidez", "La acumulación de reservas puede responder a la TRM"],
+    ["Comercio", "Balanza comercial cambiaria", "Marco macroeconómico integral", "BanRep 16702", "Δ asinh, rezago 1", "−", "Oferta neta de divisas", "Exportaciones menos importaciones canalizadas", "Es simultánea con la depreciación"],
+    ["Precios", "Diferencial BEI 5 años CO−EE. UU.", "Marco macroeconómico integral", "BanRep 15273−15276 menos Fed BKEVEN05", "Primera diferencia en pp, rezago 1", "+", "Cambio en la compensación inflacionaria relativa", "La diferencia es robustamente estacionaria y mejora BIC", "Incluye primas de riesgo de inflación y liquidez; el nivel es sensible a tendencia y quiebre"],
+    ["Mercado", "Monedas regionales", "Marco macroeconómico integral", "BRL, CLP, MXN y PEN por USD", "Promedio igual de z(Δln), base 2006–2019", "+", "Contagio regional", "PEN mejora la explicación histórica frente a tres monedas", "Comparte información con VIX y dólar global"],
     ["Pronóstico", "Modelo de un mes", "Pronóstico publicado", "Variables disponibles al inicio de t", "Rezagos de 1 a 3 meses", "—", "Predicción ex ante", "Composición regional de tres monedas seleccionada por BIC", "Backtest pseudo-tiempo-real: faltan vintages históricos"],
-    ["Flujos", "Flujo neto total de capital", "Modelo ampliado", "BanRep 16706", "Δ asinh, rezago 1", "−", "Demanda de activos COP", "Resume entradas y salidas de capital", "Altamente endógeno y volátil"],
+    ["Flujos", "Flujo neto total de capital", "Marco macroeconómico integral", "BanRep 16706", "Δ asinh, rezago 1", "−", "Demanda de activos COP", "Resume entradas y salidas de capital", "Altamente endógeno y volátil"],
     ["Política", "Intervención cambiaria", "Extensión futura", "Compras/ventas BanRep", "USD, rezago", "+ compras", "Demanda oficial de USD", "Importante en episodios puntuales", "Respuesta de política, no shock puro"],
   ];
   s.getRange("A5:I5").values = [["Bloque", "Variable", "Estatus", "Proxy/medición", "Transformación", "Signo sobre COP/USD", "Canal", "Justificación", "Cautela"]];
@@ -1581,8 +1599,8 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
   for (let i = 0; i < rows.length; i += 1) {
     const row = 6 + i;
     const status = rows[i][2];
-    if (status === "Modelo principal") s.getRange(`C${row}`).format.fill = COLORS.green;
-    else if (status === "Modelo ampliado") s.getRange(`C${row}`).format.fill = COLORS.paleBlue;
+    if (status === "Controles externos y financieros") s.getRange(`C${row}`).format.fill = COLORS.green;
+    else if (status === "Marco macroeconómico integral") s.getRange(`C${row}`).format.fill = COLORS.paleBlue;
     else if (status.includes("alta")) s.getRange(`C${row}`).format.fill = COLORS.paleBlue;
     else s.getRange(`C${row}`).format.fill = COLORS.amber;
   }
@@ -1602,25 +1620,27 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
   title(s, "A1:G1", "Fuentes y trazabilidad");
   subtitle(s, "A2:G3", "Enlaces oficiales o distribuidores públicos de las series activas. EMBIG se redistribuye conforme a las condiciones de BCRPData, con atribución a BCRPData y a sus fuentes originales Reuters/J.P. Morgan; no se afirma una licencia abierta del índice subyacente.");
   const rows = [
-    ["Banco de la República", "TRM diaria, serie 1", "Diaria → mensual", "1991–2026", "Modelo principal", "Promedio mensual", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=1"],
-    ["Banco de la República", "Tasa de política, serie 59", "Diaria → mensual", "1998–2026", "Modelo principal", "Promedio mensual", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=59"],
-    ["Banco de la República", "Remesas, serie 15363", "Mensual", "2000–2026", "Modelo principal", "Acumulado móvil 12 meses", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15363"],
-    ["Ministerio de Hacienda", "Balance fiscal GNC", "Mensual", "2004–2026", "Modelo principal", "Balance de caja; déficit positivo tras cambiar signo", "https://www.minhacienda.gov.co/documents/d/portal/balance-fiscal-gnc-mensual-y-trimestral?download=true"],
-    ["Federal Reserve / FRED", "Federal funds FEDFUNDS", "Mensual", "1954–2026", "Modelo principal", "Promedio mensual", "https://fred.stlouisfed.org/series/FEDFUNDS"],
-    ["Federal Reserve / FRED", "Índice amplio USD DTWEXBGS", "Diaria → mensual", "2006–2026", "Modelo principal", "Índice nominal amplio", "https://fred.stlouisfed.org/series/DTWEXBGS"],
-    ["Cboe / FRED", "VIXCLS", "Diaria → mensual", "1990–2026", "Modelo principal", "Promedio mensual", "https://fred.stlouisfed.org/series/VIXCLS"],
-    ["Banco de la República", "Términos de intercambio 15360", "Mensual", "1995–2026", "Modelo principal", "Índice encadenado; Δln contemporáneo en explicación ex post", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15360"],
-    ["Banco de la República", "Reservas netas sin FLAR 15053", "Mensual", "1960–2026", "Modelo ampliado", "Log y rezago", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15053"],
-    ["BCRPData", "EMBIG Colombia PD04715XD", "Diaria → mensual", "2006–2026", "Modelo ampliado", "Promedio mensual; pb/100; fuentes originales Reuters/J.P. Morgan", "https://estadisticas.bcrp.gob.pe/estadisticas/series/diarias/tasas-de-interes-embig-variacion-en-pbs"],
-    ["Banco de la República", "TES pesos cero cupón 5 años 15273", "Diaria → mensual", "2003–2026", "Modelo ampliado", "Promedio mensual separado; comparación adicional sobre fechas comunes", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15273"],
-    ["Banco de la República", "TES UVR cero cupón 5 años 15276", "Diaria → mensual", "2003–2026", "Modelo ampliado", "Promedio mensual separado; comparación adicional sobre fechas comunes", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15276"],
-    ["Federal Reserve Board", "GSW BKEVEN05", "Diaria → mensual", "2003–2026", "Modelo ampliado", "Promedio separado; robustez con fechas comunes; producto de investigación revisable", "https://www.federalreserve.gov/data/yield-curve-tables/feds200805_1.html"],
-    ["Banco de la República", "Balanza comercial cambiaria 16702", "Mensual", "2001–2026", "Modelo ampliado", "Δ asinh y rezago", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=16702"],
-    ["Banco de la República", "Flujo neto total de capital 16706", "Mensual", "2001–2026", "Modelo ampliado", "Δ asinh y rezago", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=16706"],
-    ["OECD / FRED", "BRL por USD CCUSMA02BRM618N", "Mensual", "1994–2026", "Modelo ampliado", "Factor regional a partir de Δln", "https://fred.stlouisfed.org/series/CCUSMA02BRM618N"],
-    ["OECD / FRED", "CLP por USD CCUSMA02CLM618N", "Mensual", "1960–2026", "Modelo ampliado", "Factor regional a partir de Δln", "https://fred.stlouisfed.org/series/CCUSMA02CLM618N"],
-    ["OECD / FRED", "MXN por USD CCUSMA02MXM618N", "Mensual", "1957–2026", "Modelo ampliado", "Factor regional a partir de Δln", "https://fred.stlouisfed.org/series/CCUSMA02MXM618N"],
-    ["BCRPData", "PEN por USD PN01207PM", "Mensual", "1995–2026", "Modelo ampliado y comparación regional", "Interbancario promedio; factor regional a partir de Δln", "https://estadisticas.bcrp.gob.pe/estadisticas/series/mensuales/resultados/PN01207PM/html"],
+    ["Banco de la República", "TRM diaria, serie 1", "Diaria → mensual", "1991–2026", "Controles externos y financieros", "Promedio mensual", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=1"],
+    ["Banco de la República", "Tasa de política, serie 59", "Diaria → mensual", "1998–2026", "Controles externos y financieros", "Promedio mensual", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=59"],
+    ["Banco de la República", "Remesas, serie 15363", "Mensual", "2000–2026", "Controles externos y financieros", "Acumulado móvil 12 meses", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15363"],
+    ["Ministerio de Hacienda", "Balance fiscal GNC", "Mensual", "2004–2026", "Controles externos y financieros", "Balance de caja; déficit positivo tras cambiar signo", "https://www.minhacienda.gov.co/documents/d/portal/balance-fiscal-gnc-mensual-y-trimestral?download=true"],
+    ["Federal Reserve / FRED", "Federal funds FEDFUNDS", "Mensual", "1954–2026", "Controles externos y financieros", "Promedio mensual", "https://fred.stlouisfed.org/series/FEDFUNDS"],
+    ["Federal Reserve / FRED", "Índice amplio USD DTWEXBGS", "Diaria → mensual", "2006–2026", "Controles externos y financieros", "Índice nominal amplio", "https://fred.stlouisfed.org/series/DTWEXBGS"],
+    ["Cboe / FRED", "VIXCLS", "Diaria → mensual", "1990–2026", "Controles externos y financieros", "Promedio mensual", "https://fred.stlouisfed.org/series/VIXCLS"],
+    ["Banco de la República", "Términos de intercambio 15360", "Mensual", "1995–2026", "Controles externos y financieros", "Índice encadenado; Δln contemporáneo en explicación ex post", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15360"],
+    ["DANE", "ISE total; Cuadro 2; 12 agrupaciones", "Mensual", "2005–2026", "Marco macroeconómico integral", "Índice ajustado por efecto estacional y calendario; ln y primera diferencia; rezago 2 en pronóstico; sin imputación", "https://www.dane.gov.co/index.php/en/statistics-by-topic/national-accounts/economic-monitor-index-ise"],
+    ["Banco de la República", "IPC Colombia, serie 15000", "Mensual", "1954–2026", "Marco macroeconómico integral", "Índice oficial; ln y primera diferencia; rezago 2 en pronóstico; sin imputación", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15000"],
+    ["Banco de la República", "Reservas netas sin FLAR 15053", "Mensual", "1960–2026", "Marco macroeconómico integral", "Log y rezago", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15053"],
+    ["BCRPData", "EMBIG Colombia PD04715XD", "Diaria → mensual", "2006–2026", "Marco macroeconómico integral", "Promedio mensual; pb/100; fuentes originales Reuters/J.P. Morgan", "https://estadisticas.bcrp.gob.pe/estadisticas/series/diarias/tasas-de-interes-embig-variacion-en-pbs"],
+    ["Banco de la República", "TES pesos cero cupón 5 años 15273", "Diaria → mensual", "2003–2026", "Marco macroeconómico integral", "Promedio mensual separado; comparación adicional sobre fechas comunes", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15273"],
+    ["Banco de la República", "TES UVR cero cupón 5 años 15276", "Diaria → mensual", "2003–2026", "Marco macroeconómico integral", "Promedio mensual separado; comparación adicional sobre fechas comunes", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15276"],
+    ["Federal Reserve Board", "GSW BKEVEN05", "Diaria → mensual", "2003–2026", "Marco macroeconómico integral", "Promedio separado; robustez con fechas comunes; producto de investigación revisable", "https://www.federalreserve.gov/data/yield-curve-tables/feds200805_1.html"],
+    ["Banco de la República", "Balanza comercial cambiaria 16702", "Mensual", "2001–2026", "Marco macroeconómico integral", "Δ asinh y rezago", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=16702"],
+    ["Banco de la República", "Flujo neto total de capital 16706", "Mensual", "2001–2026", "Marco macroeconómico integral", "Δ asinh y rezago", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=16706"],
+    ["OECD / FRED", "BRL por USD CCUSMA02BRM618N", "Mensual", "1994–2026", "Marco macroeconómico integral", "Factor regional a partir de Δln", "https://fred.stlouisfed.org/series/CCUSMA02BRM618N"],
+    ["OECD / FRED", "CLP por USD CCUSMA02CLM618N", "Mensual", "1960–2026", "Marco macroeconómico integral", "Factor regional a partir de Δln", "https://fred.stlouisfed.org/series/CCUSMA02CLM618N"],
+    ["OECD / FRED", "MXN por USD CCUSMA02MXM618N", "Mensual", "1957–2026", "Marco macroeconómico integral", "Factor regional a partir de Δln", "https://fred.stlouisfed.org/series/CCUSMA02MXM618N"],
+    ["BCRPData", "PEN por USD PN01207PM", "Mensual", "1995–2026", "Marco macroeconómico integral y comparación regional", "Interbancario promedio; factor regional a partir de Δln", "https://estadisticas.bcrp.gob.pe/estadisticas/series/mensuales/resultados/PN01207PM/html"],
     ["Cboe", "VIX histórico", "Diaria", "1990–2026", "Verificación", "Fuente primaria del VIX", "https://www.cboe.com/tradable_products/vix/vix_historical_data"],
     ["Banco de la República", "Portal de sector externo", "Varias", "Histórico", "Documentación", "Metodologías de TRM, remesas y sector externo", "https://www.banrep.gov.co/es/estadisticas-economicas/series-historicas/tasas-cambio-sector-externo"],
     ["BCRPData", "Condiciones de uso", "Documentación", "Vigente", "Licencia/atribución", "Permite reproducción con cita de la fuente; revisar derechos del índice subyacente", "https://estadisticas.bcrp.gob.pe/estadisticas/series/ayuda/condiciones-de-uso"],
@@ -1643,8 +1663,8 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
 const keyChecks = [];
 for (const spec of [
   { range: "Resumen!A1:N35", rows: 35, cols: 14 },
-  { range: "Modelo_principal!A5:N22", rows: 18, cols: 14 },
-  { range: "Modelo_ampliado!A5:N22", rows: 18, cols: 14 },
+  { range: "Controles_externos!A5:N22", rows: 18, cols: 14 },
+  { range: "Marco_macro_integral!A5:N22", rows: 18, cols: 14 },
   { range: "Pesos_explicativos!A1:H24", rows: 24, cols: 8 },
   { range: "Robustez!A1:P39", rows: 39, cols: 16 },
   { range: "BEI_robustez!A1:L54", rows: 54, cols: 12 },
@@ -1663,10 +1683,10 @@ const errors = await wb.inspect({
 
 const renderSpecs = [
   ["Resumen", "A1:N58"],
-  ["Datos_fuente", "A1:AC24"],
-  ["Transformaciones", "A1:AB24"],
-  ["Modelo_principal", "A1:W32"],
-  ["Modelo_ampliado", "A1:W36"],
+  ["Datos_fuente", "A1:AE24"],
+  ["Transformaciones", "A1:AF24"],
+  ["Controles_externos", "A1:W32"],
+  ["Marco_macro_integral", "A1:W36"],
   ["Pesos_explicativos", "A1:R30"],
   ["Robustez", "A1:P39"],
   ["BEI_robustez", "A1:L54"],
@@ -1695,7 +1715,7 @@ console.log(JSON.stringify({
   deliverable: DELIVERABLE_XLSX,
   rows_source: raw.length,
   rows_model: fit.length,
-  rows_model_expanded: expandedFit.length,
+  rows_model_integrated: integratedFit.length,
   explanatory_factors: explanatoryWeights.length,
   rows_validation: validationPredictions.length,
   rows_forecast_validation: forecastPredictions.length,

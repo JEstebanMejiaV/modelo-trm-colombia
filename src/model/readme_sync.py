@@ -5,7 +5,11 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .config import ROOT
+from .config import (
+    ROOT,
+    REFERENCE_MODEL_LABEL,
+    INTEGRATED_MODEL_LABEL,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -61,12 +65,16 @@ _TERM_LABELS: dict[str, str] = {
     "D.anfci_chicago.L1": "Δ índice ajustado de condiciones financieras Chicago, rezago 1",
     "D.desempleo_us_pct.L2": "Δ desempleo EE. UU. armonizado, rezago 2",
     "D.ln_fletes_transporte_us.L2": "Δln fletes de transporte, rezago 2",
+    "D.ln_ise_total_dane.L0": "Δln ISE total DANE, mes actual",
+    "D.ln_ipc_colombia.L0": "Δln IPC Colombia, mes actual",
+    "D.ln_ise_total_dane.L2": "Δln ISE total DANE, rezago 2",
+    "D.ln_ipc_colombia.L2": "Δln IPC Colombia, rezago 2",
     "dummy_pandemia_2020": "Pandemia marzo–mayo 2020",
 }
 
-# Lectura del coeficiente de la constante del modelo principal (sin lectura
-# económica distinta; se mantiene el texto de referencia).
-_PRINCIPAL_READINGS: dict[str, str] = {
+# Lectura del coeficiente de la especificación de controles externos (sin
+# lectura económica distinta; se mantiene el texto de referencia).
+_REFERENCE_READINGS: dict[str, str] = {
     "const": "No hay evidencia de una deriva mensual adicional.",
     "D.ln_terminos_intercambio.L0": (
         "Una mejora de 10% se asocia con una TRM cerca de {:.1f}% menor."
@@ -131,12 +139,12 @@ def _replace_auto_block(text: str, tag: str, new_content: str) -> str:
 
 def update_readme_fragments(
     coefficients_diff: pd.DataFrame,
-    coefficients_expanded: pd.DataFrame,
+    coefficients_integrated: pd.DataFrame,
     comparison: pd.DataFrame,
-    shapley_expanded: pd.DataFrame,
+    shapley_integrated: pd.DataFrame,
     shapley_bootstrap: pd.DataFrame,
     validation: pd.DataFrame,
-    validation_expanded: pd.DataFrame,
+    validation_integrated: pd.DataFrame,
     validation_forecast: pd.DataFrame,
     predictions_forecast: pd.DataFrame,
 ) -> None:
@@ -144,15 +152,15 @@ def update_readme_fragments(
     readme_path = ROOT / "README.md"
     text = readme_path.read_text(encoding="utf-8")
 
-    # ── 1. Coeficientes modelo principal ─────────────────────────────────────
+    # ── 1. Coeficientes de controles externos ────────────────────────────────
     base_row = validation.loc[validation["modelo"].ne("Caminata aleatoria")].iloc[0]
     mape_base = float(base_row["mape_pct"])
     acierto_base = float(base_row["acierto_direccion_pct"])
     r2_vs_walk_base = float(
-        comparison.loc[comparison["modelo"].eq("Base"), "r2_validacion_condicional_vs_caminata"].iloc[0]
+        comparison.loc[comparison["modelo"].eq(REFERENCE_MODEL_LABEL), "r2_validacion_condicional_vs_caminata"].iloc[0]
     )
 
-    rows_principal = [
+    rows_reference = [
         "| Término | Coeficiente | p-valor HAC | Lectura aproximada |",
         "|---|---:|---:|---|",
     ]
@@ -161,7 +169,7 @@ def update_readme_fragments(
         coef = float(row["coeficiente"])
         pval = float(row["p_valor"])
         label = _TERM_LABELS.get(term, f"`{term}`")
-        reading_tpl = _PRINCIPAL_READINGS.get(term, "")
+        reading_tpl = _REFERENCE_READINGS.get(term, "")
         if reading_tpl and "{" in reading_tpl:
             # Magnitud del efecto: para log-log usamos abs(coef)*10; para otros abs(coef)*100
             if "10%" in reading_tpl:
@@ -177,38 +185,38 @@ def update_readme_fragments(
             reading = reading_tpl.format(mag)
         else:
             reading = reading_tpl
-        rows_principal.append(
+        rows_reference.append(
             f"| {label} | {_coef_str(coef)} | {_pval_str(pval)} | {reading} |"
         )
-    text = _replace_auto_block(text, "coeficientes_principal", "\n".join(rows_principal))
+    text = _replace_auto_block(text, "coeficientes_controles_externos", "\n".join(rows_reference))
 
-    # ── 2. Métricas modelo principal ─────────────────────────────────────────
+    # ── 2. Métricas de controles externos ────────────────────────────────────
     lines_metricas_base = [
         f"- MAPE condicional: **{_pct_str(mape_base)}**.",
         f"- Acierto de dirección: **{_pct_str(acierto_base)}**.",
         f"- R² condicional frente a caminata aleatoria: **{_pct_str(r2_vs_walk_base * 100)}**.",
     ]
-    text = _replace_auto_block(text, "metricas_principal", "\n".join(lines_metricas_base))
+    text = _replace_auto_block(text, "metricas_controles_externos", "\n".join(lines_metricas_base))
 
-    # ── 3. Coeficientes modelo ampliado ──────────────────────────────────────
-    rows_ampliado = [
+    # ── 3. Coeficientes del marco macroeconómico integral ────────────────────
+    rows_integrated = [
         "| Término | Coeficiente | p-valor |",
         "|---|---:|---:|",
     ]
-    for _, row in coefficients_expanded.iterrows():
+    for _, row in coefficients_integrated.iterrows():
         term = str(row["termino"])
         coef = float(row["coeficiente"])
         pval = float(row["p_valor"])
         label = _TERM_LABELS.get(term, f"`{term}`")
-        rows_ampliado.append(f"| {label} | {_coef_str(coef)} | {_pval_str(pval)} |")
-    text = _replace_auto_block(text, "coeficientes_ampliado", "\n".join(rows_ampliado))
+        rows_integrated.append(f"| {label} | {_coef_str(coef)} | {_pval_str(pval)} |")
+    text = _replace_auto_block(text, "coeficientes_marco_macro_integral", "\n".join(rows_integrated))
 
-    # ── 4. Comparación de métricas principal vs ampliado ─────────────────────
-    base = comparison.loc[comparison["modelo"].eq("Base")].iloc[0]
-    amp = comparison.loc[comparison["modelo"].eq("Ampliado historico")].iloc[0]
+    # ── 4. Comparación de especificaciones descriptivas ─────────────────────
+    base = comparison.loc[comparison["modelo"].eq(REFERENCE_MODEL_LABEL)].iloc[0]
+    amp = comparison.loc[comparison["modelo"].eq(INTEGRATED_MODEL_LABEL)].iloc[0]
     r2_vs_walk_amp = float(amp["r2_validacion_condicional_vs_caminata"])
     rows_comp = [
-        "| Métrica | Modelo principal | Modelo ampliado |",
+        "| Métrica | Controles externos y financieros | Marco macroeconómico integral |",
         "|---|---:|---:|",
         f"| Observaciones efectivas | {int(base['observaciones'])} | {int(amp['observaciones'])} |",
         f"| R² | {_pct_str(base['r_cuadrado'] * 100)} | {_pct_str(amp['r_cuadrado'] * 100)} |",
@@ -217,14 +225,14 @@ def update_readme_fragments(
         f"| Acierto de dirección | {_pct_str(base['acierto_direccion_pct'])} | {_pct_str(amp['acierto_direccion_pct'])} |",
         f"| R² condicional frente a caminata aleatoria | {_pct_str(base['r2_validacion_condicional_vs_caminata'] * 100)} | {_pct_str(r2_vs_walk_amp * 100)} |",
     ]
-    text = _replace_auto_block(text, "comparacion_modelos", "\n".join(rows_comp))
+    text = _replace_auto_block(text, "comparacion_especificaciones", "\n".join(rows_comp))
 
     # ── 5. Pesos Shapley ─────────────────────────────────────────────────────
-    shapley_sorted = shapley_expanded.sort_values(
+    shapley_sorted = shapley_integrated.sort_values(
         "peso_entre_factores_pct", ascending=False
     )
     rows_shapley = [
-        f"| Factor | Peso entre los {len(shapley_expanded)} factores | Aporte al R² |",
+        f"| Factor | Peso entre los {len(shapley_integrated)} factores | Aporte al R² |",
         "|---|---:|---:|",
     ]
     for _, row in shapley_sorted.iterrows():
@@ -236,7 +244,7 @@ def update_readme_fragments(
         )
     text = _replace_auto_block(text, "pesos_shapley", "\n".join(rows_shapley))
 
-    # ── 6. Intervalos bootstrap de los 3 factores principales ────────────────
+    # ── 6. Intervalos bootstrap de los 3 factores top ────────────────
     top3 = shapley_bootstrap.nlargest(3, "peso_puntual_pct").reset_index(drop=True)
     partes = []
     for _, row in top3.iterrows():

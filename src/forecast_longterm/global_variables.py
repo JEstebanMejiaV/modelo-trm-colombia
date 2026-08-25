@@ -194,7 +194,7 @@ def evaluate_incremental(
     if len(dataset) < min_train + 30:
         return {}
 
-    # Modelo base: solo CF
+    # Referencia de señales: solo CF
     fc_base, fc_combined, act_list = [], [], []
     for i in range(min_train, len(dataset)):
         train = dataset.iloc[:i]

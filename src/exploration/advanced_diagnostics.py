@@ -35,7 +35,7 @@ from estimate_model import (
     tidy_robust_ols,
     SAMPLE_START,
     SAMPLE_END,
-    EXPANDED_FACTOR_SPECS_4,
+    INTEGRATED_FACTOR_SPECS_4,
     FORECAST_FACTOR_SPECS_3,
     SelectedDifferenceModel,
 )
@@ -52,17 +52,17 @@ def rolling_window_estimation(
     window: int = 120,
 ) -> pd.DataFrame:
     """
-    Estima el modelo ampliado con ventana fija de 120 meses (10 años).
+    Estima el marco macroeconómico integral con ventana fija de 120 meses (10 años).
     Para cada posición final t, estima con [t-119, t] y guarda coeficientes.
     Detecta inestabilidad midiendo dispersión temporal de cada coeficiente.
     """
     common_index = make_timed_difference_design(
-        components, p=3, factor_specs=EXPANDED_FACTOR_SPECS_4
+        components, p=3, factor_specs=INTEGRATED_FACTOR_SPECS_4
     )[0].index
 
     # Diseño completo para obtener y, x
     selected_full, _ = select_timed_difference_model(
-        model_data, EXPANDED_FACTOR_SPECS_4, common_index=common_index
+        model_data, INTEGRATED_FACTOR_SPECS_4, common_index=common_index
     )
     y_full = selected_full.y
     x_full = selected_full.x
@@ -255,10 +255,10 @@ def threshold_regression(
     Compara R² y coeficientes entre regímenes.
     """
     common_index = make_timed_difference_design(
-        components, p=3, factor_specs=EXPANDED_FACTOR_SPECS_4
+        components, p=3, factor_specs=INTEGRATED_FACTOR_SPECS_4
     )[0].index
     selected, _ = select_timed_difference_model(
-        model_data, EXPANDED_FACTOR_SPECS_4, common_index=common_index
+        model_data, INTEGRATED_FACTOR_SPECS_4, common_index=common_index
     )
     y = selected.y
     x = selected.x

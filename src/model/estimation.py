@@ -16,9 +16,9 @@ from statsmodels.tsa.ardl import ARDL, UECM
 from .config import (
     SelectedModel,
     SelectedDifferenceModel,
-    BASE_FACTOR_SPECS,
-    EXPANDED_FACTOR_SPECS_3,
-    EXPANDED_FACTOR_SPECS_4,
+    REFERENCE_FACTOR_SPECS,
+    INTEGRATED_FACTOR_SPECS_3,
+    INTEGRATED_FACTOR_SPECS_4,
     FORECAST_FACTOR_SPECS_3,
     FORECAST_FACTOR_SPECS_4,
     ECM_LEVEL_VARIABLES,
@@ -158,9 +158,9 @@ def estimate_explanation(
     model_data: pd.DataFrame,
     common_index: pd.Index | None = None,
 ) -> tuple[SelectedDifferenceModel, pd.DataFrame]:
-    """Estima el modelo ampliado de explicación histórica (4 monedas)."""
+    """Estima el marco macroeconómico integral de explicación histórica (4 monedas)."""
     selected, grid = select_timed_difference_model(
-        model_data, EXPANDED_FACTOR_SPECS_4, common_index=common_index
+        model_data, INTEGRATED_FACTOR_SPECS_4, common_index=common_index
     )
     return selected, grid
 

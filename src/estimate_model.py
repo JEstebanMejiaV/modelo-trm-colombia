@@ -1,9 +1,9 @@
 """
-Orquestador principal del modelo de TRM Colombia.
+Orquestador de las especificaciones de la TRM Colombia.
 
 Importa toda la logica de estimacion del paquete src/model/ y ejecuta:
 1. Carga de datos y construccion de la base mensual
-2. Estimacion de la explicacion historica (principal + ampliado)
+2. Estimación de las especificaciones históricas de controles externos y marco macroeconómico integral
 3. Estimacion del pronostico con rezagos de publicacion
 4. Comparacion regional, Shapley, bootstrap y estabilidad
 5. Contraste ARDL-ECM exploratorio
@@ -30,21 +30,26 @@ from model.config import (
     DATA,
     SAMPLE_START,
     SAMPLE_END,
+    REFERENCE_MODEL_ID,
+    REFERENCE_MODEL_LABEL,
+    INTEGRATED_MODEL_ID,
+    INTEGRATED_MODEL_LABEL,
     SHAPLEY_BOOTSTRAP_REPLICATIONS,
     SHAPLEY_BOOTSTRAP_BLOCK_MONTHS,
     SHAPLEY_BOOTSTRAP_PERMUTATIONS,
     SHAPLEY_BOOTSTRAP_SEED,
     ECM_LEVEL_VARIABLES,
-    BASE_FACTOR_SPECS,
-    EXPANDED_FACTOR_SPECS,
-    EXPANDED_FACTOR_SPECS_3,
-    EXPANDED_FACTOR_SPECS_4,
+    REFERENCE_FACTOR_SPECS,
+    INTEGRATED_FACTOR_SPECS,
+    INTEGRATED_FACTOR_SPECS_3,
+    INTEGRATED_FACTOR_SPECS_4,
     FORECAST_FACTOR_SPECS_3,
     FORECAST_FACTOR_SPECS_4,
     FORECAST_AVAILABILITY,
     DIFFERENCED_COMPONENTS,
     LEVEL_COMPONENTS,
     GLOBAL_RAW_COMPONENTS,
+    INTERNAL_RAW_COMPONENTS,
     SelectedModel,
     SelectedDifferenceModel,
     sha256_file,
@@ -87,22 +92,22 @@ def estimate_explanation(
     common_index: pd.Index,
 ) -> dict:
     """
-    Estima los modelos de explicación histórica (principal y ampliado).
+    Estima las especificaciones de explicación histórica de controles externos y del marco macroeconómico integral.
 
     Incluye:
-    - Modelo principal (BASE_FACTOR_SPECS): selección de rezagos, coeficientes,
+    - Especificación de controles externos (REFERENCE_FACTOR_SPECS): selección de rezagos, coeficientes,
       diagnósticos, ajuste, contribuciones y validación condicional.
-    - Modelo ampliado 3 monedas (EXPANDED_FACTOR_SPECS_3): coeficientes y validación.
-    - Modelo ampliado 4 monedas (EXPANDED_FACTOR_SPECS_4): la especificación activa
+    - Marco macroeconómico integral con 3 monedas (INTEGRATED_FACTOR_SPECS_3): coeficientes y validación.
+    - Marco macroeconómico integral con 4 monedas (INTEGRATED_FACTOR_SPECS_4): especificación activa
       con Shapley, bootstrap e intervalos de estabilidad.
     - Contraste ARDL–ECM exploratorio.
 
     Retorna un diccionario con todos los objetos necesarios para la escritura
     de resultados y la comparación con el pronóstico.
     """
-    # ── Modelo principal ─────────────────────────────────────────────────────
+    # ── Especificación de controles externos ──────────────────────────────────
     selected_diff, lag_grid_diff = select_timed_difference_model(
-        model_data, BASE_FACTOR_SPECS, common_index=common_index
+        model_data, REFERENCE_FACTOR_SPECS, common_index=common_index
     )
     _, coefficients_diff = tidy_robust_ols(selected_diff.result, maxlags=6)
     diagnostics_diff = diagnostics(selected_diff.result)
@@ -113,38 +118,38 @@ def estimate_explanation(
         model_data, selected_diff
     )
 
-    # ── Modelo ampliado — 3 monedas (comparación) ────────────────────────────
-    selected_expanded_3, _ = select_timed_difference_model(
-        model_data, EXPANDED_FACTOR_SPECS_3, common_index=common_index
+    # ── Marco macroeconómico integral — 3 monedas (comparación) ──────────────
+    selected_integrated_3, _ = select_timed_difference_model(
+        model_data, INTEGRATED_FACTOR_SPECS_3, common_index=common_index
     )
-    _, coefficients_expanded_3 = tidy_robust_ols(selected_expanded_3.result, maxlags=6)
-    predictions_expanded_3, validation_expanded_3 = difference_validation(
-        model_data, selected_expanded_3, holdout=min(48, len(selected_expanded_3.y) // 4)
+    _, coefficients_integrated_3 = tidy_robust_ols(selected_integrated_3.result, maxlags=6)
+    predictions_integrated_3, validation_integrated_3 = difference_validation(
+        model_data, selected_integrated_3, holdout=min(48, len(selected_integrated_3.y) // 4)
     )
 
-    # ── Modelo ampliado — 4 monedas (activo) ─────────────────────────────────
-    selected_expanded, lag_grid_expanded = select_timed_difference_model(
-        model_data, EXPANDED_FACTOR_SPECS_4, common_index=common_index
+    # ── Marco macroeconómico integral — 4 monedas (activo) ───────────────────
+    selected_integrated, lag_grid_integrated = select_timed_difference_model(
+        model_data, INTEGRATED_FACTOR_SPECS_4, common_index=common_index
     )
-    _, coefficients_expanded = tidy_robust_ols(selected_expanded.result, maxlags=6)
-    diagnostics_expanded = diagnostics(selected_expanded.result)
-    predictions_expanded, validation_expanded = difference_validation(
-        model_data, selected_expanded, holdout=min(48, len(selected_expanded.y) // 4)
+    _, coefficients_integrated = tidy_robust_ols(selected_integrated.result, maxlags=6)
+    diagnostics_integrated = diagnostics(selected_integrated.result)
+    predictions_integrated, validation_integrated = difference_validation(
+        model_data, selected_integrated, holdout=min(48, len(selected_integrated.y) // 4)
     )
-    fitted_expanded, contributions_expanded = difference_fit_and_contributions(
-        model_data, selected_expanded
+    fitted_integrated, contributions_integrated = difference_fit_and_contributions(
+        model_data, selected_integrated
     )
-    shapley_expanded = exact_shapley_r2(
-        selected_expanded, EXPANDED_FACTOR_SPECS_4, coefficients_expanded
+    shapley_integrated = exact_shapley_r2(
+        selected_integrated, INTEGRATED_FACTOR_SPECS_4, coefficients_integrated
     )
     shapley_bootstrap = block_bootstrap_shapley(
-        selected_expanded, EXPANDED_FACTOR_SPECS_4, shapley_expanded
+        selected_integrated, INTEGRATED_FACTOR_SPECS_4, shapley_integrated
     )
     stability_detail, stability_summary = subsample_stability(
-        selected_expanded,
-        EXPANDED_FACTOR_SPECS_4,
-        shapley_expanded,
-        coefficients_expanded,
+        selected_integrated,
+        INTEGRATED_FACTOR_SPECS_4,
+        shapley_integrated,
+        coefficients_integrated,
     )
 
     # ── Contraste ARDL–ECM exploratorio ──────────────────────────────────────
@@ -187,19 +192,19 @@ def estimate_explanation(
         "validation": validation,
         "fitted_diff": fitted_diff,
         "contributions_diff": contributions_diff,
-        "selected_expanded_3": selected_expanded_3,
-        "coefficients_expanded_3": coefficients_expanded_3,
-        "predictions_expanded_3": predictions_expanded_3,
-        "validation_expanded_3": validation_expanded_3,
-        "selected_expanded": selected_expanded,
-        "lag_grid_expanded": lag_grid_expanded,
-        "coefficients_expanded": coefficients_expanded,
-        "diagnostics_expanded": diagnostics_expanded,
-        "predictions_expanded": predictions_expanded,
-        "validation_expanded": validation_expanded,
-        "fitted_expanded": fitted_expanded,
-        "contributions_expanded": contributions_expanded,
-        "shapley_expanded": shapley_expanded,
+        "selected_integrated_3": selected_integrated_3,
+        "coefficients_integrated_3": coefficients_integrated_3,
+        "predictions_integrated_3": predictions_integrated_3,
+        "validation_integrated_3": validation_integrated_3,
+        "selected_integrated": selected_integrated,
+        "lag_grid_integrated": lag_grid_integrated,
+        "coefficients_integrated": coefficients_integrated,
+        "diagnostics_integrated": diagnostics_integrated,
+        "predictions_integrated": predictions_integrated,
+        "validation_integrated": validation_integrated,
+        "fitted_integrated": fitted_integrated,
+        "contributions_integrated": contributions_integrated,
+        "shapley_integrated": shapley_integrated,
         "shapley_bootstrap": shapley_bootstrap,
         "stability_detail": stability_detail,
         "stability_summary": stability_summary,
@@ -308,6 +313,9 @@ def main() -> None:
         "asinh_balanza_comercial",
         "asinh_flujos_capital",
         *LEVEL_COMPONENTS,
+        "ise_total_dane",
+        "ipc_colombia_indice",
+        *INTERNAL_RAW_COMPONENTS,
         *GLOBAL_RAW_COMPONENTS,
         "dummy_pandemia_2020",
     ]
@@ -337,10 +345,10 @@ def main() -> None:
 
     components = difference_components(model_data)
     common_index = make_timed_difference_design(
-        components, p=3, factor_specs=EXPANDED_FACTOR_SPECS
+        components, p=3, factor_specs=INTEGRATED_FACTOR_SPECS
     )[0].index
 
-    # ── Explicación histórica (principal + ampliado + ECM) ───────────────────
+    # ── Explicación histórica (controles externos + marco macroeconómico integral + ECM) ──
     print("Estimando modelos de explicación histórica...")
     explanation = estimate_explanation(model_data, components, common_index)
     selected_diff = explanation["selected_diff"]
@@ -351,19 +359,19 @@ def main() -> None:
     validation = explanation["validation"]
     fitted_diff = explanation["fitted_diff"]
     contributions_diff = explanation["contributions_diff"]
-    selected_expanded_3 = explanation["selected_expanded_3"]
-    coefficients_expanded_3 = explanation["coefficients_expanded_3"]
-    predictions_expanded_3 = explanation["predictions_expanded_3"]
-    validation_expanded_3 = explanation["validation_expanded_3"]
-    selected_expanded = explanation["selected_expanded"]
-    lag_grid_expanded = explanation["lag_grid_expanded"]
-    coefficients_expanded = explanation["coefficients_expanded"]
-    diagnostics_expanded = explanation["diagnostics_expanded"]
-    predictions_expanded = explanation["predictions_expanded"]
-    validation_expanded = explanation["validation_expanded"]
-    fitted_expanded = explanation["fitted_expanded"]
-    contributions_expanded = explanation["contributions_expanded"]
-    shapley_expanded = explanation["shapley_expanded"]
+    selected_integrated_3 = explanation["selected_integrated_3"]
+    coefficients_integrated_3 = explanation["coefficients_integrated_3"]
+    predictions_integrated_3 = explanation["predictions_integrated_3"]
+    validation_integrated_3 = explanation["validation_integrated_3"]
+    selected_integrated = explanation["selected_integrated"]
+    lag_grid_integrated = explanation["lag_grid_integrated"]
+    coefficients_integrated = explanation["coefficients_integrated"]
+    diagnostics_integrated = explanation["diagnostics_integrated"]
+    predictions_integrated = explanation["predictions_integrated"]
+    validation_integrated = explanation["validation_integrated"]
+    fitted_integrated = explanation["fitted_integrated"]
+    contributions_integrated = explanation["contributions_integrated"]
+    shapley_integrated = explanation["shapley_integrated"]
     shapley_bootstrap = explanation["shapley_bootstrap"]
     stability_detail = explanation["stability_detail"]
     stability_summary = explanation["stability_summary"]
@@ -379,7 +387,7 @@ def main() -> None:
     tests = explanation["tests"]
 
     bei_model_comparison = bei_model_specification_comparison(
-        model_data, selected_expanded, bei_break_date
+        model_data, selected_integrated, bei_break_date
     )
 
     # ── Pronóstico con rezagos de publicación ────────────────────────────────
@@ -418,11 +426,11 @@ def main() -> None:
         )
 
     base_validation_row = validation.iloc[0]
-    expanded_validation_row = validation_expanded.iloc[0]
+    integrated_validation_row = validation_integrated.iloc[0]
     comparison = pd.DataFrame(
         [
             {
-                "modelo": "Base",
+                "modelo": REFERENCE_MODEL_LABEL,
                 "observaciones": int(selected_diff.result.nobs),
                 "r_cuadrado": float(selected_diff.result.rsquared),
                 "r_cuadrado_ajustado": float(selected_diff.result.rsquared_adj),
@@ -435,18 +443,18 @@ def main() -> None:
                 "r2_validacion_condicional_vs_caminata": out_of_sample_r2(predictions),
             },
             {
-                "modelo": "Ampliado historico",
-                "observaciones": int(selected_expanded.result.nobs),
-                "r_cuadrado": float(selected_expanded.result.rsquared),
-                "r_cuadrado_ajustado": float(selected_expanded.result.rsquared_adj),
-                "aic": float(selected_expanded.result.aic),
-                "bic": float(selected_expanded.result.bic),
-                "mape_pct": float(expanded_validation_row["mape_pct"]),
+                "modelo": INTEGRATED_MODEL_LABEL,
+                "observaciones": int(selected_integrated.result.nobs),
+                "r_cuadrado": float(selected_integrated.result.rsquared),
+                "r_cuadrado_ajustado": float(selected_integrated.result.rsquared_adj),
+                "aic": float(selected_integrated.result.aic),
+                "bic": float(selected_integrated.result.bic),
+                "mape_pct": float(integrated_validation_row["mape_pct"]),
                 "acierto_direccion_pct": float(
-                    expanded_validation_row["acierto_direccion_pct"]
+                    integrated_validation_row["acierto_direccion_pct"]
                 ),
                 "r2_validacion_condicional_vs_caminata": out_of_sample_r2(
-                    predictions_expanded
+                    predictions_integrated
                 ),
             },
         ]
@@ -466,19 +474,19 @@ def main() -> None:
         (
             "Explicación histórica",
             "BRL, CLP y MXN",
-            selected_expanded_3,
-            coefficients_expanded_3,
-            predictions_expanded_3,
-            validation_expanded_3,
+            selected_integrated_3,
+            coefficients_integrated_3,
+            predictions_integrated_3,
+            validation_integrated_3,
             "factor_monedas_regionales_3.L0",
         ),
         (
             "Explicación histórica",
             "BRL, CLP, MXN y PEN",
-            selected_expanded,
-            coefficients_expanded,
-            predictions_expanded,
-            validation_expanded,
+            selected_integrated,
+            coefficients_integrated,
+            predictions_integrated,
+            validation_integrated,
             "factor_monedas_regionales_4.L0",
         ),
         (
@@ -594,36 +602,36 @@ def main() -> None:
         RESULTS / "explicacion/seleccion_rezagos_adl_diferencias.csv", index=False, encoding="utf-8-sig"
     )
     coefficients_diff.to_csv(
-        RESULTS / "explicacion/coeficientes_modelo_principal.csv", index=False, encoding="utf-8-sig"
+        RESULTS / "explicacion/coeficientes_controles_externos.csv", index=False, encoding="utf-8-sig"
     )
     diagnostics_diff.to_csv(
-        RESULTS / "explicacion/diagnosticos_modelo_principal.csv", index=False, encoding="utf-8-sig"
+        RESULTS / "explicacion/diagnosticos_controles_externos.csv", index=False, encoding="utf-8-sig"
     )
     fitted_diff.to_csv(
-        RESULTS / "explicacion/ajuste_historico_modelo_principal.csv", encoding="utf-8-sig"
+        RESULTS / "explicacion/ajuste_historico_controles_externos.csv", encoding="utf-8-sig"
     )
     contributions_diff.to_csv(
-        RESULTS / "explicacion/contribuciones_modelo_principal.csv", encoding="utf-8-sig"
+        RESULTS / "explicacion/contribuciones_controles_externos.csv", encoding="utf-8-sig"
     )
-    lag_grid_expanded.to_csv(
-        RESULTS / "explicacion/seleccion_rezagos_modelo_ampliado.csv",
+    lag_grid_integrated.to_csv(
+        RESULTS / "explicacion/seleccion_rezagos_marco_macro_integral.csv",
         index=False,
         encoding="utf-8-sig",
     )
-    coefficients_expanded.to_csv(
-        RESULTS / "explicacion/coeficientes_modelo_ampliado.csv", index=False, encoding="utf-8-sig"
+    coefficients_integrated.to_csv(
+        RESULTS / "explicacion/coeficientes_marco_macro_integral.csv", index=False, encoding="utf-8-sig"
     )
-    diagnostics_expanded.to_csv(
-        RESULTS / "explicacion/diagnosticos_modelo_ampliado.csv", index=False, encoding="utf-8-sig"
+    diagnostics_integrated.to_csv(
+        RESULTS / "explicacion/diagnosticos_marco_macro_integral.csv", index=False, encoding="utf-8-sig"
     )
-    fitted_expanded.to_csv(
-        RESULTS / "explicacion/ajuste_historico_modelo_ampliado.csv", encoding="utf-8-sig"
+    fitted_integrated.to_csv(
+        RESULTS / "explicacion/ajuste_historico_marco_macro_integral.csv", encoding="utf-8-sig"
     )
-    contributions_expanded.to_csv(
-        RESULTS / "explicacion/contribuciones_modelo_ampliado.csv", encoding="utf-8-sig"
+    contributions_integrated.to_csv(
+        RESULTS / "explicacion/contribuciones_marco_macro_integral.csv", encoding="utf-8-sig"
     )
-    shapley_expanded.to_csv(
-        RESULTS / "explicacion/pesos_explicativos_modelo_ampliado.csv",
+    shapley_integrated.to_csv(
+        RESULTS / "explicacion/pesos_explicativos_marco_macro_integral.csv",
         index=False,
         encoding="utf-8-sig",
     )
@@ -633,7 +641,7 @@ def main() -> None:
         encoding="utf-8-sig",
     )
     stability_detail.to_csv(
-        RESULTS / "explicacion/estabilidad_submuestras_modelo_ampliado.csv",
+        RESULTS / "explicacion/estabilidad_submuestras_marco_macro_integral.csv",
         index=False,
         encoding="utf-8-sig",
     )
@@ -643,7 +651,7 @@ def main() -> None:
         encoding="utf-8-sig",
     )
     comparison.to_csv(
-        RESULTS / "explicacion/comparacion_modelos.csv", index=False, encoding="utf-8-sig"
+        RESULTS / "explicacion/comparacion_especificaciones.csv", index=False, encoding="utf-8-sig"
     )
     regional_comparison.to_csv(
         RESULTS / "explicacion/comparacion_factor_regional.csv", index=False, encoding="utf-8-sig"
@@ -688,7 +696,7 @@ def main() -> None:
     # ── Modelos parsimoniosos de pronóstico ──────────────────────────────────
     components = difference_components(model_data)
     parsimonious = parsimonious_forecasts(
-        model_data, components, shapley_expanded, holdout=48
+        model_data, components, shapley_integrated, holdout=48
     )
     parsimonious.to_csv(
         RESULTS / "pronostico/comparacion_parsimoniosos_pronostico.csv",
@@ -711,13 +719,13 @@ def main() -> None:
     diagnostics_ecm.to_csv(
         RESULTS / "robustez/diagnosticos_ecm.csv", index=False, encoding="utf-8-sig"
     )
-    predictions.to_csv(RESULTS / "explicacion/validacion_predicciones_modelo_principal.csv", encoding="utf-8-sig")
-    validation.to_csv(RESULTS / "explicacion/validacion_metricas_modelo_principal.csv", index=False, encoding="utf-8-sig")
-    predictions_expanded.to_csv(
-        RESULTS / "explicacion/validacion_predicciones_modelo_ampliado.csv", encoding="utf-8-sig"
+    predictions.to_csv(RESULTS / "explicacion/validacion_predicciones_controles_externos.csv", encoding="utf-8-sig")
+    validation.to_csv(RESULTS / "explicacion/validacion_metricas_controles_externos.csv", index=False, encoding="utf-8-sig")
+    predictions_integrated.to_csv(
+        RESULTS / "explicacion/validacion_predicciones_marco_macro_integral.csv", encoding="utf-8-sig"
     )
-    validation_expanded.to_csv(
-        RESULTS / "explicacion/validacion_metricas_modelo_ampliado.csv",
+    validation_integrated.to_csv(
+        RESULTS / "explicacion/validacion_metricas_marco_macro_integral.csv",
         index=False,
         encoding="utf-8-sig",
     )
@@ -777,7 +785,7 @@ def main() -> None:
         "muestra_inicio": model_data.index.min().strftime("%Y-%m-%d"),
         "muestra_fin": model_data.index.max().strftime("%Y-%m-%d"),
         "observaciones": int(model_data.shape[0]),
-        "modelo_principal": "Modelo mensual en primeras diferencias con temporización económica y errores HAC",
+        REFERENCE_MODEL_ID: f"{REFERENCE_MODEL_LABEL}: diferencias mensuales con temporización económica y errores HAC",
         "adl_p_cambio_trm": selected_diff.p,
         "temporizacion": "Términos de intercambio, dólar amplio y VIX contemporáneos; remesas, diferencial de tasas y déficit rezagados un mes",
         "adl_observaciones": int(selected_diff.result.nobs),
@@ -785,22 +793,22 @@ def main() -> None:
         "adl_bic": float(selected_diff.result.bic),
         "adl_r_cuadrado": float(selected_diff.result.rsquared),
         "adl_r_cuadrado_ajustado": float(selected_diff.result.rsquared_adj),
-        "modelo_ampliado": "Contabilidad historica mensual en primeras diferencias con 13 factores, cuatro monedas regionales y errores HAC",
-        "ampliado_p_cambio_trm": selected_expanded.p,
-        "ampliado_observaciones": int(selected_expanded.result.nobs),
-        "ampliado_aic": float(selected_expanded.result.aic),
-        "ampliado_bic": float(selected_expanded.result.bic),
-        "ampliado_r_cuadrado": float(selected_expanded.result.rsquared),
-        "ampliado_r_cuadrado_ajustado": float(
-            selected_expanded.result.rsquared_adj
+        INTEGRATED_MODEL_ID: f"{INTEGRATED_MODEL_LABEL}: contabilidad histórica mensual en primeras diferencias con 14 factores, cuatro monedas regionales y errores HAC",
+        "marco_macro_integral_p_cambio_trm": selected_integrated.p,
+        "marco_macro_integral_observaciones": int(selected_integrated.result.nobs),
+        "marco_macro_integral_aic": float(selected_integrated.result.aic),
+        "marco_macro_integral_bic": float(selected_integrated.result.bic),
+        "marco_macro_integral_r_cuadrado": float(selected_integrated.result.rsquared),
+        "marco_macro_integral_r_cuadrado_ajustado": float(
+            selected_integrated.result.rsquared_adj
         ),
-        "ampliado_temporizacion": "Términos de intercambio, dólar amplio, VIX, EMBIG Colombia, monedas regionales y condiciones financieras, commodities y actividad internacional contemporáneos; cambios de remesas, tasas, déficit, reservas, balanza, flujos de capital y diferencial BEI rezagados un mes",
+        "marco_macro_integral_temporizacion": "Términos de intercambio, dólar amplio, VIX, EMBIG Colombia, monedas regionales y condiciones financieras, commodities y actividad internacional contemporáneos; cambios de remesas, tasas, déficit, reservas, balanza, flujos de capital y diferencial BEI rezagados un mes",
         "pesos_metodo": "Shapley/LMG exacto del incremento del R2 sobre intercepto, dinamica de TRM y dummy de pandemia",
-        "pesos_suma_pct": float(shapley_expanded["peso_entre_factores_pct"].sum()),
-        "shapley_r2_base": float(shapley_expanded["r2_base"].iloc[0]),
-        "shapley_r2_completo": float(shapley_expanded["r2_completo"].iloc[0]),
+        "pesos_suma_pct": float(shapley_integrated["peso_entre_factores_pct"].sum()),
+        "shapley_r2_base": float(shapley_integrated["r2_base"].iloc[0]),
+        "shapley_r2_completo": float(shapley_integrated["r2_completo"].iloc[0]),
         "shapley_r2_incremental": float(
-            shapley_expanded["r2_incremental"].iloc[0]
+            shapley_integrated["r2_incremental"].iloc[0]
         ),
         "shapley_bootstrap_metodo": "Bootstrap circular de bloques mensuales; pesos de cada réplica aproximados con permutaciones antitéticas",
         "shapley_bootstrap_replicas": SHAPLEY_BOOTSTRAP_REPLICATIONS,
@@ -813,17 +821,17 @@ def main() -> None:
         "estabilidad_2020_spearman_rangos": float(
             recent_stability["correlacion_spearman_rangos_vs_completa"]
         ),
-        "estabilidad_2020_factores_mismo_signo_de_13": int(
-            recent_stability["factores_mismo_signo_de_13"]
+        "estabilidad_2020_factores_mismo_signo_de_14": int(
+            recent_stability["factores_mismo_signo_de_14"]
         ),
-        "factor_regional": "Modelo activo: promedio de cambios log estandarizados de BRL, CLP, MXN y PEN por USD; comparación contra BRL, CLP y MXN; parámetros calibrados 2006-2019",
+        "factor_regional": "Especificación histórica activa: promedio de cambios log estandarizados de BRL, CLP, MXN y PEN por USD; comparación contra BRL, CLP y MXN; parámetros calibrados 2006-2019",
         "factor_regional_correlacion_3_4": regional_correlation,
         "pronostico_modelo": f"Modelo mensual de un paso con todos los factores rezagados conforme a un calendario conservador de disponibilidad al inicio del mes objetivo; composición regional seleccionada por BIC: {forecast_currencies}",
         "pronostico_factor_regional_monedas": forecast_currencies,
         "pronostico_advertencia_vintages": "El backtest respeta rezagos de publicación, pero usa la última versión disponible de las series. Es pseudo-tiempo-real hasta contar con vintages históricos archivados; no debe rotularse como backtest genuino en tiempo real.",
         "vintages_archivo_inicio": "2026-08-23",
         "vintages_origenes_alfred_recuperados": 0,
-        "vintages_factores_completos_de_13": complete_vintage_factors,
+        "vintages_factores_completos_de_14": complete_vintage_factors,
         "backtest_genuino_disponible": complete_vintage_factors == len(FORECAST_FACTOR_SPECS_3),
         "pronostico_p_cambio_trm": selected_forecast.p,
         "pronostico_observaciones": int(selected_forecast.result.nobs),
@@ -852,6 +860,18 @@ def main() -> None:
                 "tes_5y_uvr_banrep.json",
                 "bei_5y_eeuu_diario_fed.csv",
                 "pen_usd_mensual_bcrp.json",
+            ]
+        },
+        "internal_snapshot_sha256": {
+            filename: sha256_file(RAW / filename)
+            for filename in [
+                "ise_dane_9actividades_jun2026.xlsx",
+                "ise_dane_12actividades_jun2026.xlsx",
+                "ipi_dane_jun2026.xlsx",
+                "ipp_dane_jul2026.xlsx",
+                "geih_dane_jun2026.xlsx",
+                "geih_dane_desestacionalizado_jun2026.xlsx",
+                "ipc_colombia_banrep.json",
             ]
         },
         "diferencial_bei_5y_transformacion": "Modelo vigente: primera diferencia rezagada un mes y promedios mensuales separados; nivel, fechas comunes, tendencia y quiebre se reportan como robustez",
@@ -888,13 +908,13 @@ def main() -> None:
             bei_best_validation["especificacion"]
         ),
         "flujos_capital": "Movimientos netos de capital de la balanza cambiaria, BanRep serie 16706",
-        "validacion_base_mape_pct": float(base_validation_row["mape_pct"]),
-        "validacion_ampliado_mape_pct": float(expanded_validation_row["mape_pct"]),
-        "validacion_base_acierto_direccion_pct": float(
+        "validacion_controles_externos_mape_pct": float(base_validation_row["mape_pct"]),
+        "validacion_marco_macro_integral_mape_pct": float(integrated_validation_row["mape_pct"]),
+        "validacion_controles_externos_acierto_direccion_pct": float(
             base_validation_row["acierto_direccion_pct"]
         ),
-        "validacion_ampliado_acierto_direccion_pct": float(
-            expanded_validation_row["acierto_direccion_pct"]
+        "validacion_marco_macro_integral_acierto_direccion_pct": float(
+            integrated_validation_row["acierto_direccion_pct"]
         ),
         "ecm_p": selected_ecm.p,
         "ecm_q_comun": selected_ecm.q,
@@ -911,28 +931,28 @@ def main() -> None:
     print("\nActualizando README.md con los valores del modelo...")
     update_readme_fragments(
         coefficients_diff=coefficients_diff,
-        coefficients_expanded=coefficients_expanded,
+        coefficients_integrated=coefficients_integrated,
         comparison=comparison,
-        shapley_expanded=shapley_expanded,
+        shapley_integrated=shapley_integrated,
         shapley_bootstrap=shapley_bootstrap,
         validation=validation,
-        validation_expanded=validation_expanded,
+        validation_integrated=validation_integrated,
         validation_forecast=validation_forecast,
         predictions_forecast=predictions_forecast,
     )
 
     print(json.dumps(metadata, indent=2, ensure_ascii=False))
-    print("\nCoeficientes del modelo principal en diferencias")
+    print("\nCoeficientes de controles externos en diferencias")
     print(coefficients_diff.to_string(index=False))
-    print("\nDiagnósticos del modelo principal")
+    print("\nDiagnósticos de controles externos")
     print(diagnostics_diff.to_string(index=False))
     print("\nValidación")
     print(validation.to_string(index=False))
-    print("\nComparacion base vs. ampliado")
+    print("\nComparación de especificaciones")
     print(comparison.to_string(index=False))
-    print("\nPesos explicativos Shapley del modelo ampliado")
+    print("\nPesos explicativos Shapley del marco macroeconómico integral")
     print(
-        shapley_expanded[
+        shapley_integrated[
             ["factor", "grupo", "shapley_r2", "peso_entre_factores_pct"]
         ].to_string(index=False)
     )
@@ -966,9 +986,9 @@ _TERM_LABELS: dict[str, str] = {
     "dummy_pandemia_2020": "Pandemia marzo–mayo 2020",
 }
 
-# Lectura del coeficiente de la constante del modelo principal (sin lectura
+# Lectura del coeficiente de la constante del controles externos y financieros (sin lectura
 # económica distinta; se mantiene el texto de referencia).
-_PRINCIPAL_READINGS: dict[str, str] = {
+_REFERENCE_READINGS: dict[str, str] = {
     "const": "No hay evidencia de una deriva mensual adicional.",
     "D.ln_terminos_intercambio.L0": (
         "Una mejora de 10% se asocia con una TRM cerca de {:.1f}% menor."
@@ -1061,19 +1081,19 @@ def diebold_mariano_test(
 def parsimonious_forecasts(
     model_data: pd.DataFrame,
     components: pd.DataFrame,
-    shapley_expanded: pd.DataFrame,
+    shapley_integrated: pd.DataFrame,
     holdout: int = 48,
 ) -> pd.DataFrame:
     """
     Estima modelos de pronóstico parsimoniosos con los top-N factores por Shapley.
 
-    Compara: top-3, top-5, top-7 y el modelo completo (13 factores).
+    Compara: top-3, top-5, top-7 y el marco macroeconómico integral completo (14 factores).
     Todos usan rezagos de publicación (FORECAST_FACTOR_SPECS).
     """
     from copy import deepcopy
 
     # Ranking de factores por peso Shapley
-    ranked_factors = shapley_expanded.sort_values(
+    ranked_factors = shapley_integrated.sort_values(
         "peso_entre_factores_pct", ascending=False
     )["factor"].tolist()
 
@@ -1082,7 +1102,7 @@ def parsimonious_forecasts(
     )[0].index
 
     results_rows: list[dict[str, object]] = []
-    for n_factors in [3, 5, 7, 13]:
+    for n_factors in [3, 5, 7, 14]:
         selected_names = set(ranked_factors[:n_factors])
         # Filtrar FORECAST_FACTOR_SPECS_3 a solo los factores seleccionados
         specs_subset = {
@@ -1158,12 +1178,12 @@ def _replace_auto_block(text: str, tag: str, new_content: str) -> str:
 
 def update_readme_fragments(
     coefficients_diff: pd.DataFrame,
-    coefficients_expanded: pd.DataFrame,
+    coefficients_integrated: pd.DataFrame,
     comparison: pd.DataFrame,
-    shapley_expanded: pd.DataFrame,
+    shapley_integrated: pd.DataFrame,
     shapley_bootstrap: pd.DataFrame,
     validation: pd.DataFrame,
-    validation_expanded: pd.DataFrame,
+    validation_integrated: pd.DataFrame,
     validation_forecast: pd.DataFrame,
     predictions_forecast: pd.DataFrame,
 ) -> None:
@@ -1171,15 +1191,15 @@ def update_readme_fragments(
     readme_path = ROOT / "README.md"
     text = readme_path.read_text(encoding="utf-8")
 
-    # ── 1. Coeficientes modelo principal ─────────────────────────────────────
+    # ── 1. Coeficientes controles externos y financieros ─────────────────────────────────────
     base_row = validation.loc[validation["modelo"].ne("Caminata aleatoria")].iloc[0]
     mape_base = float(base_row["mape_pct"])
     acierto_base = float(base_row["acierto_direccion_pct"])
     r2_vs_walk_base = float(
-        comparison.loc[comparison["modelo"].eq("Base"), "r2_validacion_condicional_vs_caminata"].iloc[0]
+        comparison.loc[comparison["modelo"].eq(REFERENCE_MODEL_LABEL), "r2_validacion_condicional_vs_caminata"].iloc[0]
     )
 
-    rows_principal = [
+    rows_reference = [
         "| Término | Coeficiente | p-valor HAC | Lectura aproximada |",
         "|---|---:|---:|---|",
     ]
@@ -1188,7 +1208,7 @@ def update_readme_fragments(
         coef = float(row["coeficiente"])
         pval = float(row["p_valor"])
         label = _TERM_LABELS.get(term, f"`{term}`")
-        reading_tpl = _PRINCIPAL_READINGS.get(term, "")
+        reading_tpl = _REFERENCE_READINGS.get(term, "")
         if reading_tpl and "{" in reading_tpl:
             # Magnitud del efecto: para log-log usamos abs(coef)*10; para otros abs(coef)*100
             if "10%" in reading_tpl:
@@ -1204,38 +1224,38 @@ def update_readme_fragments(
             reading = reading_tpl.format(mag)
         else:
             reading = reading_tpl
-        rows_principal.append(
+        rows_reference.append(
             f"| {label} | {_coef_str(coef)} | {_pval_str(pval)} | {reading} |"
         )
-    text = _replace_auto_block(text, "coeficientes_principal", "\n".join(rows_principal))
+    text = _replace_auto_block(text, "coeficientes_controles_externos", "\n".join(rows_reference))
 
-    # ── 2. Métricas modelo principal ─────────────────────────────────────────
+    # ── 2. Métricas controles externos y financieros ─────────────────────────────────────────
     lines_metricas_base = [
         f"- MAPE condicional: **{_pct_str(mape_base)}**.",
         f"- Acierto de dirección: **{_pct_str(acierto_base)}**.",
         f"- R² condicional frente a caminata aleatoria: **{_pct_str(r2_vs_walk_base)}**.",
     ]
-    text = _replace_auto_block(text, "metricas_principal", "\n".join(lines_metricas_base))
+    text = _replace_auto_block(text, "metricas_controles_externos", "\n".join(lines_metricas_base))
 
-    # ── 3. Coeficientes modelo ampliado ──────────────────────────────────────
-    rows_ampliado = [
+    # ── 3. Coeficientes marco macroeconómico integral ──────────────────────────────────────
+    rows_integrated = [
         "| Término | Coeficiente | p-valor |",
         "|---|---:|---:|",
     ]
-    for _, row in coefficients_expanded.iterrows():
+    for _, row in coefficients_integrated.iterrows():
         term = str(row["termino"])
         coef = float(row["coeficiente"])
         pval = float(row["p_valor"])
         label = _TERM_LABELS.get(term, f"`{term}`")
-        rows_ampliado.append(f"| {label} | {_coef_str(coef)} | {_pval_str(pval)} |")
-    text = _replace_auto_block(text, "coeficientes_ampliado", "\n".join(rows_ampliado))
+        rows_integrated.append(f"| {label} | {_coef_str(coef)} | {_pval_str(pval)} |")
+    text = _replace_auto_block(text, "coeficientes_marco_macro_integral", "\n".join(rows_integrated))
 
-    # ── 4. Comparación de métricas principal vs ampliado ─────────────────────
-    base = comparison.loc[comparison["modelo"].eq("Base")].iloc[0]
-    amp = comparison.loc[comparison["modelo"].eq("Ampliado historico")].iloc[0]
+    # ── 4. Comparación de métricas entre especificaciones ─────────────────────
+    base = comparison.loc[comparison["modelo"].eq(REFERENCE_MODEL_LABEL)].iloc[0]
+    amp = comparison.loc[comparison["modelo"].eq(INTEGRATED_MODEL_LABEL)].iloc[0]
     r2_vs_walk_amp = float(amp["r2_validacion_condicional_vs_caminata"])
     rows_comp = [
-        "| Métrica | Modelo principal | Modelo ampliado |",
+        "| Métrica | Controles externos y financieros | Marco macroeconómico integral |",
         "|---|---:|---:|",
         f"| Observaciones efectivas | {int(base['observaciones'])} | {int(amp['observaciones'])} |",
         f"| R² | {_pct_str(base['r_cuadrado'] * 100)} | {_pct_str(amp['r_cuadrado'] * 100)} |",
@@ -1244,14 +1264,14 @@ def update_readme_fragments(
         f"| Acierto de dirección | {_pct_str(base['acierto_direccion_pct'])} | {_pct_str(amp['acierto_direccion_pct'])} |",
         f"| R² condicional frente a caminata aleatoria | {_pct_str(base['r2_validacion_condicional_vs_caminata'] * 100)} | {_pct_str(r2_vs_walk_amp * 100)} |",
     ]
-    text = _replace_auto_block(text, "comparacion_modelos", "\n".join(rows_comp))
+    text = _replace_auto_block(text, "comparacion_especificaciones", "\n".join(rows_comp))
 
     # ── 5. Pesos Shapley ─────────────────────────────────────────────────────
-    shapley_sorted = shapley_expanded.sort_values(
+    shapley_sorted = shapley_integrated.sort_values(
         "peso_entre_factores_pct", ascending=False
     )
     rows_shapley = [
-        "| Factor | Peso entre los 12 factores | Aporte al R² |",
+        f"| Factor | Peso entre los {len(shapley_integrated)} factores | Aporte al R² |",
         "|---|---:|---:|",
     ]
     for _, row in shapley_sorted.iterrows():
@@ -1263,7 +1283,7 @@ def update_readme_fragments(
         )
     text = _replace_auto_block(text, "pesos_shapley", "\n".join(rows_shapley))
 
-    # ── 6. Intervalos bootstrap de los 3 factores principales ────────────────
+    # ── 6. Intervalos bootstrap de los 3 factores con mayor peso ────────────────
     top3 = shapley_bootstrap.nlargest(3, "peso_puntual_pct").reset_index(drop=True)
     partes = []
     for _, row in top3.iterrows():

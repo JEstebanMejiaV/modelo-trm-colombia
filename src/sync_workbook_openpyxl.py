@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """Sincroniza el workbook versionado sin depender de @oai/artifact-tool.
 
-El generador principal usa ``src/build_workbook.mjs`` y el paquete privado
+El generador de workbook usa ``src/build_workbook.mjs`` y el paquete privado
 ``@oai/artifact-tool``. Este fallback conserva el workbook existente, pero
 reemplaza las tablas auditables con los CSV actuales para que el entregable
 pueda reconstruirse en entornos que solo tienen Python y openpyxl.
@@ -76,6 +76,10 @@ TERM_LABELS = {
     "D.ln_empleo_manufactura_us.L2": "Δ ln empleo manufacturero EE. UU. (t−2)",
     "D.ln_produccion_industrial_us.L2": "Δ ln producción industrial EE. UU. (t−2)",
     "D.ln_fletes_transporte_us.L2": "Δ ln fletes/logística EE. UU. (t−2)",
+    "D.ln_ise_total_dane.L0": "Δ ln ISE total DANE (t)",
+    "D.ln_ipc_colombia.L0": "Δ ln IPC Colombia (t)",
+    "D.ln_ise_total_dane.L2": "Δ ln ISE total DANE (t−2)",
+    "D.ln_ipc_colombia.L2": "Δ ln IPC Colombia (t−2)",
     "dummy_pandemia_2020": "Dummy pandemia 2020",
 }
 
@@ -131,6 +135,19 @@ def write_table(
     width = len(headers)
     end_row = start_row + len(rows)
     end_col = start_col + width - 1
+    # Los workbooks heredados pueden conservar celdas combinadas dentro del
+    # rango de una tabla que ahora crece (por ejemplo, al pasar de 13 a 14
+    # factores). Se descombinan únicamente los rangos que se solapan con la
+    # tabla objetivo para que openpyxl permita escribir cada valor.
+    for merged_range in list(ws.merged_cells.ranges):
+        if not (
+            merged_range.max_row < start_row
+            or merged_range.min_row > end_row
+            or merged_range.max_col < start_col
+            or merged_range.min_col > end_col
+        ):
+            ws.unmerge_cells(str(merged_range))
+
     existing = table_object(ws, name)
 
     if existing is not None:
@@ -237,19 +254,19 @@ def effect_text(coefficient: float, proportional_change: float | None = None) ->
 
 def update_summary(wb, metadata: dict[str, object]) -> None:
     ws = wb["Resumen"]
-    comparison = csv("explicacion/comparacion_modelos.csv")
+    comparison = csv("explicacion/comparacion_especificaciones.csv")
     forecast_metrics = csv("pronostico/validacion_metricas_pronostico.csv")
-    weights = csv("explicacion/pesos_explicativos_modelo_ampliado.csv")
-    principal = csv("explicacion/coeficientes_modelo_principal.csv").set_index("termino")
+    weights = csv("explicacion/pesos_explicativos_marco_macro_integral.csv")
+    reference = csv("explicacion/coeficientes_controles_externos.csv").set_index("termino")
 
     ws["A3"] = (
         "Se separan dos usos: explicación histórica con información contemporánea y "
         "pronóstico de un mes con rezagos de publicación. Muestra común: enero de 2006 a abril de 2026."
     )
-    ws["A6"] = int(metadata["ampliado_observaciones"])
+    ws["A6"] = int(metadata["marco_macro_integral_observaciones"])
     ws["C6"] = pct(float(metadata["adl_r_cuadrado_ajustado"]))
-    ws["E6"] = pct(float(metadata["ampliado_r_cuadrado_ajustado"]))
-    ws["A10"] = f"{float(metadata['validacion_ampliado_mape_pct']):.2f}%"
+    ws["E6"] = pct(float(metadata["marco_macro_integral_r_cuadrado_ajustado"]))
+    ws["A10"] = f"{float(metadata['validacion_marco_macro_integral_mape_pct']):.2f}%"
     ws["C10"] = f"{float(metadata['pronostico_mape_pct']):.2f}%"
     ws["E10"] = pct(float(metadata["pronostico_r2_vs_caminata"]))
 
@@ -303,7 +320,7 @@ def update_summary(wb, metadata: dict[str, object]) -> None:
     }
     output_rows = [["Variable", "Movimiento ilustrativo", "Efecto aproximado en TRM", "Signo", "p-valor", "Lectura"]]
     for term, (label, movement, proportional, reading) in labels.items():
-        record = principal.loc[term]
+        record = reference.loc[term]
         coefficient = float(record["coeficiente"])
         output_rows.append([
             label,
@@ -320,7 +337,7 @@ def update_summary(wb, metadata: dict[str, object]) -> None:
 
 
 def update_weights_and_robustness(wb) -> None:
-    weights = csv("explicacion/pesos_explicativos_modelo_ampliado.csv")
+    weights = csv("explicacion/pesos_explicativos_marco_macro_integral.csv")
     write_table(
         wb["Pesos_explicativos"],
         "PesosExplicativosTable",
@@ -347,7 +364,7 @@ def update_weights_and_robustness(wb) -> None:
     ws["A2"] = (
         "La descomposición reparte el R² incremental entre factores promediando todos los órdenes de entrada. "
         "El bloque de condiciones financieras, commodities y actividad internacional permanece como un solo jugador "
-        "para controlar colinealidad y conservar 13 factores."
+        "para controlar colinealidad y conservar 14 factores."
     )
     ws["B6"].number_format = ws["B7"].number_format = ws["B8"].number_format = "0.0000%"
     ws["E6"].number_format = ws["E7"].number_format = ws["E8"].number_format = "0.0000%"
@@ -375,18 +392,18 @@ def update_weights_and_robustness(wb) -> None:
         "EstabilidadResumenTable",
         6,
         10,
-        ["Submuestra", "Obs.", "R² ajustado", "Spearman rangos", "Mediana |Δ peso|", "Máx. |Δ peso|", "Mismo signo / 13"],
+        ["Submuestra", "Obs.", "R² ajustado", "Spearman rangos", "Mediana |Δ peso|", "Máx. |Δ peso|", "Mismo signo / 14"],
         [
             [row.submuestra, row.observaciones, row.r2_ajustado,
              row.correlacion_spearman_rangos_vs_completa,
              row.mediana_diferencia_abs_peso_pp / 100,
              row.max_diferencia_abs_peso_pp / 100,
-             row.factores_mismo_signo_de_13]
+             row.factores_mismo_signo_de_14]
             for row in stability_summary.itertuples(index=False)
         ],
     )
 
-    stability_detail = csv("explicacion/estabilidad_submuestras_modelo_ampliado.csv")
+    stability_detail = csv("explicacion/estabilidad_submuestras_marco_macro_integral.csv")
     subsamples = list(stability_summary["submuestra"])
     factor_order = list(weights["factor"])
     stability_rows: list[list[object]] = []
@@ -604,9 +621,9 @@ def update_forecast(wb, metadata: dict[str, object]) -> None:
 
 
 def update_models(wb) -> None:
-    principal = csv("explicacion/coeficientes_modelo_principal.csv")
+    principal = csv("explicacion/coeficientes_controles_externos.csv")
     write_table(
-        wb["Modelo_principal"],
+        wb["Controles_externos"],
         "CoeficientesModeloTable",
         5,
         1,
@@ -615,39 +632,39 @@ def update_models(wb) -> None:
           row.p_valor, row.ic_95_inferior, row.ic_95_superior] for row in principal.itertuples(index=False)],
     )
 
-    expanded = csv("explicacion/coeficientes_modelo_ampliado.csv")
-    ws = wb["Modelo_ampliado"]
+    integrated = csv("explicacion/coeficientes_marco_macro_integral.csv")
+    ws = wb["Marco_macro_integral"]
     write_table(
         ws,
-        "CoeficientesModeloAmpliadoTable",
+        "CoeficientesMarcoMacroIntegralTable",
         5,
         1,
         ["Variable", "Coeficiente", "EE HAC", "t", "p-valor", "IC 95% inferior", "IC 95% superior"],
         [[term_label(row.termino), row.coeficiente, row.error_estandar_hac, row.estadistico_t,
-          row.p_valor, row.ic_95_inferior, row.ic_95_superior] for row in expanded.itertuples(index=False)],
+          row.p_valor, row.ic_95_inferior, row.ic_95_superior] for row in integrated.itertuples(index=False)],
     )
-    expanded_diagnostics = csv("explicacion/diagnosticos_modelo_ampliado.csv")
+    integrated_diagnostics = csv("explicacion/diagnosticos_marco_macro_integral.csv")
     write_table(
         ws,
-        "DiagnosticosModeloAmpliadoTable",
+        "DiagnosticosMarcoMacroIntegralTable",
         13,
         9,
         ["Prueba", "Estadístico", "p-valor", "Lectura"],
-        [[row.prueba, row.estadistico, row.p_valor, diagnostic_reading(row.prueba, row.p_valor)] for row in expanded_diagnostics.itertuples(index=False)],
+        [[row.prueba, row.estadistico, row.p_valor, diagnostic_reading(row.prueba, row.p_valor)] for row in integrated_diagnostics.itertuples(index=False)],
     )
 
-    expanded_fit = csv("explicacion/ajuste_historico_modelo_ampliado.csv")
-    contributions = csv("explicacion/contribuciones_modelo_ampliado.csv")
+    integrated_fit = csv("explicacion/ajuste_historico_marco_macro_integral.csv")
+    contributions = csv("explicacion/contribuciones_marco_macro_integral.csv")
     contribution_keys = [column for column in contributions.columns if column != "fecha"]
     contribution_by_date = contributions.set_index("fecha").to_dict(orient="index")
-    fit_header = max(22, 5 + len(expanded) + 3, 13 + len(expanded_diagnostics) + 3)
+    fit_header = max(22, 5 + len(integrated) + 3, 13 + len(integrated_diagnostics) + 3)
     headers = [
         "Mes", "Δln TRM observado", "Δln TRM ajustado", "Residuo", "TRM observada", "TRM ajustada 1 paso",
         *["Ajuste total de contribuciones" if key == "ajuste_total" else term_label(key) for key in contribution_keys],
         "Diferencia de control",
     ]
     fit_rows: list[list[object]] = []
-    for row in expanded_fit.itertuples(index=False):
+    for row in integrated_fit.itertuples(index=False):
         date = str(row.fecha)
         contribution = contribution_by_date.get(date, {})
         adjustment = contribution.get("ajuste_total")
@@ -657,10 +674,10 @@ def update_models(wb) -> None:
             *[contribution.get(key) for key in contribution_keys],
             None if value(adjustment) is None else row.cambio_log_ajustado - adjustment,
         ])
-    write_table(ws, "AjusteModeloAmpliadoTable", fit_header, 1, headers, fit_rows)
-    ws["A1"] = "Modelo ampliado: condiciones financieras, commodities y actividad internacional"
+    write_table(ws, "AjusteMarcoMacroIntegralTable", fit_header, 1, headers, fit_rows)
+    ws["A1"] = "Marco macroeconómico integral: condiciones externas, internas y regionales"
     ws["A2"] = (
-        "Explicación histórica ex post. Integra 13 factores, incluido un bloque de 17 términos globales agrupados: "
+        "Explicación histórica ex post. Integra 14 factores, incluido un bloque de 17 términos globales agrupados: "
         "expectativas y rendimientos de EE. UU., condiciones financieras, commodities, desempleo, empleo industrial y fletes. "
         "Las series candidatas incompletas se documentan, pero no se imputan ni entran al modelo balanceado."
     )
@@ -668,7 +685,7 @@ def update_models(wb) -> None:
     ws._charts = []
     if len(fit_rows) > 0:
         chart = LineChart()
-        chart.title = "TRM observada y ajuste ampliado"
+        chart.title = "TRM observada y ajuste del marco macroeconómico integral"
         chart.y_axis.title = "COP por USD"
         chart.x_axis.title = "Mes"
         data = Reference(ws, min_col=5, max_col=6, min_row=fit_header, max_row=fit_header + len(fit_rows))
@@ -679,7 +696,7 @@ def update_models(wb) -> None:
         chart.width = 13
         ws.add_chart(chart, "O5")
 
-    principal_diagnostics = csv("explicacion/diagnosticos_modelo_principal.csv")
+    controles_externos_diagnostics = csv("explicacion/diagnosticos_controles_externos.csv")
     diagnostic_ws = wb["Diagnosticos"]
     write_table(
         diagnostic_ws,
@@ -687,17 +704,17 @@ def update_models(wb) -> None:
         6,
         1,
         ["Prueba", "Estadístico", "p-valor", "Lectura"],
-        [[row.prueba, row.estadistico, row.p_valor, diagnostic_reading(row.prueba, row.p_valor)] for row in principal_diagnostics.itertuples(index=False)],
+        [[row.prueba, row.estadistico, row.p_valor, diagnostic_reading(row.prueba, row.p_valor)] for row in controles_externos_diagnostics.itertuples(index=False)],
     )
     write_table(
         diagnostic_ws,
-        "DiagnosticosAmpliadosTable",
+        "DiagnosticosMarcoMacroIntegralResumenTable",
         15,
         10,
         ["Prueba", "Estadístico", "p-valor", "Lectura"],
-        [[row.prueba, row.estadistico, row.p_valor, diagnostic_reading(row.prueba, row.p_valor)] for row in expanded_diagnostics.itertuples(index=False)],
+        [[row.prueba, row.estadistico, row.p_valor, diagnostic_reading(row.prueba, row.p_valor)] for row in integrated_diagnostics.itertuples(index=False)],
     )
-    diagnostic_ws["J14"] = "Diagnósticos del modelo ampliado"
+    diagnostic_ws["J14"] = "Diagnósticos del marco macroeconómico integral"
 
 
 def update_source_sheet(wb, metadata: dict[str, object]) -> None:
@@ -715,7 +732,7 @@ def update_source_sheet(wb, metadata: dict[str, object]) -> None:
         "EMBIG Colombia (pb)", "EMBIG Colombia (pp)", "Balanza comercial cambiaria (USD mill.)", "Flujo neto total de capital (USD mill.)",
         "TES pesos cero cupón 5 años (%)", "TES UVR cero cupón 5 años (%)", "BEI Colombia 5 años (%)", "BEI EE. UU. 5 años (%)",
         "Diferencial BEI 5 años (pp)", "BRL por USD", "CLP por USD", "MXN por USD", "PEN por USD",
-        "Factor regional 3 monedas", "Factor regional 4 monedas",
+        "Factor regional 3 monedas", "Factor regional 4 monedas", "ISE total DANE (índice)", "IPC Colombia (índice)",
     ]
     base_columns = [
         "fecha", "trm_cop_usd", "terminos_intercambio", "remesas_usd_millones", "remesas_12m_usd_millones",
@@ -724,7 +741,7 @@ def update_source_sheet(wb, metadata: dict[str, object]) -> None:
         "embig_colombia_pb", "embig_colombia_pp", "balanza_comercial_cambiaria_usd_millones", "flujos_capital_usd_millones",
         "tes_5y_pesos_colombia_pct", "tes_5y_uvr_colombia_pct", "bei_colombia_5y_pct", "bei_eeuu_5y_pct",
         "diferencial_bei_5y_pp", "brl_por_usd", "clp_por_usd", "mxn_por_usd", "pen_por_usd",
-        "factor_monedas_regionales_3", "factor_monedas_regionales_4",
+        "factor_monedas_regionales_3", "factor_monedas_regionales_4", "ise_total_dane", "ipc_colombia_indice",
     ]
     global_specs = [
         ("yield_real_10y_tips_pct", "TIPS real EE. UU. 10 años (%)"),
@@ -764,11 +781,76 @@ def update_source_sheet(wb, metadata: dict[str, object]) -> None:
     ws["A1"] = "Datos fuente mensuales y cobertura global"
     ws["A2"] = (
         "Niveles y transformaciones previas de las series utilizadas. Las columnas globales activas y candidatas se muestran "
-        "para auditoría; high-yield, TED, UNRATE y China conservan sus faltantes y no se imputan."
+        "para auditoría; ISE total DANE e IPC Colombia conservan niveles oficiales sin imputación; high-yield, TED, UNRATE y China "
+        "conservan sus faltantes y no se imputan."
     )
     for col in range(1, len(headers) + 1):
         ws.column_dimensions[get_column_letter(col)].width = 18 if col > 29 else ws.column_dimensions[get_column_letter(col)].width
     ws.column_dimensions["A"].width = 12
+
+
+def update_transformations(wb, metadata: dict[str, object]) -> None:
+    """Rebuild the auditable transformation sheet, including ISE and IPC."""
+    ws = wb["Transformaciones"]
+    monthly = pd.read_csv(DATA / "modelo_trm_datos_mensuales.csv")
+    monthly["fecha"] = pd.to_datetime(monthly["fecha"])
+    sample_start = pd.Timestamp(metadata["muestra_inicio"]) - pd.DateOffset(months=1)
+    sample_end = pd.Timestamp(metadata["muestra_fin"])
+    monthly = monthly.loc[monthly["fecha"].between(sample_start, sample_end)].copy()
+
+    headers = [
+        "Mes", "ln TRM", "Δln TRM", "ln términos de intercambio", "Δln términos de intercambio",
+        "ln remesas 12m", "Δln remesas 12m", "Diferencial tasas", "Δ diferencial", "Déficit 12m/PIB", "Δ déficit",
+        "ln dólar amplio", "Δln dólar amplio", "ln VIX", "Δln VIX", "Pandemia", "ln reservas netas sin FLAR", "Δln reservas",
+        "EMBIG Colombia (pp)", "Δ EMBIG Colombia", "asinh balanza (USD miles de millones)", "Δ asinh balanza",
+        "asinh flujos (USD miles de millones)", "Δ asinh flujos", "Diferencial BEI 5 años", "Δ diferencial BEI",
+        "Factor regional 3 monedas", "Factor regional 4 monedas", "ln ISE total DANE", "Δln ISE total DANE",
+        "ln IPC Colombia", "Δln IPC Colombia",
+    ]
+    rows: list[list[object]] = []
+    for offset in range(len(monthly)):
+        r = 6 + offset
+        first = offset == 0
+        rows.append([
+            f"='Datos_fuente'!A{r}",
+            f"=IF('Datos_fuente'!B{r}=\"\",\"\",LN('Datos_fuente'!B{r}))",
+            None if first else f'=IF(OR(B{r}=\"\",B{r - 1}=\"\"),\"\",B{r}-B{r - 1})',
+            f"=IF('Datos_fuente'!C{r}=\"\",\"\",LN('Datos_fuente'!C{r}))",
+            None if first else f'=IF(OR(D{r}=\"\",D{r - 1}=\"\"),\"\",D{r}-D{r - 1})',
+            f"=IF('Datos_fuente'!E{r}=\"\",\"\",LN('Datos_fuente'!E{r}))",
+            None if first else f'=IF(OR(F{r}=\"\",F{r - 1}=\"\"),\"\",F{r}-F{r - 1})',
+            f"='Datos_fuente'!H{r}",
+            None if first else f'=IF(OR(H{r}=\"\",H{r - 1}=\"\"),\"\",H{r}-H{r - 1})',
+            f"='Datos_fuente'!J{r}",
+            None if first else f'=IF(OR(J{r}=\"\",J{r - 1}=\"\"),\"\",J{r}-J{r - 1})',
+            f"=IF('Datos_fuente'!K{r}=\"\",\"\",LN('Datos_fuente'!K{r}))",
+            None if first else f'=IF(OR(L{r}=\"\",L{r - 1}=\"\"),\"\",L{r}-L{r - 1})',
+            f"=IF('Datos_fuente'!L{r}=\"\",\"\",LN('Datos_fuente'!L{r}))",
+            None if first else f'=IF(OR(N{r}=\"\",N{r - 1}=\"\"),\"\",N{r}-N{r - 1})',
+            f"='Datos_fuente'!M{r}",
+            f"=IF('Datos_fuente'!N{r}=\"\",\"\",LN('Datos_fuente'!N{r}))",
+            None if first else f'=IF(OR(Q{r}=\"\",Q{r - 1}=\"\"),\"\",Q{r}-Q{r - 1})',
+            f"='Datos_fuente'!P{r}",
+            None if first else f'=IF(OR(S{r}=\"\",S{r - 1}=\"\"),\"\",S{r}-S{r - 1})',
+            f"=IF('Datos_fuente'!Q{r}=\"\",\"\",ASINH('Datos_fuente'!Q{r}/1000))",
+            None if first else f'=IF(OR(U{r}=\"\",U{r - 1}=\"\"),\"\",U{r}-U{r - 1})',
+            f"=IF('Datos_fuente'!R{r}=\"\",\"\",ASINH('Datos_fuente'!R{r}/1000))",
+            None if first else f'=IF(OR(W{r}=\"\",W{r - 1}=\"\"),\"\",W{r}-W{r - 1})',
+            f"='Datos_fuente'!W{r}",
+            None if first else f'=IF(OR(Y{r}=\"\",Y{r - 1}=\"\"),\"\",Y{r}-Y{r - 1})',
+            f"='Datos_fuente'!AB{r}",
+            f"='Datos_fuente'!AC{r}",
+            f"=IF('Datos_fuente'!AD{r}=\"\",\"\",LN('Datos_fuente'!AD{r}))",
+            None if first else f'=IF(OR(AC{r}=\"\",AC{r - 1}=\"\"),\"\",AC{r}-AC{r - 1})',
+            f"=IF('Datos_fuente'!AE{r}=\"\",\"\",LN('Datos_fuente'!AE{r}))",
+            None if first else f'=IF(OR(AE{r}=\"\",AE{r - 1}=\"\"),\"\",AE{r}-AE{r - 1})',
+        ])
+    write_table(ws, "TransformacionesTable", 5, 1, headers, rows)
+    ws["A1"] = "Transformaciones auditables, incluidas las variables internas"
+    ws["A2"] = (
+        "Todas las columnas se enlazan a Datos_fuente. ISE total DANE e IPC Colombia se transforman con ln(x) y primera diferencia; "
+        "los faltantes permanecen vacíos y no se interpolan ni se extrapolan."
+    )
 
 
 def update_sources(wb) -> None:
@@ -776,15 +858,20 @@ def update_sources(wb) -> None:
     existing = [[ws.cell(row, col).value for col in range(1, 8)] for row in range(6, 28)]
     existing = [row for row in existing if any(item is not None for item in row)]
     for row in existing:
-        if row[4] == "Modelo ampliado" and row[1] == "EMBIG Colombia PD04715XD":
+        if row[4] == "Marco macroeconómico integral" and row[1] == "EMBIG Colombia PD04715XD":
             row[5] = "Promedio mensual; pb/100; fuentes originales Reuters/J.P. Morgan"
     global_rows = [
-        ["Federal Reserve Board / FRED", "DFII10, DFII5, DGS2, DGS10", "Diaria → mensual", "2003–2026", "Modelo ampliado", "Rendimientos reales y nominales de EE. UU.; cambios contemporáneos o rezagados", "https://fred.stlouisfed.org/"],
-        ["Federal Reserve Board / FRED", "T5YIE, T10YIE", "Diaria → mensual", "2003–2026", "Modelo ampliado", "Expectativas/compensación de inflación a 5 y 10 años; cambios", "https://fred.stlouisfed.org/"],
-        ["FRED", "DCOILBRENTEU, PALLFNFINDEXM", "Diaria/mensual", "2000–2026", "Modelo ampliado", "Brent y commodities; logs y diferencias", "https://fred.stlouisfed.org/"],
-        ["FRED", "USEPUINDXD, STLFSI4, NFCI, ANFCI", "Semanal/mensual", "2000–2026", "Modelo ampliado", "Incertidumbre y condiciones financieras; diferencias", "https://fred.stlouisfed.org/"],
-        ["FRED", "LRUN64TTUSM156S", "Mensual", "2000–2026", "Modelo ampliado", "Desempleo estadounidense activo; diferencia; serie completa en la muestra", "https://fred.stlouisfed.org/series/LRUN64TTUSM156S"],
-        ["FRED", "MANEMP, INDPRO, TSIFRGHT", "Mensual", "2000–2026", "Modelo ampliado", "Empleo industrial, producción y fletes/logística; empleo/fletes con L2 en pronóstico", "https://fred.stlouisfed.org/"],
+        ["DANE", "ISE total; Cuadro 2; 12 agrupaciones", "Mensual", "2005–2026", "Marco macroeconómico integral", "Índice ajustado por efecto estacional y calendario; ln y primera diferencia; rezago 2 en pronóstico; sin imputación", "https://www.dane.gov.co/index.php/en/statistics-by-topic/national-accounts/economic-monitor-index-ise"],
+        ["Banco de la República", "IPC Colombia, serie 15000", "Mensual", "1954–2026", "Marco macroeconómico integral", "Índice oficial; ln y primera diferencia; rezago 2 en pronóstico; sin imputación", "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15000"],
+        ["DANE", "ISE sectorial 9 y 12 agrupaciones", "Mensual", "2005–2026", "Candidata auditable", "Se conserva para cobertura y diagnóstico; no se activa junto al total por colinealidad", "https://www.dane.gov.co/index.php/en/statistics-by-topic/national-accounts/economic-monitor-index-ise"],
+        ["DANE", "GEIH nacional y desestacionalizada", "Mensual", "Incompleta", "Candidata documentada", "Cobertura incompleta; se mantienen faltantes y no se empalma ni se imputa", "https://www.dane.gov.co/index.php/estadisticas-por-tema/mercado-laboral/empleo-y-desempleo/mercado-laboral-historicos"],
+        ["DANE", "IPI total e IPP producción nacional", "Mensual", "Desde 2014", "Candidata documentada", "No cubren 2006–2026; no se extrapolan ni se empalman con una base anterior", "https://www.dane.gov.co/index.php/estadisticas-por-tema/industria/indice-de-produccion-industrial-ipi"],
+        ["Federal Reserve Board / FRED", "DFII10, DFII5, DGS2, DGS10", "Diaria → mensual", "2003–2026", "Marco macroeconómico integral", "Rendimientos reales y nominales de EE. UU.; cambios contemporáneos o rezagados", "https://fred.stlouisfed.org/"],
+        ["Federal Reserve Board / FRED", "T5YIE, T10YIE", "Diaria → mensual", "2003–2026", "Marco macroeconómico integral", "Expectativas/compensación de inflación a 5 y 10 años; cambios", "https://fred.stlouisfed.org/"],
+        ["FRED", "DCOILBRENTEU, PALLFNFINDEXM", "Diaria/mensual", "2000–2026", "Marco macroeconómico integral", "Brent y commodities; logs y diferencias", "https://fred.stlouisfed.org/"],
+        ["FRED", "USEPUINDXD, STLFSI4, NFCI, ANFCI", "Semanal/mensual", "2000–2026", "Marco macroeconómico integral", "Incertidumbre y condiciones financieras; diferencias", "https://fred.stlouisfed.org/"],
+        ["FRED", "LRUN64TTUSM156S", "Mensual", "2000–2026", "Marco macroeconómico integral", "Desempleo estadounidense activo; diferencia; serie completa en la muestra", "https://fred.stlouisfed.org/series/LRUN64TTUSM156S"],
+        ["FRED", "MANEMP, INDPRO, TSIFRGHT", "Mensual", "2000–2026", "Marco macroeconómico integral", "Empleo industrial, producción y fletes/logística; empleo/fletes con L2 en pronóstico", "https://fred.stlouisfed.org/"],
         ["FRED", "BAMLH0A0HYM2", "Diaria", "Incompleta", "Candidato documentado", "High-yield OAS; no cubre la muestra activa y no se imputa", "https://fred.stlouisfed.org/series/BAMLH0A0HYM2"],
         ["FRED", "TEDRATE", "Diaria", "Hasta 2022-01", "Candidato documentado", "TED spread; cobertura incompleta, fuera del modelo balanceado", "https://fred.stlouisfed.org/series/TEDRATE"],
         ["BLS / FRED", "UNRATE", "Mensual", "Faltante 2025-10", "Candidato documentado", "Desempleo BLS; se conserva el faltante, sin interpolación", "https://fred.stlouisfed.org/series/UNRATE"],
@@ -799,17 +886,27 @@ def update_sources(wb) -> None:
     )
 
 
+def _rename_model_sheets(wb) -> None:
+    """Alinea las dos hojas de especificación con sus nombres descriptivos."""
+    target_names = ("Controles_externos", "Marco_macro_integral")
+    for worksheet, target_name in zip(list(wb.worksheets)[3:5], target_names):
+        if worksheet.title != target_name:
+            worksheet.title = target_name
+
+
 def main() -> None:
     if not WORKBOOK_PATH.exists():
         raise FileNotFoundError(f"No existe el workbook base: {WORKBOOK_PATH}")
     metadata = pd.read_json(RESULTS / "metadata.json", typ="series").to_dict()
     wb = load_workbook(WORKBOOK_PATH)
+    _rename_model_sheets(wb)
     update_summary(wb, metadata)
     update_weights_and_robustness(wb)
     update_bei(wb, metadata)
     update_forecast(wb, metadata)
     update_models(wb)
     update_source_sheet(wb, metadata)
+    update_transformations(wb, metadata)
     update_sources(wb)
     try:
         wb.calculation.fullCalcOnLoad = True

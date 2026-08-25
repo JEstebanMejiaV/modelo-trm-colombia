@@ -12,6 +12,6 @@ Importar desde este paquete en vez de desde estimate_model.py directamente:
     from model.config import (
         ROOT, RESULTS, DATA, RAW,
         SAMPLE_START, SAMPLE_END,
-        EXPANDED_FACTOR_SPECS_4, FORECAST_FACTOR_SPECS_3,
+        INTEGRATED_FACTOR_SPECS_4, FORECAST_FACTOR_SPECS_3,
     )
 """

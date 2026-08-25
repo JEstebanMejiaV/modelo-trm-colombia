@@ -11,7 +11,7 @@ from statsmodels.tsa.stattools import adfuller, kpss, zivot_andrews
 from .config import (
     SAMPLE_START,
     SAMPLE_END,
-    EXPANDED_FACTOR_SPECS_4,
+    INTEGRATED_FACTOR_SPECS_4,
     SelectedDifferenceModel,
 )
 from .transforms import make_timed_difference_design, select_timed_difference_model, design_term_name
@@ -180,10 +180,10 @@ def bei_trend_break_models(
 
 
 def bei_factor_specs(component: str) -> dict[str, dict[str, object]]:
-    """Copia la especificación ampliada y sustituye únicamente el término BEI."""
+    """Copia la especificación integral y sustituye únicamente el término BEI."""
     specs = {
         name: {**spec, "terminos": list(spec["terminos"])}
-        for name, spec in EXPANDED_FACTOR_SPECS_4.items()
+        for name, spec in INTEGRATED_FACTOR_SPECS_4.items()
     }
     specs["Diferencial de compensación inflacionaria 5 años"]["terminos"] = [
         (component, 1)
@@ -193,14 +193,14 @@ def bei_factor_specs(component: str) -> dict[str, dict[str, object]]:
 
 def bei_model_specification_comparison(
     model_data: pd.DataFrame,
-    selected_expanded: SelectedDifferenceModel,
+    selected_integrated: SelectedDifferenceModel,
     break_date: pd.Timestamp,
 ) -> pd.DataFrame:
     """Compara transformaciones y calendarios BEI sobre una muestra idéntica."""
     from .transforms import difference_components
 
     components = difference_components(model_data)
-    common_index = selected_expanded.y.index
+    common_index = selected_integrated.y.index
     variants = [
         (
             "Nivel — medias separadas (referencia)",
@@ -255,7 +255,7 @@ def bei_model_specification_comparison(
         specs = bei_factor_specs(component)
         y, x = make_timed_difference_design(
             components,
-            p=selected_expanded.p,
+            p=selected_integrated.p,
             factor_specs=specs,
             index=common_index,
         )
@@ -272,7 +272,7 @@ def bei_model_specification_comparison(
         predictions, metrics = difference_validation(
             model_data,
             SelectedDifferenceModel(
-                p=selected_expanded.p,
+                p=selected_integrated.p,
                 q=0,
                 result=result,
                 y=y,
@@ -322,7 +322,7 @@ def bei_model_specification_comparison(
                     else ""
                 ),
                 "observaciones": int(result.nobs),
-                "p_cambio_trm": int(selected_expanded.p),
+                "p_cambio_trm": int(selected_integrated.p),
                 "r_cuadrado_ajustado": float(result.rsquared_adj),
                 "aic": float(result.aic),
                 "bic": float(result.bic),
@@ -348,6 +348,6 @@ def bei_model_specification_comparison(
             "Primera diferencia — medias separadas (vigente)"
         )
     ].iloc[0]
-    if not np.isclose(current["bic"], selected_expanded.result.bic, atol=1e-8):
-        raise AssertionError("La especificación BEI vigente no concilia con el modelo ampliado.")
+    if not np.isclose(current["bic"], selected_integrated.result.bic, atol=1e-8):
+        raise AssertionError("La especificación BEI vigente no concilia con el marco macroeconómico integral.")
     return comparison

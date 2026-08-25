@@ -14,6 +14,15 @@ RESULTS = ROOT / "results"
 DATA = ROOT / "data"
 SAMPLE_START = pd.Timestamp("2006-01-01")
 SAMPLE_END = pd.Timestamp("2026-04-01")
+
+# IDs canónicos de las dos especificaciones históricas. Los IDs se usan en
+# nombres de archivos y contratos reproducibles; las etiquetas son las que se
+# muestran a lectores no técnicos.
+REFERENCE_MODEL_ID = "controles_externos"
+REFERENCE_MODEL_LABEL = "Controles externos y financieros"
+INTEGRATED_MODEL_ID = "marco_macro_integral"
+INTEGRATED_MODEL_LABEL = "Marco macroeconómico integral"
+
 SHAPLEY_BOOTSTRAP_REPLICATIONS = 200
 SHAPLEY_BOOTSTRAP_BLOCK_MONTHS = 12
 SHAPLEY_BOOTSTRAP_PERMUTATIONS = 64
@@ -76,10 +85,18 @@ GLOBAL_RAW_COMPONENTS = [
 ]
 GLOBAL_BASE_FILE = DATA / "base_global_mensual.csv"
 
+# Series internas colombianas con cobertura mensual completa en la ventana
+# activa. La GEIH, IPI e IPP se cargan y auditan, pero no entran aquí si dejan
+# meses faltantes o empiezan después de 2006; no se rellenan artificialmente.
+INTERNAL_RAW_COMPONENTS = [
+    "ln_ise_total_dane",
+    "ln_ipc_colombia",
+]
+
 
 # Cada factor es un jugador de la descomposicion Shapley. Todos sus terminos
 # (transformaciones y rezagos) entran o salen juntos al calcular el R2 marginal.
-BASE_FACTOR_SPECS = {
+REFERENCE_FACTOR_SPECS = {
     "Términos de intercambio": {
         "grupo": "Sector externo Colombia",
         "terminos": [("D.ln_terminos_intercambio", 0)],
@@ -136,9 +153,9 @@ def _global_terms(lag_market: int, lag_monthly: int) -> list[tuple[str, int]]:
     ]
 
 
-def expanded_factor_specs(regional_component: str) -> dict[str, dict[str, object]]:
+def integrated_factor_specs(regional_component: str) -> dict[str, dict[str, object]]:
     return {
-        **BASE_FACTOR_SPECS,
+        **REFERENCE_FACTOR_SPECS,
         "Riesgo soberano EMBIG Colombia": {
             "grupo": "Riesgo local",
             # Contemporaneo: esta version es contabilidad historica/nowcast, no causal.
@@ -160,6 +177,14 @@ def expanded_factor_specs(regional_component: str) -> dict[str, dict[str, object
             "grupo": "Política doméstica",
             "terminos": [("D.diferencial_bei_5y_pp", 1)],
         },
+        "Actividad y precios domésticos": {
+            "grupo": "Condiciones internas",
+            # ISE e IPC contemporáneos: explicación histórica/nowcast, no pronóstico.
+            "terminos": [
+                ("D.ln_ise_total_dane", 0),
+                ("D.ln_ipc_colombia", 0),
+            ],
+        },
         "Monedas regionales": {
             "grupo": "Regional",
             "terminos": [(regional_component, 0)],
@@ -171,9 +196,9 @@ def expanded_factor_specs(regional_component: str) -> dict[str, dict[str, object
     }
 
 
-EXPANDED_FACTOR_SPECS_3 = expanded_factor_specs("factor_monedas_regionales_3")
-EXPANDED_FACTOR_SPECS_4 = expanded_factor_specs("factor_monedas_regionales_4")
-EXPANDED_FACTOR_SPECS = EXPANDED_FACTOR_SPECS_4
+INTEGRATED_FACTOR_SPECS_3 = integrated_factor_specs("factor_monedas_regionales_3")
+INTEGRATED_FACTOR_SPECS_4 = integrated_factor_specs("factor_monedas_regionales_4")
+INTEGRATED_FACTOR_SPECS = INTEGRATED_FACTOR_SPECS_4
 
 
 def forecast_factor_specs(regional_component: str) -> dict[str, dict[str, object]]:
@@ -223,6 +248,14 @@ def forecast_factor_specs(regional_component: str) -> dict[str, dict[str, object
             "grupo": "Política doméstica",
             "terminos": [("D.diferencial_bei_5y_pp", 1)],
         },
+        "Actividad y precios domésticos": {
+            "grupo": "Condiciones internas",
+            # Bloque DANE con rezago conservador de publicación de dos meses.
+            "terminos": [
+                ("D.ln_ise_total_dane", 2),
+                ("D.ln_ipc_colombia", 2),
+            ],
+        },
         "Monedas regionales": {
             "grupo": "Regional",
             "terminos": [(regional_component, 1)],
@@ -250,6 +283,7 @@ FORECAST_AVAILABILITY = [
     ("Balanza comercial cambiaria", 2, "Mensual; publicación posterior al cierre", "Supuesto conservador: t-2"),
     ("Flujos netos de capital", 2, "Mensual; publicación posterior al cierre", "Supuesto conservador: t-2"),
     ("Diferencial de compensación inflacionaria 5 años", 1, "Curvas diarias", "Promedios completos conocidos para t-1"),
+    ("Actividad y precios domésticos", 2, "DANE; ISE mensual e IPC mensual", "Supuesto conservador: últimas observaciones completas conocidas para t-2"),
     ("Monedas regionales", 1, "Tipos de cambio mensuales", "Promedios completos conocidos para t-1"),
     (
         "Condiciones financieras, commodities y actividad internacional",
@@ -273,6 +307,8 @@ DIFFERENCED_COMPONENTS = [
     "asinh_flujos_capital",
     "diferencial_bei_5y_pp",
     "diferencial_bei_5y_comun_pp",
+    "ln_ise_total_dane",
+    "ln_ipc_colombia",
     *GLOBAL_RAW_COMPONENTS,
 ]
 
