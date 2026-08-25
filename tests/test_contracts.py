@@ -133,3 +133,63 @@ def test_monthly_output_contract_is_exact_and_disjoint() -> None:
     assert len(output_paths) == len(set(output_paths))
     contract_paths = {project_paths().relative(path) for path in contract_files(project_paths().root)}
     assert {"requirements.lock", "requirements-optional.lock"}.issubset(contract_paths)
+
+
+def test_experiment_registry_is_valid_and_ids_are_unique() -> None:
+    from trm_model.experiments.registry import validate_experiment_registry
+
+    registry = validate_experiment_registry(paths=project_paths())
+    ids = [record["experiment_id"] for record in registry["experiments"]]
+    assert len(ids) >= 1
+    assert len(ids) == len(set(ids))
+
+
+def test_run_manifest_experiment_references_are_validated() -> None:
+    from trm_model.experiments.registry import MONTHLY_EXPERIMENT_IDS
+
+    paths = project_paths()
+    manifest = build_run_manifest(
+        product_id="monthly_bundle",
+        config_files=[paths.configs / "common.toml"],
+        input_files=[paths.source_registry()],
+        output_files=[paths.schemas / "run_manifest.json"],
+        paths=paths,
+        status="success",
+        started_at=datetime(2026, 8, 23, tzinfo=timezone.utc),
+        finished_at=datetime(2026, 8, 23, 0, 1, tzinfo=timezone.utc),
+        experiment_ids=MONTHLY_EXPERIMENT_IDS,
+    )
+    validate_run_manifest(manifest, paths=paths)
+    assert manifest["experiment_ids"] == list(MONTHLY_EXPERIMENT_IDS)
+
+    manifest["experiment_id"] = "monthly_forecast.not_registered.v1"
+    with pytest.raises(ValueError, match="no registrados"):
+        validate_run_manifest(manifest, paths=paths)
+
+
+def test_experiment_listing_and_filters() -> None:
+    from trm_model.experiments.registry import experiment_details, list_experiments
+
+    monthly = list_experiments(product_id="monthly_forecast", paths=project_paths())
+    assert monthly
+    assert all(record["product_id"] == "monthly_forecast" for record in monthly)
+    active = list_experiments(status="active", paths=project_paths())
+    assert active
+    assert all(record["status"] == "active" for record in active)
+    details = experiment_details(monthly[0]["experiment_id"], paths=project_paths())
+    assert details["experiment_id"] == monthly[0]["experiment_id"]
+    assert "observed_runs" in details
+
+
+def test_experiment_registration_rejects_duplicate_id(tmp_path) -> None:
+    from trm_model.experiments.registry import (
+        ExperimentError,
+        load_experiment_registry,
+        register_experiment_file,
+    )
+
+    record = load_experiment_registry(paths=project_paths())["experiments"][0]
+    candidate = tmp_path / "duplicate.json"
+    candidate.write_text(json.dumps(record), encoding="utf-8")
+    with pytest.raises(ExperimentError, match="ya existe"):
+        register_experiment_file(candidate, paths=project_paths())

@@ -1,0 +1,122 @@
+{
+  "title": "TRM experiment record",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "experiment_id",
+    "product_id",
+    "model_id",
+    "title",
+    "status",
+    "change_type",
+    "created_at_utc",
+    "hypothesis",
+    "change_summary",
+    "code_paths",
+    "config_paths",
+    "input_sources",
+    "parameters",
+    "metrics",
+    "decision",
+    "evidence",
+    "tags"
+  ],
+  "properties": {
+    "schema_version": {"type": "integer", "minimum": 1},
+    "experiment_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]+$"
+    },
+    "product_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]+$"
+    },
+    "model_id": {"type": "string", "minLength": 1},
+    "title": {"type": "string", "minLength": 1},
+    "status": {
+      "type": "string",
+      "enum": ["planned", "active", "completed", "rejected", "retired"]
+    },
+    "change_type": {
+      "type": "string",
+      "enum": [
+        "baseline",
+        "specification",
+        "feature",
+        "transform",
+        "lag",
+        "model",
+        "hyperparameter",
+        "data",
+        "vintage",
+        "validation",
+        "bugfix"
+      ]
+    },
+    "created_at_utc": {"type": "string", "minLength": 1},
+    "parent_experiment_id": {
+      "type": ["string", "null"]
+    },
+    "hypothesis": {"type": "string", "minLength": 1},
+    "change_summary": {"type": "string", "minLength": 1},
+    "code_paths": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "config_paths": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "input_sources": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "parameters": {"type": "object"},
+    "metrics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "value"],
+        "properties": {
+          "name": {"type": "string", "minLength": 1},
+          "value": {"type": ["number", "string"]},
+          "unit": {"type": "string"},
+          "benchmark": {"type": "string"},
+          "split": {"type": "string"},
+          "direction": {"type": "string"},
+          "note": {"type": "string"}
+        },
+        "additionalProperties": true
+      }
+    },
+    "decision": {
+      "type": "object",
+      "required": ["outcome", "rationale"],
+      "properties": {
+        "outcome": {
+          "type": "string",
+          "enum": ["reference", "selected", "supporting", "research", "rejected", "pending"]
+        },
+        "rationale": {"type": "string", "minLength": 1},
+        "promotion_criteria": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      },
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "tags": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "notes": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  },
+  "additionalProperties": false
+}

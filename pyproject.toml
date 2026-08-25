@@ -51,6 +51,7 @@ packages = [
   "model",
   "trm_model",
   "trm_model.data",
+  "trm_model.experiments",
   "trm_model.features",
   "trm_model.provenance",
   "trm_model.specifications",

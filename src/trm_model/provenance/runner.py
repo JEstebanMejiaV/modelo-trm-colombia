@@ -39,6 +39,7 @@ class ProductRun:
     config_files: tuple[Path, ...] | None = None
     run_context: Mapping[str, object] | None = None
     warnings: tuple[str, ...] = ()
+    experiment_id: str | None = None
 
 
 def declared_product_outputs(
@@ -113,6 +114,7 @@ def run_product(spec: ProductRun, *, paths: ProjectPaths | None = None) -> Path:
         finished_at=started,
         warnings=spec.warnings,
         run_context=context,
+        experiment_id=spec.experiment_id,
     )
     running["products"] = ownership_records({spec.product_id: []})
     write_run_manifest(running, paths=project)
@@ -144,6 +146,7 @@ def run_product(spec: ProductRun, *, paths: ProjectPaths | None = None) -> Path:
             finished_at=datetime.now(timezone.utc),
             warnings=spec.warnings,
             run_context=context,
+            experiment_id=spec.experiment_id,
         )
         completed["products"] = ownership_records(ownership)
         validate_run_output_ownership(
@@ -165,6 +168,7 @@ def run_product(spec: ProductRun, *, paths: ProjectPaths | None = None) -> Path:
             error=f"{type(error).__name__}: {error}",
             warnings=spec.warnings,
             run_context=context,
+            experiment_id=spec.experiment_id,
         )
         failed["products"] = ownership_records({spec.product_id: []})
         write_run_manifest(failed, paths=project)

@@ -1,0 +1,79 @@
+{
+  "title": "TRM experiment registry",
+  "type": "object",
+  "required": ["schema_version", "description", "generated_at_utc", "experiments"],
+  "properties": {
+    "schema_version": {"type": "integer", "minimum": 1},
+    "description": {"type": "string", "minLength": 1},
+    "generated_at_utc": {"type": "string", "minLength": 1},
+    "experiments": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "experiment_id",
+          "product_id",
+          "model_id",
+          "title",
+          "status",
+          "change_type",
+          "created_at_utc",
+          "hypothesis",
+          "change_summary",
+          "code_paths",
+          "config_paths",
+          "input_sources",
+          "parameters",
+          "metrics",
+          "decision",
+          "evidence",
+          "tags"
+        ],
+        "properties": {
+          "schema_version": {"type": "integer", "minimum": 1},
+          "experiment_id": {"type": "string", "pattern": "^[a-z][a-z0-9_.-]+$"},
+          "product_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]+$"},
+          "model_id": {"type": "string", "minLength": 1},
+          "title": {"type": "string", "minLength": 1},
+          "status": {
+            "type": "string",
+            "enum": ["planned", "active", "completed", "rejected", "retired"]
+          },
+          "change_type": {
+            "type": "string",
+            "enum": [
+              "baseline",
+              "specification",
+              "feature",
+              "transform",
+              "lag",
+              "model",
+              "hyperparameter",
+              "data",
+              "vintage",
+              "validation",
+              "bugfix"
+            ]
+          },
+          "created_at_utc": {"type": "string", "minLength": 1},
+          "parent_experiment_id": {"type": ["string", "null"]},
+          "hypothesis": {"type": "string", "minLength": 1},
+          "change_summary": {"type": "string", "minLength": 1},
+          "code_paths": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "config_paths": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "input_sources": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "parameters": {"type": "object"},
+          "metrics": {"type": "array"},
+          "decision": {"type": "object"},
+          "evidence": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "tags": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "notes": {"type": "array", "items": {"type": "string"}}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

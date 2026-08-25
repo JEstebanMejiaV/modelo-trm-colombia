@@ -6,6 +6,7 @@ común y los tres outputs de volatilidad declarados.
 
 from __future__ import annotations
 
+from trm_model.experiments.registry import DAILY_VOLATILITY_EXPERIMENT_ID
 from trm_model.provenance import ProductRun, run_product
 
 
@@ -28,6 +29,7 @@ def run() -> None:
             product_id="daily_volatility",
             runner=_run_legacy,
             output_files=OUTPUT_FILES,
+            experiment_id=DAILY_VOLATILITY_EXPERIMENT_ID,
         )
     )
 

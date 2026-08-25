@@ -73,6 +73,10 @@ class ProjectPaths:
         return self.root / "configs"
 
     @property
+    def experiments(self) -> Path:
+        return self.root / "experiments"
+
+    @property
     def schemas(self) -> Path:
         return self.root / "schemas"
 

@@ -6,6 +6,7 @@ común y solo se incluyen los outputs que este entry point produce.
 
 from __future__ import annotations
 
+from trm_model.experiments.registry import DAILY_DIRECTION_EXPERIMENT_ID
 from trm_model.provenance import ProductRun, run_product
 from forecast_daily.reproducibility import DAILY_RANDOM_SEED
 
@@ -33,6 +34,7 @@ def run() -> None:
                 "deterministic": True,
                 "thread_limit": 1,
             },
+            experiment_id=DAILY_DIRECTION_EXPERIMENT_ID,
         )
     )
 
