@@ -18,24 +18,24 @@ Modelos que usan realizaciones contemporáneas de algunos factores. Sirven para 
 
 | Archivo | Contenido |
 |---|---|
-| `coeficientes_modelo_principal.csv` | Coeficientes HAC del modelo base (6 factores + pandemia) |
-| `coeficientes_modelo_ampliado.csv` | Coeficientes HAC del modelo ampliado (13 factores agrupados; 4 monedas regionales) |
-| `diagnosticos_modelo_principal.csv` | Ljung-Box, ARCH, Jarque-Bera, RESET, CUSUM |
-| `diagnosticos_modelo_ampliado.csv` | Igual para el ampliado |
-| `ajuste_historico_modelo_principal.csv` | Ajuste de un paso, residuos mensuales |
-| `ajuste_historico_modelo_ampliado.csv` | Igual para el ampliado |
-| `contribuciones_modelo_principal.csv` | Descomposición mensual: coeficiente × regresor |
-| `contribuciones_modelo_ampliado.csv` | Igual para el ampliado |
-| `validacion_metricas_modelo_principal.csv` | MAPE, acierto y MAE en validación expansiva de 48 meses |
-| `validacion_metricas_modelo_ampliado.csv` | Igual para el ampliado |
-| `validacion_predicciones_modelo_principal.csv` | Predicciones mensuales de la validación |
-| `validacion_predicciones_modelo_ampliado.csv` | Igual para el ampliado |
-| `comparacion_modelos.csv` | R², BIC, MAPE y acierto: principal vs ampliado |
-| `seleccion_rezagos_adl_diferencias.csv` | Grid BIC para rezagos del modelo base |
-| `seleccion_rezagos_modelo_ampliado.csv` | Grid BIC para rezagos del ampliado |
-| `pesos_explicativos_modelo_ampliado.csv` | Descomposición Shapley/LMG exacta del R² |
+| `coeficientes_controles_externos.csv` | Coeficientes HAC de Controles externos y financieros (6 factores + pandemia) |
+| `coeficientes_marco_macro_integral.csv` | Coeficientes HAC del marco macroeconómico integral (14 factores agrupados; 4 monedas regionales) |
+| `diagnosticos_controles_externos.csv` | Ljung-Box, ARCH, Jarque-Bera, RESET, CUSUM |
+| `diagnosticos_marco_macro_integral.csv` | Igual para el marco macroeconómico integral |
+| `ajuste_historico_controles_externos.csv` | Ajuste de un paso, residuos mensuales |
+| `ajuste_historico_marco_macro_integral.csv` | Igual para el marco macroeconómico integral |
+| `contribuciones_controles_externos.csv` | Descomposición mensual: coeficiente × regresor |
+| `contribuciones_marco_macro_integral.csv` | Igual para el marco macroeconómico integral |
+| `validacion_metricas_controles_externos.csv` | MAPE, acierto y MAE en validación expansiva de 48 meses |
+| `validacion_metricas_marco_macro_integral.csv` | Igual para el marco macroeconómico integral |
+| `validacion_predicciones_controles_externos.csv` | Predicciones mensuales de la validación |
+| `validacion_predicciones_marco_macro_integral.csv` | Igual para el marco macroeconómico integral |
+| `comparacion_especificaciones.csv` | R², BIC, MAPE y acierto de las especificaciones descriptivas |
+| `seleccion_rezagos_adl_diferencias.csv` | Grid BIC para rezagos de Controles externos y financieros |
+| `seleccion_rezagos_marco_macro_integral.csv` | Grid BIC para rezagos del marco macroeconómico integral |
+| `pesos_explicativos_marco_macro_integral.csv` | Descomposición Shapley/LMG exacta del R² |
 | `intervalos_bootstrap_pesos_shapley.csv` | Intervalos del 95% por bloques de 12 meses |
-| `estabilidad_submuestras_modelo_ampliado.csv` | Coeficientes y Shapley en 5 cortes |
+| `estabilidad_submuestras_marco_macro_integral.csv` | Coeficientes y Shapley en 5 cortes |
 | `estabilidad_submuestras_resumen.csv` | Correlación de rangos y cambio máximo de peso |
 | `comparacion_factor_regional.csv` | BRL+CLP+MXN vs +PEN en explicación y pronóstico |
 | `pruebas_integracion.csv` | ADF y KPSS para todas las variables |
@@ -54,7 +54,7 @@ Modelo que solo usa información disponible al inicio del mes objetivo. Ningún 
 | `validacion_metricas_pronostico.csv` | MAPE, acierto y R² vs caminata aleatoria |
 | `validacion_predicciones_pronostico.csv` | Predicciones mensuales pseudo-tiempo-real |
 | `calendario_disponibilidad_pronostico.csv` | Rezago conservador de cada factor |
-| `cobertura_vintages_pronostico.csv` | Cobertura de vintages por factor (3 de 13 factores activos completos) |
+| `cobertura_vintages_pronostico.csv` | Cobertura de vintages por factor (3 de 14 factores activos completos) |
 | `variables_globales_series.csv` | Señales mensuales globales, transformaciones y factor agrupado |
 | `variables_globales_evaluacion.csv` | Evaluación OOS de señales globales individuales y agregadas |
 | `comparacion_modelos_diarios.csv` | Comparación OOS de modelos diarios, incluido HAR con globales rezagadas |
@@ -64,7 +64,7 @@ Modelo que solo usa información disponible al inicio del mes objetivo. Ningún 
 | `volatilidad_modelos_garch.csv` | Comparación GARCH, EGARCH, GJR-GARCH y GARCH + VIX |
 | `volatilidad_var_backtest.csv` | Violaciones y pruebas de cobertura de VaR |
 | `diebold_mariano_pronostico.csv` | Test DM vs caminata (p = 0.21, no rechaza igualdad) |
-| `comparacion_parsimoniosos_pronostico.csv` | Top-3, top-5, top-7 y especificación ampliada de 13 factores comparados |
+| `comparacion_parsimoniosos_pronostico.csv` | Top-3, top-5, top-7 y marco macroeconómico integral de 14 factores comparados |
 | `coeficientes_pronostico_parsimonioso.csv` | Coeficientes del top-3 (monedas, dólar, EMBIG) |
 | `validacion_metricas_parsimonioso.csv` | MAPE 2.57% del pronóstico parsimonioso |
 | `validacion_predicciones_parsimonioso.csv` | Predicciones mensuales del top-3 |
@@ -77,7 +77,7 @@ La validación es **pseudo-tiempo-real**: respeta el calendario de publicación 
 
 ## `robustez/` — Pruebas de robustez y contraste ECM
 
-Análisis complementarios que informan decisiones de especificación pero no producen el resultado principal.
+Análisis complementarios que informan decisiones de especificación pero no producen el resultado de referencia.
 
 | Archivo | Contenido |
 |---|---|
@@ -91,10 +91,10 @@ Análisis complementarios que informan decisiones de especificación pero no pro
 | `coeficientes_largo_plazo_ecm.csv` | Vector cointegrante normalizado (exploratorio) |
 | `seleccion_rezagos_ecm.csv` | Grid AIC/BIC/HQIC del ARDL |
 | `diagnosticos_ecm.csv` | Pruebas residuales del contraste ECM |
-| `rolling_window_coeficientes.csv` | 120 ventanas × 14 coeficientes del ampliado |
+| `rolling_window_coeficientes.csv` | 120 ventanas × 14 coeficientes del marco macroeconómico integral |
 | `rolling_window_estabilidad.csv` | Resumen: std, CV, cambios de signo (10/14 inestables) |
 | `threshold_regression.csv` | Test de Chow con VIX, dólar y EMBIG como umbrales |
-| `garch_residuos_ampliado.csv` | GARCH(1,1): persistencia 0.94, vol 2.12%/mes |
+| `garch_residuos_marco_macro_integral.csv` | GARCH(1,1): persistencia 0.94, vol 2.12%/mes |
 | `comparacion_estimadores_robustos.csv` | OLS vs Huber-T vs LAD |
 | `coeficientes_robustos_vs_ols.csv` | Coeficientes clave por estimador |
 | `outliers_huber_identificados.csv` | 35 meses downweighted por Huber |
@@ -102,13 +102,17 @@ Análisis complementarios que informan decisiones de especificación pero no pro
 | `mejoras_explicacion_parte2.csv` | PDL dólar, intervención, estimación robusta |
 | `evaluacion_variables_candidatas.csv` | MICH, NFCI, T10Y2Y, STLFSI (ninguna aporta) |
 
-El ECM es exploratorio: la prueba bounds no confirma cointegración al 5%, por lo que el modelo principal permanece en diferencias.
+El ECM es exploratorio: la prueba bounds no confirma cointegración al 5%, por lo que las especificaciones mensuales permanecen en diferencias.
+
+## Variables internas de Colombia
+
+La especificación integral añade el factor `Actividad y precios domésticos`, con `D.ln_ise_total_dane.L0` y `D.ln_ipc_colombia.L0` en la explicación histórica y `.L2` en el pronóstico. Ambas series cubren 244/244 meses de 2006-01 a 2026-04 y se mantienen sin imputación. GEIH, IPI e IPP se conservan como candidatas auditadas fuera de la matriz balanceada por cobertura incompleta. La trazabilidad completa está en `data/variables_internas_cobertura.csv`.
 
 ## Resultados globales y de horizonte largo
 
 La base mensual global se integra como un factor agrupado en la explicación histórica para evitar una explosión de jugadores Shapley y controlar colinealidad. El factor `Condiciones financieras, commodities y actividad internacional` reúne 17 términos activos: rendimientos y expectativas de EE. UU., commodities, incertidumbre, condiciones financieras, desempleo, actividad industrial y fletes/logística. Sus series y transformaciones se describen en `data/base_global_mensual.csv` y su cobertura en `data/base_global_cobertura.csv`; high-yield, TED, `UNRATE` y China quedan como candidatos documentados cuando no cubren la muestra completa. No se imputa ningún faltante.
 
-La señal `delta_actividad_us_12m` obtiene R² OOS de 12,8% a 12 meses (DM p = 0,006). La wavelet D3+D4+D5 alcanza 45,9% y el panel EM aproximadamente 43,8%. En el corto plazo diario, el mejor HAR con globales mensuales y señales globales ampliadas tiene R² OOS de 13,4%, pero dirección de 41,2% y Sharpe −3,91. Estas métricas no son intercambiables: cada una corresponde a una frecuencia, horizonte y benchmark distintos.
+La señal `delta_actividad_us_12m` obtiene R² OOS de 12,8% a 12 meses (DM p = 0,006). La wavelet D3+D4+D5 alcanza 45,9% y el panel EM aproximadamente 43,8%. En el corto plazo diario, el mejor HAR con globales mensuales y señales globales adicionales tiene R² OOS de 13,4%, pero dirección de 41,2% y Sharpe −3,91. Estas métricas no son intercambiables: cada una corresponde a una frecuencia, horizonte y benchmark distintos.
 
 
 - `D.variable` = primera diferencia mensual.

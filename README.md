@@ -7,88 +7,91 @@ Dos productos independientes: uno explica ex post, otro intenta pronosticar. El 
 
 # Parte A — Explicar la TRM
 
-El modelo ampliado distribuye la variación mensual entre 13 factores macroeconómicos usando información contemporánea y rezagada. R² ajustado: **62,80%** (R² sin ajustar: 67,47%). Los principales bloques son monedas regionales (24,59%), condiciones financieras, commodities y actividad internacional (21,62%), dólar amplio (15,46%) y EMBIG Colombia (14,26%); juntos concentran 75,93% del peso entre factores.
+El marco macroeconómico integral distribuye la variación mensual entre 14 factores macroeconómicos usando información contemporánea y rezagada. Incluye el factor interno **Actividad y precios domésticos**, construido con el ISE total DANE y el IPC Colombia, además de los controles externos, financieros, regionales y globales. Las cifras de ajuste y los pesos se regeneran automáticamente desde los resultados versionados.
 
-## Coeficientes del modelo ampliado
+## Coeficientes del marco macroeconómico integral
 
-<!-- AUTO:coeficientes_ampliado -->
+<!-- AUTO:coeficientes_marco_macro_integral -->
 | Término | Coeficiente | p-valor |
 |---|---:|---:|
-| Constante | 0,00249 | 0,1712 |
-| Δln términos de intercambio, mes actual | 0,01682 | 0,6915 |
-| Δln remesas 12 meses, rezago 1 | 0,16805 | 0,1388 |
-| Δ diferencial de tasas, rezago 1 | 0,00109 | 0,8366 |
-| Δ déficit fiscal 12 meses/PIB, rezago 1 | 0,00003 | 0,9938 |
-| Δln dólar amplio, mes actual | 0,16176 | 0,3627 |
-| Δln VIX, mes actual | 0,01464 | 0,1687 |
-| Δ EMBIG Colombia (pp), mes actual | 0,02478 | 0,0204 |
-| Δln reservas netas sin FLAR, rezago 1 | −0,25123 | 0,0381 |
-| Δ asinh(balanza comercial), rezago 1 | 0,05448 | <0,0001 |
-| Δ asinh(flujos de capital), rezago 1 | 0,00066 | 0,8324 |
-| Δ diferencial BEI 5 años (pp), rezago 1 | −0,00240 | 0,5755 |
-| Factor regional BRL+CLP+MXN+PEN, mes actual | 0,01758 | <0,0001 |
-| `D.yield_real_10y_tips_pct.L0` | −344,51234 | 0,2405 |
-| `D.yield_real_5y_us_pct.L0` | −0,09219 | 0,1268 |
-| `D.yield_2y_us_pct.L0` | −325,01023 | 0,2153 |
-| `D.yield_10y_us_pct.L0` | 669,61408 | 0,0373 |
-| `D.spread_10y_2y_us_pct.L0` | −325,05115 | 0,2152 |
-| `D.breakeven_5y_us_pct.L0` | −0,10116 | 0,0839 |
-| `D.breakeven_10y_us_pct.L0` | −344,43964 | 0,2406 |
-| `D.epu_global.L0` | −0,00001 | 0,6528 |
-| `D.estres_financiero_stl.L0` | 0,00383 | 0,5106 |
-| `D.nfci_chicago.L0` | 0,02803 | 0,5832 |
-| `D.anfci_chicago.L0` | −0,04698 | 0,2677 |
-| `D.ln_brent_global.L0` | −0,02448 | 0,4578 |
-| `D.ln_commodities_global.L0` | −0,15359 | 0,0160 |
-| `D.desempleo_us_pct.L0` | −0,00915 | 0,0916 |
-| `D.ln_empleo_manufactura_us.L0` | 0,05646 | 0,9271 |
-| `D.ln_produccion_industrial_us.L0` | −0,54247 | 0,1272 |
-| `D.ln_fletes_transporte_us.L0` | 0,22241 | 0,0922 |
-| Pandemia marzo–mayo 2020 | 0,00515 | 0,5874 |
-<!-- /AUTO:coeficientes_ampliado -->
+| Constante | 0,00567 | 0,0103 |
+| Δln términos de intercambio, mes actual | 0,01482 | 0,7322 |
+| Δln remesas 12 meses, rezago 1 | 0,19704 | 0,0571 |
+| Δ diferencial de tasas, rezago 1 | 0,00345 | 0,5264 |
+| Δ déficit fiscal 12 meses/PIB, rezago 1 | −0,00012 | 0,9714 |
+| Δln dólar amplio, mes actual | 0,20247 | 0,2746 |
+| Δln VIX, mes actual | 0,01656 | 0,1121 |
+| Δ EMBIG Colombia (pp), mes actual | 0,02779 | 0,0104 |
+| Δln reservas netas sin FLAR, rezago 1 | −0,23794 | 0,0487 |
+| Δ asinh(balanza comercial), rezago 1 | 0,05473 | <0,0001 |
+| Δ asinh(flujos de capital), rezago 1 | 0,00060 | 0,8380 |
+| Δ diferencial BEI 5 años (pp), rezago 1 | −0,00172 | 0,6793 |
+| `D.ln_ise_total_dane.L0` | −0,21001 | 0,0187 |
+| `D.ln_ipc_colombia.L0` | −0,70708 | 0,0561 |
+| Factor regional BRL+CLP+MXN+PEN, mes actual | 0,01614 | <0,0001 |
+| `D.yield_real_10y_tips_pct.L0` | −285,78701 | 0,3113 |
+| `D.yield_real_5y_us_pct.L0` | −0,09764 | 0,1208 |
+| `D.yield_2y_us_pct.L0` | −415,41215 | 0,1054 |
+| `D.yield_10y_us_pct.L0` | 701,29852 | 0,0304 |
+| `D.spread_10y_2y_us_pct.L0` | −415,45712 | 0,1053 |
+| `D.breakeven_5y_us_pct.L0` | −0,10213 | 0,0980 |
+| `D.breakeven_10y_us_pct.L0` | −285,71881 | 0,3114 |
+| `D.epu_global.L0` | −0,00002 | 0,5317 |
+| `D.estres_financiero_stl.L0` | 0,00342 | 0,5641 |
+| `D.nfci_chicago.L0` | 0,02482 | 0,6076 |
+| `D.anfci_chicago.L0` | −0,04764 | 0,2327 |
+| `D.ln_brent_global.L0` | −0,01447 | 0,6360 |
+| `D.ln_commodities_global.L0` | −0,16719 | 0,0084 |
+| `D.desempleo_us_pct.L0` | −0,01132 | 0,0376 |
+| `D.ln_empleo_manufactura_us.L0` | 0,08917 | 0,8764 |
+| `D.ln_produccion_industrial_us.L0` | −0,57942 | 0,1017 |
+| `D.ln_fletes_transporte_us.L0` | 0,24884 | 0,0585 |
+| Pandemia marzo–mayo 2020 | −0,00267 | 0,7999 |
+<!-- /AUTO:coeficientes_marco_macro_integral -->
 
 ## Descomposición Shapley (peso de cada factor)
 
-Se calculan los **8.192 subconjuntos** posibles y se promedia el aporte marginal en todos los órdenes de entrada. El bloque fijo (intercepto + pandemia) explica 1,78%; los 13 factores agregan 65,69 p.p.
+Se calculan los **16.384 subconjuntos** posibles y se promedia el aporte marginal en todos los órdenes de entrada. El bloque fijo (intercepto + pandemia) y los 14 factores se reportan con la misma convención descriptiva; la tabla siguiente se actualiza automáticamente al reestimar.
 
 <!-- AUTO:pesos_shapley -->
-| Factor | Peso entre los 13 factores | Aporte al R² |
+| Factor | Peso entre los 14 factores | Aporte al R² |
 |---|---:|---:|
-| Monedas regionales | 24,59% | 16,15 p.p. |
-| Condiciones financieras, commodities y actividad internacional | 21,62% | 14,20 p.p. |
-| Dólar amplio | 15,46% | 10,15 p.p. |
-| Riesgo soberano EMBIG Colombia | 14,26% | 9,37 p.p. |
-| Balanza comercial cambiaria | 6,47% | 4,25 p.p. |
-| VIX | 6,12% | 4,02 p.p. |
-| Términos de intercambio | 4,29% | 2,82 p.p. |
-| Flujos netos de capital | 3,40% | 2,24 p.p. |
-| Reservas internacionales | 2,03% | 1,33 p.p. |
-| Remesas | 1,15% | 0,75 p.p. |
-| Diferencial de compensación inflacionaria 5 años | 0,32% | 0,21 p.p. |
-| Diferencial de tasas | 0,20% | 0,13 p.p. |
-| Déficit fiscal | 0,10% | 0,06 p.p. |
+| Monedas regionales | 23,55% | 15,72 p,p, |
+| Condiciones financieras, commodities y actividad internacional | 21,63% | 14,44 p,p, |
+| Dólar amplio | 15,11% | 10,09 p,p, |
+| Riesgo soberano EMBIG Colombia | 14,12% | 9,43 p,p, |
+| Balanza comercial cambiaria | 6,36% | 4,25 p,p, |
+| VIX | 6,10% | 4,07 p,p, |
+| Términos de intercambio | 4,15% | 2,77 p,p, |
+| Flujos netos de capital | 3,29% | 2,20 p,p, |
+| Actividad y precios domésticos | 2,02% | 1,35 p,p, |
+| Reservas internacionales | 1,94% | 1,30 p,p, |
+| Remesas | 1,17% | 0,78 p,p, |
+| Diferencial de compensación inflacionaria 5 años | 0,30% | 0,20 p,p, |
+| Diferencial de tasas | 0,18% | 0,12 p,p, |
+| Déficit fiscal | 0,09% | 0,06 p,p, |
 <!-- /AUTO:pesos_shapley -->
 
 <!-- AUTO:bootstrap_intervalos -->
-La incertidumbre se evalúa con 200 réplicas de un *bootstrap* circular de bloques de 12 meses. Los intervalos percentiles del 95% de los tres factores principales son: Monedas regionales, **17,68%–28,59%**; Condiciones financieras, commodities y actividad internacional, **18,18%–30,36%**; Dólar amplio, **9,05%–19,64%**. Son intervalos de la asignación Shapley bajo remuestreo temporal, no intervalos de un efecto causal.
+La incertidumbre se evalúa con 200 réplicas de un *bootstrap* circular de bloques de 12 meses. Los intervalos percentiles del 95% de los tres factores principales son: Monedas regionales, **16,63%–27,30%**; Condiciones financieras, commodities y actividad internacional, **17,56%–31,73%**; Dólar amplio, **8,74%–20,85%**. Son intervalos de la asignación Shapley bajo remuestreo temporal, no intervalos de un efecto causal.
 <!-- /AUTO:bootstrap_intervalos -->
 
-## Comparación principal vs ampliado
+## Comparación de especificaciones descriptivas
 
-<!-- AUTO:comparacion_modelos -->
-| Métrica | Modelo principal | Modelo ampliado |
+<!-- AUTO:comparacion_especificaciones -->
+| Métrica | Controles externos y financieros | Marco macroeconómico integral |
 |---|---:|---:|
 | Observaciones efectivas | 240 | 240 |
-| R² | 49,45% | 67,47% |
-| R² ajustado | 47,92% | 62,80% |
-| MAPE, validación condicional de 48 meses | 2,01% | 1,51% |
+| R² | 49,45% | 68,54% |
+| R² ajustado | 47,92% | 63,67% |
+| MAPE, validación condicional de 48 meses | 2,01% | 1,49% |
 | Acierto de dirección | 68,75% | 83,33% |
-| R² condicional frente a caminata aleatoria | 31,92% | 55,07% |
-<!-- /AUTO:comparacion_modelos -->
+| R² condicional frente a caminata aleatoria | 31,92% | 56,87% |
+<!-- /AUTO:comparacion_especificaciones -->
 
-## Modelo principal (7 factores)
+## Controles externos y financieros
 
-<!-- AUTO:coeficientes_principal -->
+<!-- AUTO:coeficientes_controles_externos -->
 | Término | Coeficiente | p-valor HAC | Lectura aproximada |
 |---|---:|---:|---|
 | Constante | −0,00059 | 0,7250 | No hay evidencia de una deriva mensual adicional. |
@@ -99,28 +102,32 @@ La incertidumbre se evalúa con 200 réplicas de un *bootstrap* circular de bloq
 | Δln dólar amplio, mes actual | 1,27461 | <0,0001 | Un aumento de 1% del dólar global se asocia con una TRM cerca de 127.46% mayor. |
 | Δln VIX, mes actual | 0,03836 | <0,0001 | Un aumento de 10% del VIX se asocia con una TRM cerca de 38.36% mayor. |
 | Pandemia marzo–mayo 2020 | 0,01081 | 0,0200 | Se asocia con una TRM alrededor de 1.1% mayor, condicionado a los demás factores. |
-<!-- /AUTO:coeficientes_principal -->
+<!-- /AUTO:coeficientes_controles_externos -->
 
-<!-- AUTO:metricas_principal -->
+<!-- AUTO:metricas_controles_externos -->
 - MAPE condicional: **2,01%**.
 - Acierto de dirección: **68,75%**.
-- R² condicional frente a caminata aleatoria: **31,92%**.
-<!-- /AUTO:metricas_principal -->
+- R² condicional frente a caminata aleatoria: **0,32%**.
+<!-- /AUTO:metricas_controles_externos -->
 
 ## Robustez y estabilidad
 
 Un modelo combinado (interacciones + asimetría + outliers) eleva el R² a 66% y resuelve la heterocedasticidad ARCH. La jerarquía Shapley es robusta en submuestras (Spearman 0,91–0,98), pero los coeficientes individuales son inestables: rolling window de 120 meses muestra que 10/14 cambian significativamente entre mitades.
 
+## Variables internas de Colombia
+
+La especificación integral activa un único factor descriptivo de **Actividad y precios domésticos** para evitar colinealidad entre indicadores sectoriales. Sus términos históricos son `D.ln_ise_total_dane.L0` y `D.ln_ipc_colombia.L0`; en el pronóstico ambos usan `L2`. El ISE total DANE y el IPC Colombia cubren los **244 meses** de enero de 2006 a abril de 2026 y se incorporan sin ceros, interpolaciones, extrapolaciones ni empalmes artificiales. GEIH, IPI e IPP permanecen auditados como candidatos porque no cubren toda la muestra. La matriz completa de cobertura está en [`data/variables_internas_cobertura.csv`](data/variables_internas_cobertura.csv).
+
 ---
 
 # Parte B — Pronosticar la TRM
 
-El modelo de pronóstico usa los 13 factores agrupados con rezagos de publicación (1–3 meses según disponibilidad). No emplea información contemporánea del mes objetivo.
+El modelo de pronóstico usa los 14 factores agrupados con rezagos de publicación (1–3 meses según disponibilidad). No emplea información contemporánea del mes objetivo.
 
 ## Resultado: no supera la caminata aleatoria
 
 <!-- AUTO:metricas_pronostico -->
-La validación expansiva de 48 meses obtiene MAPE de **2,58%**, acierto de dirección de **50,00%** y R² frente a la caminata aleatoria de **−4,84%**. La caminata obtiene MAPE de **2,39%**. Es decir, la ecuación explicativa no se convierte automáticamente en un buen pronóstico y, con esta información, el benchmark simple sigue siendo superior.
+La validación expansiva de 48 meses obtiene MAPE de **2,49%**, acierto de dirección de **52,08%** y R² frente a la caminata aleatoria de **−1,46%**. La caminata obtiene MAPE de **2,39%**. Es decir, la ecuación explicativa no se convierte automáticamente en un buen pronóstico y, con esta información, el benchmark simple sigue siendo superior.
 <!-- /AUTO:metricas_pronostico -->
 
 ## Evaluaciones adicionales
@@ -143,7 +150,7 @@ A horizontes largos, la señal `delta_actividad_us_12m` obtiene R² OOS de **12,
 
 La volatilidad se recalculó con especificaciones GARCH y VIX: **GARCH + VIX** tiene el menor BIC. En el backtest de VaR al 95% registra 31 violaciones de 500 observaciones (**6,2%**, frente a 5% esperado). La evidencia es útil para medir riesgo, no constituye recomendación de inversión.
 
-La base global mensual activa reúne 17 componentes balanceados: rendimientos reales y nominales de EE. UU., expectativas de inflación a 5 y 10 años, pendiente 10Y–2Y, Brent, commodities, incertidumbre de política económica, STLFSI, NFCI, ANFCI, desempleo estadounidense `LRUN64TTUSM156S`, empleo manufacturero, producción industrial y fletes/logística. High-yield, TED, `UNRATE` y los indicadores de China se conservan como candidatos con cobertura incompleta o faltantes publicados; no se imputan ni entran al modelo balanceado. La cobertura completa se audita en `data/base_global_cobertura.csv`. El bloque se mantiene agrupado para controlar colinealidad y conservar una descomposición Shapley tractable con 13 jugadores.
+La base global mensual activa reúne 17 componentes balanceados: rendimientos reales y nominales de EE. UU., expectativas de inflación a 5 y 10 años, pendiente 10Y–2Y, Brent, commodities, incertidumbre de política económica, STLFSI, NFCI, ANFCI, desempleo estadounidense `LRUN64TTUSM156S`, empleo manufacturero, producción industrial y fletes/logística. High-yield, TED, `UNRATE` y los indicadores de China se conservan como candidatos con cobertura incompleta o faltantes publicados; no se imputan ni entran al modelo balanceado. La cobertura completa se audita en `data/base_global_cobertura.csv`. El bloque se mantiene agrupado para controlar colinealidad y conservar una descomposición Shapley tractable con 14 jugadores.
 
 **Conclusión:** las variables globales mejoran la explicación histórica y aportan señales específicas a horizontes largos, pero el pronóstico mensual disponible ex ante continúa por debajo de la caminata aleatoria.
 
@@ -156,7 +163,7 @@ Cinco PNGs en `deliverables/graficos/`:
 1. **Descomposición Shapley** — barras horizontales con intervalos bootstrap.
 2. **Desempeño de los modelos** — explicación histórica, pronóstico mensual y benchmark.
 3. **Validación de la TRM** — realizaciones, ajustes, pronóstico y caminata aleatoria.
-4. **Efectos típicos estandarizados** — asociaciones parciales del modelo ampliado; el factor global agrupado aparece como una sola fila.
+4. **Efectos típicos estandarizados** — asociaciones parciales del marco macroeconómico integral; el factor global agrupado aparece como una sola fila.
 5. **ECM y elasticidades** — corto plazo, largo plazo y velocidad de ajuste.
 
 Ver [`deliverables/graficos/README.md`](deliverables/graficos/README.md) para cautelas de lectura.

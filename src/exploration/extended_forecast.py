@@ -3,7 +3,7 @@ Extensiones al modelo de pronóstico de la TRM.
 
 1. Pronóstico parsimonioso (top-3 factores Shapley) como especificación activa.
 2. Backtest genuino parcial con vintages FRED descargados.
-3. GARCH(1,1) sobre residuos del modelo ampliado.
+3. GARCH(1,1) sobre residuos del marco macroeconómico integral.
 4. Forecast combination: promedio ponderado del pronóstico y la caminata.
 
 Uso:
@@ -40,7 +40,7 @@ from estimate_model import (
     SAMPLE_START,
     SAMPLE_END,
     FORECAST_FACTOR_SPECS_3,
-    EXPANDED_FACTOR_SPECS_4,
+    INTEGRATED_FACTOR_SPECS_4,
     SelectedDifferenceModel,
 )
 
@@ -55,7 +55,7 @@ def parsimonious_top3_forecast(
     components: pd.DataFrame,
 ) -> dict:
     """
-    Estima el pronóstico solo con los top-3 factores del Shapley ampliado:
+    Estima el pronóstico solo con los top-3 factores del Shapley del marco macroeconómico integral:
     Monedas regionales, Dólar amplio y Riesgo soberano EMBIG.
     Usa los rezagos de FORECAST_FACTOR_SPECS_3 para esos 3 factores.
     """
@@ -218,13 +218,13 @@ def genuine_backtest(
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 3. GARCH(1,1) SOBRE RESIDUOS DEL MODELO AMPLIADO
+# 3. GARCH(1,1) SOBRE RESIDUOS DEL MARCO MACROECONÓMICO INTEGRAL
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 def fit_garch(model_data: pd.DataFrame, components: pd.DataFrame) -> pd.DataFrame:
     """
-    Ajusta GARCH(1,1) sobre los residuos del modelo ampliado.
+    Ajusta GARCH(1,1) sobre los residuos del marco macroeconómico integral.
     Reporta parámetros, log-verosimilitud e intervalos de volatilidad condicional.
     """
     try:
@@ -233,12 +233,12 @@ def fit_garch(model_data: pd.DataFrame, components: pd.DataFrame) -> pd.DataFram
         print("  SKIP: paquete 'arch' no instalado. pip install arch")
         return pd.DataFrame()
 
-    # Obtener residuos del modelo ampliado
+    # Obtener residuos del marco macroeconómico integral
     common_index = make_timed_difference_design(
-        components, p=3, factor_specs=EXPANDED_FACTOR_SPECS_4
+        components, p=3, factor_specs=INTEGRATED_FACTOR_SPECS_4
     )[0].index
     selected, _ = select_timed_difference_model(
-        model_data, EXPANDED_FACTOR_SPECS_4, common_index=common_index
+        model_data, INTEGRATED_FACTOR_SPECS_4, common_index=common_index
     )
     residuals = selected.result.resid * 100  # escalar a pct para estabilidad numérica
 
@@ -415,11 +415,11 @@ def main() -> None:
         print("  Sin datos de vintages disponibles.")
 
     # ── 3. GARCH(1,1) ────────────────────────────────────────────────────────
-    print("\n[4/5] GARCH(1,1) sobre residuos del ampliado...")
+    print("\n[4/5] GARCH(1,1) sobre residuos del marco macroeconómico integral...")
     garch_result = fit_garch(model_data, components)
     if not garch_result.empty:
         garch_result.to_csv(
-            RESULTS / "robustez" / "garch_residuos_ampliado.csv",
+            RESULTS / "robustez" / "garch_residuos_marco_macro_integral.csv",
             index=False, encoding="utf-8-sig",
         )
         print(f"  Persistencia (α+β): {garch_result['persistencia'].iloc[0]:.4f}")

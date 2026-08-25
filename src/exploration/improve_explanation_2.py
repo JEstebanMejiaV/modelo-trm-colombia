@@ -36,7 +36,7 @@ from estimate_model import (
     diagnostics,
     SAMPLE_START,
     SAMPLE_END,
-    EXPANDED_FACTOR_SPECS_4,
+    INTEGRATED_FACTOR_SPECS_4,
     ECM_LEVEL_VARIABLES,
     LEVEL_COMPONENTS,
     SelectedDifferenceModel,
@@ -276,11 +276,11 @@ def main() -> None:
     model_data = load_model_data()
     components = difference_components(model_data)
     common_index = make_timed_difference_design(
-        components, p=3, factor_specs=EXPANDED_FACTOR_SPECS_4
+        components, p=3, factor_specs=INTEGRATED_FACTOR_SPECS_4
     )[0].index
 
     selected_base, _ = select_timed_difference_model(
-        model_data, EXPANDED_FACTOR_SPECS_4, common_index=common_index
+        model_data, INTEGRATED_FACTOR_SPECS_4, common_index=common_index
     )
 
     output_dir = RESULTS / "robustez"

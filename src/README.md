@@ -6,7 +6,7 @@ Esta carpeta contiene el pipeline de estimación, validación y documentación d
 
 | Archivo | Función |
 |---|---|
-| `estimate_model.py` | Orquestador principal. Importa del paquete `model/`, estima los modelos base, ampliado y de pronóstico, calcula Shapley, Diebold-Mariano, modelos parsimoniosos y actualiza `data/`, `results/` y `README.md`. |
+| `estimate_model.py` | Orquestador principal. Importa del paquete `model/`, estima las especificaciones de controles externos y financieros, el marco macroeconómico integral y el pronóstico, calcula Shapley, Diebold-Mariano, modelos parsimoniosos y actualiza `data/`, `results/` y `README.md`. |
 | `archive_vintage.py` | Crea snapshots inmutables por fecha de origen. Descarga vintages FRED via API (`FRED_API_KEY`) y genera la matriz de cobertura. |
 | `build_charts.py` | Construye cinco gráficos PNG desde los CSV de `results/` y los guarda en `graficos/`. |
 | `build_workbook.mjs` | Construye el archivo Excel de 14 hojas y actualiza `deliverables/modelo_trm_colombia.xlsx` cuando está disponible `@oai/artifact-tool`. |
@@ -49,7 +49,7 @@ build_dataset()
    ↓
 data/modelo_trm_datos_mensuales.csv
    ↓
-modelo base + modelo ampliado histórico + pronóstico rezagado + ECM exploratorio
+Controles externos y financieros + marco macroeconómico integral histórico + pronóstico rezagado + ECM exploratorio
    ↓
 results/*.csv y results/metadata.json
    ├──→ src/build_charts.py → graficos/*.png
@@ -61,21 +61,21 @@ deliverables/modelo_trm_colombia.xlsx
 
 ## Especificaciones econométricas
 
-`BASE_FACTOR_SPECS`, `EXPANDED_FACTOR_SPECS_3/4` y `FORECAST_FACTOR_SPECS_3/4` declaran cada factor, su grupo, transformación y rezago. `make_timed_difference_design()` usa esas especificaciones para mantener una sola ruta de construcción.
+`REFERENCE_FACTOR_SPECS`, `INTEGRATED_FACTOR_SPECS_3/4` y `FORECAST_FACTOR_SPECS_3/4` declaran cada factor, su grupo, transformación y rezago. `make_timed_difference_design()` usa esas especificaciones para mantener una sola ruta de construcción.
 
-- Factores contemporáneos del histórico: términos de intercambio, dólar amplio, VIX, EMBIG Colombia, factor regional de cuatro monedas y los 17 términos del bloque `Condiciones financieras, commodities y actividad internacional`.
+- Factores contemporáneos del histórico: términos de intercambio, dólar amplio, VIX, EMBIG Colombia, factor regional de cuatro monedas, el factor `Actividad y precios domésticos` (ISE total DANE e IPC Colombia) y los 17 términos del bloque `Condiciones financieras, commodities y actividad internacional`.
 - Factores rezagados un mes: remesas, diferencial de tasas, déficit fiscal, reservas, balanza cambiaria, capitales y primera diferencia del BEI a cinco años.
 - En el pronóstico, mercados, tasas, riesgo y commodities usan `.L1`; empleo, desempleo y fletes/logística de EE. UU. usan `.L2` conforme al calendario de disponibilidad. Los candidatos de China quedan fuera del score completo por cobertura incompleta.
 - Variable dependiente: cambio mensual del logaritmo de la TRM.
 - Inferencia: OLS con errores estándar HAC de seis meses.
 - Selección dinámica: BIC entre cero y tres rezagos de la variación de la TRM; la selección actual es cero.
-- Comparación: modelo base y ampliado usan exactamente las mismas fechas efectivas.
+- Comparación: las especificaciones de controles externos y financieros y del marco macroeconómico integral usan exactamente las mismas fechas efectivas.
 
 Los términos de intercambio entran como `D.ln_terminos_intercambio.L0`; su rezago de publicación cercano a dos meses refuerza que el uso contemporáneo es explicativo *ex post*. El riesgo soberano entra como `D.embig_colombia_pp.L0`: se promedia diariamente el EMBIG Colombia de BCRPData y se convierte de puntos básicos a puntos porcentuales. Debe mantenerse la atribución a BCRPData y a sus fuentes originales Reuters/J.P. Morgan; la descarga pública no equivale a una licencia abierta sobre la metodología o la marca EMBIG.
 
 El diferencial BEI a cinco años entra como `D.diferencial_bei_5y_pp.L1`. Para Colombia se restan los promedios mensuales de TES nominales y TES UVR al mismo horizonte; luego se resta la compensación estadounidense `BKEVEN05`. `build_bei_aggregations()` conserva también una versión limitada a fechas diarias comunes. `bei_stationarity_tests()` y `bei_trend_break_models()` evalúan constante, tendencia y quiebres; `bei_model_specification_comparison()` contrasta seis variantes sobre la misma muestra. Es una compensación de inflación de mercado, no una expectativa pura. Las fuentes, fórmulas y cautelas se detallan en [`data/README.md`](../data/README.md).
 
-La temporización contemporánea hace que el modelo ampliado sea una explicación histórica o *nowcast*, no un pronóstico disponible antes de observar el mes. PEN, descargado de BCRPData `PN01207PM`, mejora BIC, R² ajustado y MAPE de esa explicación frente al factor de tres monedas.
+La temporización contemporánea hace que el marco macroeconómico integral sea una explicación histórica o *nowcast*, no un pronóstico disponible antes de observar el mes. El factor `Actividad y precios domésticos` reúne el ISE total DANE y el IPC Colombia: ambos entran como `D.ln_ise_total_dane.L0` y `D.ln_ipc_colombia.L0` en la explicación y con `.L2` en el pronóstico. GEIH, IPI e IPP se auditan en `data/variables_internas_cobertura.csv`, pero permanecen fuera de la matriz balanceada por cobertura incompleta. PEN, descargado de BCRPData `PN01207PM`, mejora BIC, R² ajustado y MAPE de esa explicación frente al factor de tres monedas.
 
 El modelo de pronóstico usa `FORECAST_FACTOR_SPECS_3/4`: todos los factores económicos entran con uno a tres meses de rezago conforme a `FORECAST_AVAILABILITY`. BIC selecciona el factor de tres monedas y un rezago de `Δln(TRM)`. La validación es pseudo-tiempo-real porque respeta disponibilidad, pero usa el último *vintage* de las fuentes. Un backtest genuino exige reconstruir cada origen con las versiones que existían entonces.
 
@@ -83,7 +83,7 @@ En las validaciones recursivas se reestiman los coeficientes, pero se conserva l
 
 ## Pesos explicativos
 
-`exact_shapley_r2()` calcula los **8.192 subconjuntos de 13 factores**. Cada factor entra con todos sus términos y recibe su aporte marginal medio al R². El factor `Condiciones financieras, commodities y actividad internacional` se conserva como un único jugador, aunque sus contribuciones mensuales se calculan término por término. El control automático exige que:
+`exact_shapley_r2()` calcula los **16.384 subconjuntos de 14 factores**. Cada factor entra con todos sus términos y recibe su aporte marginal medio al R². El factor `Condiciones financieras, commodities y actividad internacional` se conserva como un único jugador, aunque sus contribuciones mensuales se calculan término por término. El control automático exige que:
 
 - los aportes sumen el R² incremental;
 - los pesos entre factores sumen 100%;
@@ -96,7 +96,7 @@ Los pesos son descriptivos. No identifican causalidad ni sustituyen pruebas de e
 
 ## Archivo de vintages
 
-`archive_vintage.py` no forma parte de la ejecución normal del estimador porque requiere acceso a los proveedores. Un snapshot completo se crea con `snapshot --origin-date`; las fechas existentes no se sobrescriben. `alfred-history` intenta recuperar los 48 orígenes, valida que cada observación sea anterior a su origen y reanuda desde caché, pero solo publica el consolidado cuando las 288 respuestas están completas. La validación pseudo-tiempo-real cubre 48 meses; solo 3 de los 13 factores activos tienen vintages históricos completos (dólar amplio, VIX y monedas regionales). La base global mensual usa el último vintage disponible, por lo que sus señales también se interpretan con esta cautela.
+`archive_vintage.py` no forma parte de la ejecución normal del estimador porque requiere acceso a los proveedores. Un snapshot completo se crea con `snapshot --origin-date`; las fechas existentes no se sobrescriben. `alfred-history` intenta recuperar los 48 orígenes, valida que cada observación sea anterior a su origen y reanuda desde caché, pero solo publica el consolidado cuando las 288 respuestas están completas. La validación pseudo-tiempo-real cubre 48 meses; solo 3 de los 14 factores activos tienen vintages históricos completos (dólar amplio, VIX y monedas regionales). La base global mensual usa el último vintage disponible, por lo que sus señales también se interpretan con esta cautela.
 
 ## Reproducción
 

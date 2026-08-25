@@ -2,33 +2,36 @@
 
 ## Lectura empírica
 
-El modelo ampliado describe asociaciones dinámicas entre la variación mensual de la TRM y 13 factores. La muestra común cubre mayo de 2006 a abril de 2026, con 240 observaciones efectivas. El R² es 67,47%, el R² ajustado 62,80%, el MAPE histórico condicional 1,51% y el acierto de dirección 83,33%.
+El marco macroeconómico integral describe asociaciones dinámicas entre la variación mensual de la TRM y 14 factores. La muestra común cubre mayo de 2006 a abril de 2026, con 240 observaciones efectivas. Las métricas de ajuste y validación se regeneran con cada corrida y se publican en `results/explicacion/comparacion_especificaciones.csv`.
 
-La ampliación conserva un único jugador Shapley para el bloque **Condiciones financieras, commodities y actividad internacional**. Ese jugador reúne 17 términos activos: rendimientos reales y nominales de EE. UU., expectativas de inflación a 5 y 10 años, pendiente 10Y–2Y, Brent, commodities, EPU global, STLFSI, NFCI, ANFCI, desempleo estadounidense, empleo manufacturero, producción industrial y fletes/logística. La agrupación evita que la colinealidad y la explosión combinatoria de jugadores hagan ilegible la descomposición.
+El marco macroeconómico integral conserva un único jugador Shapley para el bloque **Condiciones financieras, commodities y actividad internacional**. Ese jugador reúne 17 términos activos: rendimientos reales y nominales de EE. UU., expectativas de inflación a 5 y 10 años, pendiente 10Y–2Y, Brent, commodities, EPU global, STLFSI, NFCI, ANFCI, desempleo estadounidense, empleo manufacturero, producción industrial y fletes/logística. La agrupación evita que la colinealidad y la explosión combinatoria de jugadores hagan ilegible la descomposición.
+
+El factor interno **Actividad y precios domésticos** agrega `D.ln_ise_total_dane.L0` y `D.ln_ipc_colombia.L0` a la explicación histórica; ambos pasan a `L2` en el pronóstico. Las dos series cubren 244/244 meses y no requieren imputación. GEIH, IPI e IPP permanecen como candidatas auditadas fuera de la matriz balanceada por faltantes o inicio tardío; véase `data/variables_internas_cobertura.csv`.
 
 El desempleo activo usa `LRUN64TTUSM156S`, que cubre la muestra completa. High-yield, TED, `UNRATE` y los indicadores de China permanecen como candidatos documentados cuando no cubren la ventana; no se interpolan ni se incorporan al modelo balanceado. La cobertura se audita en `data/base_global_cobertura.csv`.
 
 ## Canales y pesos Shapley
 
-Los pesos son participaciones descriptivas del R² incremental, no efectos causales. Se calculan sobre los 8.192 subconjuntos de los 13 factores y suman 100% entre factores.
+Los pesos son participaciones descriptivas del R² incremental, no efectos causales. Se calculan sobre los 16.384 subconjuntos de los 14 factores y suman 100% entre factores.
 
 | Canal o factor | Peso entre factores | Coeficiente principal | Lectura cautelosa |
 |---|---:|---:|---|
-| Monedas regionales BRL, CLP, MXN y PEN | 24,59% | +0,01758 | La depreciación regional se mueve junto con la TRM; contiene shocks globales compartidos. |
-| Condiciones financieras, commodities y actividad internacional | 21,62% | Bloque de 17 términos | Agrupa tasas, expectativas, riesgo, commodities, actividad, desempleo y logística. |
-| Dólar amplio | 15,46% | +0,16176 | La fortaleza global del USD se asocia con depreciación del COP. |
-| Riesgo soberano EMBIG Colombia | 14,26% | +0,02478 | El spread contiene riesgo idiosincrático, liquidez y aversión global al riesgo. |
-| Balanza comercial cambiaria | 6,47% | +0,05448 | El signo estimado es contrario al canal simple de oferta de divisas; puede reflejar simultaneidad. |
-| VIX | 6,12% | +0,01464 | Aversión global al riesgo; comparte información con el dólar y las monedas regionales. |
-| Términos de intercambio | 4,29% | +0,01682 | La entrada contemporánea es explicación histórica, no información disponible al inicio del mes. |
-| Flujos netos de capital | 3,40% | +0,00066 | Alta volatilidad y endogeneidad reducen la precisión del coeficiente. |
-| Reservas internacionales | 2,03% | −0,25123 | El coeficiente grande no implica un peso explicativo grande; la intervención puede responder a la TRM. |
-| Remesas | 1,15% | +0,16805 | El signo no coincide con una lectura simple de oferta de dólares; puede haber respuesta a shocks cambiarios. |
-| Diferencial BEI 5 años | 0,32% | −0,00240 | Compensación de mercado, no expectativa pura; entra en primera diferencia y con L1. |
-| Diferencial de tasas | 0,20% | +0,00109 | Diferencial nominal endógeno; no identifica un shock monetario. |
-| Déficit fiscal | 0,10% | +0,00003 | Participación marginal y coeficiente impreciso. |
+| Monedas regionales BRL, CLP, MXN y PEN | 23,55% | +0,01614 | La depreciación regional se mueve junto con la TRM; contiene shocks globales compartidos. |
+| Condiciones financieras, commodities y actividad internacional | 21,63% | Bloque de 17 términos | Agrupa tasas, expectativas, riesgo, commodities, actividad, desempleo y logística. |
+| Dólar amplio | 15,11% | +0,20247 | La fortaleza global del USD se asocia con depreciación del COP. |
+| Riesgo soberano EMBIG Colombia | 14,12% | +0,02779 | El spread contiene riesgo idiosincrático, liquidez y aversión global al riesgo. |
+| Balanza comercial cambiaria | 6,36% | +0,05473 | El signo estimado es contrario al canal simple de oferta de divisas; puede reflejar simultaneidad. |
+| VIX | 6,10% | +0,01656 | Aversión global al riesgo; comparte información con el dólar y las monedas regionales. |
+| Términos de intercambio | 4,15% | +0,01482 | La entrada contemporánea es explicación histórica, no información disponible al inicio del mes. |
+| Flujos netos de capital | 3,29% | +0,00060 | Alta volatilidad y endogeneidad reducen la precisión del coeficiente. |
+| Reservas internacionales | 1,94% | −0,23794 | El coeficiente grande no implica un peso explicativo grande; la intervención puede responder a la TRM. |
+| Remesas | 1,17% | +0,19704 | El signo no coincide con una lectura simple de oferta de dólares; puede haber respuesta a shocks cambiarios. |
+| Diferencial BEI 5 años | 0,30% | −0,00172 | Compensación de mercado, no expectativa pura; entra en primera diferencia y con L1. |
+| Diferencial de tasas | 0,18% | +0,00345 | Diferencial nominal endógeno; no identifica un shock monetario. |
+| Déficit fiscal | 0,09% | −0,00012 | Participación marginal y coeficiente impreciso. |
+| Actividad y precios domésticos (ISE total e IPC) | 2,02% | −0,21001 (ISE); −0,70708 (IPC) | Dos términos internos con cobertura completa; no se interpretan causalmente. |
 
-El canal global y regional —monedas regionales, dólar amplio, VIX y el bloque financiero/internacional— suma 67,79% del peso entre factores. El riesgo soberano aporta 14,26%, el sector externo colombiano 17,34% y la política doméstica 0,61%. Esta suma organiza la lectura; no debe interpretarse como una partición causal de la depreciación.
+El canal global y regional —monedas regionales, dólar amplio, VIX y el bloque financiero/internacional— suma aproximadamente 66,39% del peso entre factores. El riesgo soberano aporta 14,12%, el sector externo colombiano 16,91%, la política doméstica 0,57% y actividad/precios domésticos 2,02%. Esta suma organiza la lectura; no debe interpretarse como una partición causal de la depreciación.
 
 ## Secuencia de transmisión
 
@@ -66,7 +69,7 @@ El pronóstico mensual evita regresores contemporáneos y aplica el calendario d
 - empleo, desempleo y fletes/logística: `.L2`;
 - factor regional seleccionado: BRL, CLP y MXN con `.L1`.
 
-La validación mensual obtiene MAPE 2,58%, frente a 2,39% de la caminata aleatoria, y R² −4,84% frente a ese benchmark. El resultado confirma que un buen ajuste histórico con información contemporánea no es automáticamente un pronóstico ex ante. Además, el backtest sigue siendo pseudo-tiempo-real porque solo 3 de los 13 factores tienen vintages históricos completos para los 48 orígenes.
+La validación mensual obtiene MAPE 2,49%, frente a 2,39% de la caminata aleatoria, acierto de dirección de 52,08% y R² −1,46% frente a ese benchmark. El resultado confirma que un buen ajuste histórico con información contemporánea no es automáticamente un pronóstico ex ante. Además, el backtest sigue siendo pseudo-tiempo-real porque solo 3 de los 14 factores tienen vintages históricos completos para los 48 orígenes.
 
 ## BEI, candidatos y política de faltantes
 
@@ -85,9 +88,9 @@ La regla es conservar la columna y la cobertura, pero no interpolar, transportar
 
 ## Diagnósticos y límites
 
-En el ampliado, Jarque–Bera rechaza normalidad al 5% (`p = 0,004`), mientras ARCH-LM no rechaza heterocedasticidad condicional (`p = 0,147`). No se detecta autocorrelación relevante; RESET (`p = 0,241`) y CUSUM (`p = 0,617`) no rechazan la forma funcional ni una inestabilidad global. Los errores estándar HAC se mantienen para la inferencia de la media, pero no convierten las asociaciones en relaciones causales.
+En el marco macroeconómico integral, Jarque–Bera rechaza normalidad al 5% (`p = 0,001`), mientras ARCH-LM no rechaza heterocedasticidad condicional (`p = 0,220`). No se detecta autocorrelación relevante; RESET (`p = 0,162`) y CUSUM (`p = 0,722`) no rechazan la forma funcional ni una inestabilidad global. Los errores estándar HAC se mantienen para la inferencia de la media, pero no convierten las asociaciones en relaciones causales.
 
-La prueba bounds del ECM es no concluyente al 5%: el p-valor del límite I(1) es aproximadamente 0,075. Por ello, el modelo principal permanece en primeras diferencias y los coeficientes de largo plazo del ECM son exploratorios.
+La prueba bounds del ECM es no concluyente al 5%: el p-valor del límite I(1) es aproximadamente 0,075. Por ello, las especificaciones mensuales permanecen en primeras diferencias y los coeficientes de largo plazo del ECM son exploratorios.
 
 ## Conclusión
 
