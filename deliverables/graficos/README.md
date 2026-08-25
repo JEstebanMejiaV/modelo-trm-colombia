@@ -6,7 +6,7 @@ Esta carpeta presenta cinco lecturas visuales del modelo fuera del archivo Excel
 
 ![Peso explicativo Shapley](01_pesos_explicativos.png)
 
-Ordena los 13 factores por su participación en el R² incremental asignado mediante Shapley/LMG. Los bigotes añaden intervalos percentiles del 95% obtenidos con 200 réplicas de bloques circulares de 12 meses. El bloque `Condiciones financieras, commodities y actividad internacional` aparece como un único jugador y reúne 17 términos activos. Los pesos suman 100% dentro del bloque de factores. No son porcentajes causales del precio del dólar: dependen de la muestra, la especificación y la información compartida entre variables correlacionadas.
+Ordena los 14 factores por su participación en el R² incremental asignado mediante Shapley/LMG. Los bigotes añaden intervalos percentiles del 95% obtenidos con 200 réplicas de bloques circulares de 12 meses. El bloque `Condiciones financieras, commodities y actividad internacional` aparece como un único jugador y reúne 17 términos activos. Los pesos suman 100% dentro del bloque de factores. No son porcentajes causales del precio del dólar: dependen de la muestra, la especificación y la información compartida entre variables correlacionadas.
 
 ## 2. Comparación de desempeño
 
@@ -18,7 +18,7 @@ Separa el desempeño de la explicación histórica y el pronóstico con rezagos 
 
 ![TRM observada frente a modelos](03_validacion_trm.png)
 
-Muestra la TRM observada, las estimaciones condicionales principal y ampliada, el pronóstico con información rezagada y la caminata aleatoria durante los 48 meses de validación. Las dos primeras explican con realizaciones contemporáneas; la tercera respeta el calendario de publicación, aunque usa el último *vintage* disponible.
+Muestra la TRM observada, las estimaciones condicionales de `Controles externos y financieros` y del `Marco macroeconómico integral`, el pronóstico con información rezagada y la caminata aleatoria durante los 48 meses de validación. Las dos primeras explican con realizaciones contemporáneas; la tercera respeta el calendario de publicación, aunque usa el último *vintage* disponible.
 
 ## 4. Dirección y magnitud típica
 
@@ -39,17 +39,18 @@ Separa tres conceptos que no deben mezclarse:
 - El diferencial de tasas y el déficit se muestran como semielasticidades: en corto plazo corresponden a un cambio mensual de 1 punto porcentual y en largo plazo a una diferencia de 1 punto porcentual en el nivel de equilibrio.
 - La curva inferior muestra qué proporción de un desequilibrio inicial permanecería después de cada mes. La anotación calcula la velocidad de ajuste y la semivida a partir del coeficiente de corrección vigente; la banda transforma su intervalo del 95%.
 
-El bosque de elasticidades incluye términos de intercambio tanto en corto como en largo plazo. El riesgo soberano EMBIG Colombia y el diferencial de compensación inflacionaria a cinco años pertenecen al modelo ampliado, pero no al vector ECM; por eso aparecen en los gráficos de pesos y efectos típicos, no en este bosque.
+El bosque de elasticidades incluye términos de intercambio tanto en corto como en largo plazo. El riesgo soberano EMBIG Colombia y el diferencial de compensación inflacionaria a cinco años pertenecen al marco macroeconómico integral, pero no al vector ECM; por eso aparecen en los gráficos de pesos y efectos típicos, no en este bosque.
 
 El CSV de largo plazo contiene el vector cointegrante normalizado con coeficiente 1 para `ln_trm`. Para expresar la respuesta de equilibrio de la TRM, el gráfico invierte el signo de los términos explicativos y también invierte los extremos de sus intervalos. El subtítulo interpreta la prueba bounds con ambos límites al 5%; salvo que se rechace el límite superior I(1), los valores de largo plazo deben leerse como exploratorios y no como evidencia confirmada de equilibrio.
 
 ## Cautelas comunes
 
 - Los cinco gráficos describen asociaciones estadísticas, no causalidad.
+- El factor histórico incluye `D.ln_ise_total_dane.L0` y `D.ln_ipc_colombia.L0` como actividad y precios domésticos; el pronóstico los usa con `.L2`. Ambas series cubren 244/244 meses y no se imputan. GEIH, IPI e IPP quedan fuera por cobertura incompleta.
 - Términos de intercambio, dólar amplio, VIX, EMBIG Colombia y monedas regionales usan información contemporánea realizada.
 - El factor histórico usa BRL, CLP, MXN y PEN; el pronóstico usa BRL, CLP y MXN porque obtiene menor BIC. PEN mejora el ajuste histórico, no el desempeño ex ante.
-- La evaluación con rezagos sigue siendo pseudo-tiempo-real: el archivo hacia adelante está activo, pero solo 3 de 13 factores tienen cobertura histórica versionada completa para los 48 orígenes. La base global mensual usa el último vintage disponible.
-- En el modelo ampliado, balanza, capitales, reservas, remesas, tasas, déficit y el cambio del diferencial de compensación inflacionaria entran rezagados, pero aun así pueden compartir choques o responder indirectamente a la propia TRM.
+- La evaluación con rezagos sigue siendo pseudo-tiempo-real: el archivo hacia adelante está activo, pero solo 3 de 14 factores tienen cobertura histórica versionada completa para los 48 orígenes. La base global mensual usa el último vintage disponible.
+- En el marco macroeconómico integral, balanza, capitales, reservas, remesas, tasas, déficit y el cambio del diferencial de compensación inflacionaria entran rezagados, pero aun así pueden compartir choques o responder indirectamente a la propia TRM.
 - El diferencial BEI a cinco años se construye con compensaciones de mercado y entra en primera diferencia; su nivel es sensible a tendencias. Combina inflación esperada con primas por riesgo inflacionario y diferencias de liquidez entre bonos nominales e indexados; no es una expectativa pura.
 - EMBIG Colombia mide una prima de riesgo soberano de mercado; su coeficiente contemporáneo también puede recoger liquidez y aversión global al riesgo.
 - La balanza comercial tiene signo estimado positivo, contrario al esperado; esto puede reflejar simultaneidad o composición de los flujos.

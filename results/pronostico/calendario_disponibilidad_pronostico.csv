@@ -10,5 +10,6 @@ Reservas internacionales,2,Mensual; publicación posterior al cierre,Supuesto co
 Balanza comercial cambiaria,2,Mensual; publicación posterior al cierre,Supuesto conservador: t-2
 Flujos netos de capital,2,Mensual; publicación posterior al cierre,Supuesto conservador: t-2
 Diferencial de compensación inflacionaria 5 años,1,Curvas diarias,Promedios completos conocidos para t-1
+Actividad y precios domésticos,2,DANE; ISE mensual e IPC mensual,Supuesto conservador: últimas observaciones completas conocidas para t-2
 Monedas regionales,1,Tipos de cambio mensuales,Promedios completos conocidos para t-1
 "Condiciones financieras, commodities y actividad internacional",2,FRED; mercados diarios/semanales e indicadores mensuales,"Rendimientos, expectativas, riesgo y commodities t-1; empleo, desempleo, fletes y China t-2"

@@ -19,8 +19,184 @@ from .config import (
 )
 
 
+DANE_MONTH_NUMBERS_ES = {
+    **MONTH_NUMBERS_ES,
+    "Enero": 1,
+    "Febrero": 2,
+    "Marzo": 3,
+    "Abril": 4,
+    "Mayo": 5,
+    "Junio": 6,
+    "Julio": 7,
+    "Agosto": 8,
+    "Septiembre": 9,
+    "Octubre": 10,
+    "Noviembre": 11,
+    "Diciembre": 12,
+}
+
+ISE_COMPONENTS = {
+    "Actividades primarias": "ise_actividades_primarias_dane",
+    "Agricultura, ganadería, caza, silvicultura y pesca": "ise_agricultura_dane",
+    "Explotación de minas y canteras": "ise_mineria_dane",
+    "Actividades secundarias": "ise_actividades_secundarias_dane",
+    "Industrias manufactureras": "ise_manufactura_dane",
+    "Construcción": "ise_construccion_dane",
+    "Actividades terciarias": "ise_actividades_terciarias_dane",
+    "Suministro de electricidad, gas, vapor y aire acondicionado; Distribución de agua; Evacuación y tratamiento de aguas residuales, gestión de desechos y actividades de saneamiento ambiental": "ise_electricidad_agua_dane",
+    "Comercio al por mayor y al por menor; Reparación de vehículos automotores y motocicletas; Transporte y almacenamiento; Alojamiento y servicios de comida": "ise_comercio_transporte_alojamiento_dane",
+    "Información y comunicaciones": "ise_informacion_comunicaciones_dane",
+    "Actividades financieras y de seguros": "ise_finanzas_dane",
+    "Actividades inmobiliarias": "ise_inmobiliarias_dane",
+    "Actividades profesionales, científicas y técnicas; Actividades de servicios administrativos y de apoyo": "ise_profesionales_administrativos_dane",
+    "Administración pública y defensa; planes de seguridad social de afiliación obligatoria; Educación; Actividades de atención de la salud humana y de servicios sociales": "ise_administracion_educacion_salud_dane",
+    "Actividades artísticas, de entretenimiento y recreación y otras actividades de servicios; Actividades de los hogares individuales en calidad de empleadores; Actividades no diferenciadas de los hogares individuales como productores de bienes y servicios para uso propio": "ise_arte_hogares_dane",
+    "Indicador de Seguimiento a la Economía": "ise_total_dane",
+}
+
+GEIH_COMPONENTS = {
+    "Tasa Global de Participación (TGP)": "tasa_participacion_dane_pct",
+    "Tasa de Ocupación (TO)": "tasa_ocupacion_dane_pct",
+    "Tasa de Desocupación (TD)": "tasa_desocupacion_dane_pct",
+    "Población ocupada": "ocupados_dane_miles",
+    "Población desocupada": "desocupados_dane_miles",
+    "Población fuera de la fuerza de trabajo": "fuera_fuerza_trabajo_dane_miles",
+}
+
+
 def month_start(values: pd.Series | pd.DatetimeIndex) -> pd.DatetimeIndex:
     return pd.DatetimeIndex(values).to_period("M").to_timestamp()
+
+
+def _dane_wide_dates(year_values, month_values) -> list[pd.Timestamp]:
+    """Construye fechas mensuales desde encabezados DANE con años combinados."""
+    dates: list[pd.Timestamp] = []
+    year: int | None = None
+    for year_value, month_value in zip(year_values, month_values):
+        if year_value is not None:
+            year_text = str(year_value).strip()
+            if year_text[:4].isdigit():
+                year = int(year_text[:4])
+        month = DANE_MONTH_NUMBERS_ES.get(str(month_value).strip())
+        if year is not None and month is not None:
+            dates.append(pd.Timestamp(year=year, month=month, day=1))
+        else:
+            dates.append(pd.NaT)
+    return dates
+
+
+def _dane_wide_series(values, dates: list[pd.Timestamp]) -> pd.Series:
+    series = pd.Series(
+        pd.to_numeric(values, errors="coerce"),
+        index=pd.DatetimeIndex(dates),
+        dtype="float64",
+    )
+    return series[series.index.notna()].groupby(level=0).mean().sort_index()
+
+
+def load_ise_dane(path: Path) -> pd.DataFrame:
+    """Lee el ISE DANE ajustado por efecto estacional y calendario."""
+    workbook = load_workbook(path, read_only=True, data_only=True)
+    try:
+        worksheet = workbook["Cuadro 2"]
+        rows = list(worksheet.iter_rows(values_only=True))
+        dates = _dane_wide_dates(rows[10][3:], rows[11][3:])
+        rows_by_concept: dict[str, tuple[object, ...]] = {}
+        for row in rows[13:29]:
+            concept = str(row[2] or "").replace("\n", " ").strip()
+            if concept in ISE_COMPONENTS and concept not in rows_by_concept:
+                rows_by_concept[concept] = row
+        missing = sorted(set(ISE_COMPONENTS) - set(rows_by_concept))
+        if missing:
+            raise ValueError(f"No se encontraron conceptos ISE en {path}: {missing}")
+        return pd.DataFrame(
+            {
+                output_name: _dane_wide_series(rows_by_concept[concept][3:], dates)
+                for concept, output_name in ISE_COMPONENTS.items()
+            }
+        ).sort_index()
+    finally:
+        workbook.close()
+
+
+def load_geih_dane(path: Path, seasonally_adjusted: bool = False) -> pd.DataFrame:
+    """Lee las series mensuales nacionales de la GEIH publicadas por DANE."""
+    workbook = load_workbook(path, read_only=True, data_only=True)
+    try:
+        worksheet = workbook["Total nacional"]
+        rows = list(worksheet.iter_rows(values_only=True))
+        dates = _dane_wide_dates(rows[11][1:], rows[12][1:])
+        rows_by_concept: dict[str, tuple[object, ...]] = {}
+        for row in rows[13:]:
+            concept = str(row[0] or "").strip()
+            if concept in GEIH_COMPONENTS and concept not in rows_by_concept:
+                rows_by_concept[concept] = row
+        selected = {
+            (
+                output_name.replace("_dane_", "_dane_sa_")
+                if seasonally_adjusted
+                else output_name
+            ): _dane_wide_series(rows_by_concept[concept][1:], dates)
+            for concept, output_name in GEIH_COMPONENTS.items()
+            if concept in rows_by_concept
+        }
+        if not selected:
+            raise ValueError(f"No se encontraron conceptos GEIH en {path}.")
+        return pd.DataFrame(selected).sort_index()
+    finally:
+        workbook.close()
+
+
+def _ipp_month(value: object) -> pd.Timestamp | None:
+    text = str(value or "").strip()
+    if "-" not in text:
+        return None
+    month_text, year_text = text.split("-", 1)
+    month = DANE_MONTH_NUMBERS_ES.get(month_text.strip())
+    if month is None or not year_text[:2].isdigit():
+        return None
+    year = 2000 + int(year_text[:2])
+    return pd.Timestamp(year=year, month=month, day=1)
+
+
+def load_ipi_dane(path: Path) -> pd.Series:
+    """Lee el índice total mensual del IPI DANE (serie disponible desde 2014)."""
+    workbook = load_workbook(path, read_only=True, data_only=True)
+    try:
+        worksheet = workbook["3. Indices total por clase "]
+        rows: list[tuple[pd.Timestamp, float]] = []
+        for row in worksheet.iter_rows(min_row=10, values_only=True):
+            if row[0] != "T_IPI" or row[1] is None or row[2] is None or row[4] is None:
+                continue
+            rows.append(
+                (
+                    pd.Timestamp(year=int(row[1]), month=int(row[2]), day=1),
+                    float(row[4]),
+                )
+            )
+        if not rows:
+            raise ValueError(f"No se encontró el total IPI en {path}.")
+        return pd.Series(dict(rows), name="ipi_total_dane").sort_index()
+    finally:
+        workbook.close()
+
+
+def load_ipp_dane(path: Path) -> pd.Series:
+    """Lee el índice de producción nacional total del IPP DANE."""
+    workbook = load_workbook(path, read_only=True, data_only=True)
+    try:
+        worksheet = workbook["1.1"]
+        rows: list[tuple[pd.Timestamp, float]] = []
+        for column in range(4, worksheet.max_column + 1):
+            date = _ipp_month(worksheet.cell(6, column).value)
+            value = pd.to_numeric(worksheet.cell(7, column).value, errors="coerce")
+            if date is not None and pd.notna(value):
+                rows.append((date, float(value)))
+        if not rows:
+            raise ValueError(f"No se encontró el total IPP en {path}.")
+        return pd.Series(dict(rows), name="ipp_produccion_nacional_dane").sort_index()
+    finally:
+        workbook.close()
 
 
 def read_fred(path: Path, output_name: str, daily: bool = False) -> pd.Series:
@@ -395,6 +571,17 @@ def build_dataset() -> pd.DataFrame:
         read_fred(RAW / "clp_usd_mensual_fred.csv", "clp_por_usd"),
         read_fred(RAW / "mxn_usd_mensual_fred.csv", "mxn_por_usd"),
         load_bcrp_monthly(RAW / "pen_usd_mensual_bcrp.json", "pen_por_usd"),
+        load_banrep_series(
+            RAW / "ipc_colombia_banrep.json", "ipc_colombia_indice", daily=False
+        ),
+        load_ise_dane(RAW / "ise_dane_12actividades_jun2026.xlsx"),
+        load_geih_dane(RAW / "geih_dane_jun2026.xlsx"),
+        load_geih_dane(
+            RAW / "geih_dane_desestacionalizado_jun2026.xlsx",
+            seasonally_adjusted=True,
+        ),
+        load_ipi_dane(RAW / "ipi_dane_jun2026.xlsx"),
+        load_ipp_dane(RAW / "ipp_dane_jul2026.xlsx"),
     ]
     data = pd.concat(series, axis=1, sort=True).sort_index()
     data = data.join(load_fiscal(RAW / "balance_fiscal_gnc_mensual_trimestral.xlsx"), how="outer")
@@ -428,7 +615,7 @@ def build_dataset() -> pd.DataFrame:
     data["factor_monedas_regionales_4"] = regional_z[
         ["brl_por_usd", "clp_por_usd", "mxn_por_usd", "pen_por_usd"]
     ].mean(axis=1, skipna=False)
-    # Alias explícito del modelo ampliado activo: composición de cuatro monedas.
+    # Alias explícito del marco macroeconómico integral activo: cuatro monedas.
     data["factor_monedas_regionales"] = data["factor_monedas_regionales_4"]
 
     positive_logs = {
@@ -438,6 +625,8 @@ def build_dataset() -> pd.DataFrame:
         "ln_vix": "vix",
         "ln_terminos_intercambio": "terminos_intercambio",
         "ln_reservas_netas_sin_flar": "reservas_netas_sin_flar_usd_millones",
+        "ln_ise_total_dane": "ise_total_dane",
+        "ln_ipc_colombia": "ipc_colombia_indice",
     }
     for target, source in positive_logs.items():
         data[target] = np.log(data[source].where(data[source] > 0))

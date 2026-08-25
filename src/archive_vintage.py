@@ -447,6 +447,8 @@ def coverage() -> None:
         ("Balanza comercial cambiaria", "BanRep 16702", "No disponible", 0, "BanRep no publica vintages"),
         ("Flujos netos de capital", "BanRep 16706", "No disponible", 0, "BanRep no publica vintages"),
         ("Diferencial de compensación inflacionaria 5 años", "BanRep 15273/15276 + Fed GSW", "No disponible", 0, "Ningún componente tiene vintages completos"),
+        ("Actividad y precios domésticos", "DANE ISE total + BanRep IPC 15000", "No disponible", 0, "ISE e IPC no publican vintages históricos; se conserva el snapshot actual sin imputación"),
+        ("Variables globales nuevas", "FRED: TIPS, Treasury, Brent, commodities, EPU, STLFSI, empleo y producción industrial", "No disponible", 0, "Base global mensual sin vintages históricos consolidados"),
         ("Monedas regionales", "FRED BRL/CLP/MXN", "Completo" if regional_origins == 48 else "Parcial", regional_origins, "Factor de 3 monedas; API FRED con realtime vintage"),
     ]
     frame = pd.DataFrame(
@@ -465,7 +467,7 @@ def coverage() -> None:
     frame.to_csv(output, index=False, encoding="utf-8-sig", float_format="%.10g")
     print(f"Cobertura escrita: {output.relative_to(ROOT)}")
     apt = int(frame["apto_backtest_genuino"].sum())
-    print(f"  Factores aptos para backtest genuino: {apt}/12")
+    print(f"  Factores aptos para backtest genuino: {apt}/14")
 
 
 def parse_args() -> argparse.Namespace:

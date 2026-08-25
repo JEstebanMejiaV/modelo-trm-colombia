@@ -6,7 +6,7 @@ Mejoras al modelo de explicación histórica de la TRM.
 3. Factores principales PCA (reducir multicolinealidad)
 4. Dummies de outliers (2008-10, 2015-02, 2020-03)
 
-Compara cada extensión contra el modelo ampliado actual usando:
+Compara cada extensión contra el marco macroeconómico integral actual usando:
 - R² ajustado, BIC, MAPE condicional
 - Proporción de coeficientes significativos
 - Diagnósticos residuales
@@ -42,7 +42,7 @@ from estimate_model import (
     diagnostics,
     SAMPLE_START,
     SAMPLE_END,
-    EXPANDED_FACTOR_SPECS_4,
+    INTEGRATED_FACTOR_SPECS_4,
     SelectedDifferenceModel,
 )
 
@@ -65,9 +65,9 @@ def load_model_data():
 
 
 def baseline_model(model_data, components, common_index):
-    """Modelo ampliado actual como referencia."""
+    """Especificación integral actual como referencia."""
     selected, _ = select_timed_difference_model(
-        model_data, EXPANDED_FACTOR_SPECS_4, common_index=common_index
+        model_data, INTEGRATED_FACTOR_SPECS_4, common_index=common_index
     )
     _, coefs = tidy_robust_ols(selected.result, maxlags=6)
     preds, metrics = difference_validation(model_data, selected, holdout=48)
@@ -115,7 +115,7 @@ def evaluate_model(name, result, model_data, y, x, coefs=None):
 
 
 def model_interactions(model_data, components, common_index, selected_base):
-    """Añade dólar×VIX y EMBIG×regionales al modelo ampliado."""
+    """Añade dólar×VIX y EMBIG×regionales al marco macroeconómico integral."""
     y = selected_base.y
     x = selected_base.x.copy()
 
@@ -127,7 +127,7 @@ def model_interactions(model_data, components, common_index, selected_base):
 
     result = sm.OLS(y, x).fit()
     _, coefs = tidy_robust_ols(result, maxlags=6)
-    return evaluate_model("Ampliado + interacciones", result, model_data, y, x, coefs)
+    return evaluate_model("Marco macroeconómico integral + interacciones", result, model_data, y, x, coefs)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -149,7 +149,7 @@ def model_asymmetric(model_data, components, common_index, selected_base):
 
     result = sm.OLS(y, x).fit()
     _, coefs = tidy_robust_ols(result, maxlags=6)
-    return evaluate_model("Ampliado + asimetria dolar", result, model_data, y, x, coefs)
+    return evaluate_model("Marco macroeconómico integral + asimetria dolar", result, model_data, y, x, coefs)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -214,7 +214,7 @@ def model_outlier_dummies(model_data, components, common_index, selected_base):
     result = sm.OLS(y, x).fit()
     _, coefs = tidy_robust_ols(result, maxlags=6)
     outlier_dates = [d.strftime("%Y-%m") for d in top_outliers[:3]]
-    info = evaluate_model("Ampliado + 3 dummies outlier", result, model_data, y, x, coefs)
+    info = evaluate_model("Marco macroeconómico integral + 3 dummies outlier", result, model_data, y, x, coefs)
     info["outliers_identificados"] = ", ".join(outlier_dates)
     return info
 
@@ -268,15 +268,15 @@ def main() -> None:
     model_data = load_model_data()
     components = difference_components(model_data)
     common_index = make_timed_difference_design(
-        components, p=3, factor_specs=EXPANDED_FACTOR_SPECS_4
+        components, p=3, factor_specs=INTEGRATED_FACTOR_SPECS_4
     )[0].index
 
-    print("[2/6] Estimando modelo base...")
+    print("[2/6] Estimando la especificación integral de referencia...")
     selected_base, coefs_base, preds_base, metrics_base, diag_base = baseline_model(
         model_data, components, common_index
     )
     base_info = evaluate_model(
-        "Ampliado actual (referencia)",
+        "Marco macroeconómico integral actual (referencia)",
         selected_base.result, model_data, selected_base.y, selected_base.x
     )
 

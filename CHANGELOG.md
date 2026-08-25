@@ -6,12 +6,15 @@ Todos los cambios relevantes del proyecto están documentados aquí. El formato 
 
 ### Pendiente de merge
 
+- Integración de variables internas de Colombia: ISE total DANE e IPC BanRep activos sin imputación, con `GEIH`, `IPI` e `IPP` auditados como candidatos por cobertura incompleta; la matriz `data/variables_internas_cobertura.csv` conserva la trazabilidad completa.
+- Sustitución completa de la nomenclatura anterior por las agrupaciones `Controles externos y financieros` y `Marco macroeconómico integral`; la explicación histórica y el pronóstico pasan a documentar 14 factores y `comparacion_especificaciones.csv`.
+- La descomposición Shapley se recalcula sobre 16.384 subconjuntos para los 14 factores, con el bloque global y el factor interno agrupados para evitar colinealidad y una explosión combinatoria.
 - Reestimación completa con la base global mensual FRED: explicación histórica, pronóstico mensual y diario, señales de largo plazo, robustez, gráficos, Excel y documentación.
-- El modelo ampliado queda en 13 factores con el bloque `Condiciones financieras, commodities y actividad internacional`; el cálculo Shapley usa 8.192 subconjuntos.
-- Resultados principales: R² ajustado 62,80%, R² 67,47%, MAPE condicional 1,51%, dirección histórica 83,33% y peso Shapley del bloque global 21,62%. El pronóstico mensual obtiene MAPE 2,58%, dirección 50,00% y R² −4,84% frente a la caminata.
+- El marco macroeconómico integral queda en 14 factores con el bloque `Condiciones financieras, commodities y actividad internacional`; el cálculo Shapley usa 16.384 subconjuntos.
+- Resultados regenerados: R² ajustado 63,67%, R² 68,54%, MAPE condicional 1,49%, dirección histórica 83,33% y peso Shapley del bloque global 21,63%. El pronóstico mensual obtiene MAPE 2,49%, dirección 52,08% y R² −1,46% frente a la caminata.
 - La especificación global activa suma 17 términos: expectativas de inflación a 5/10 años, rendimiento real a 5 años, NFCI/ANFCI, desempleo estadounidense completo, fletes y actividad industrial, entre otros. High-yield, TED, `UNRATE` y China permanecen como candidatos sin imputación cuando no cubren la muestra.
 - La mejor señal global de largo plazo obtiene R² OOS 12,8% a 12 meses (DM p = 0,006); wavelet D3+D4+D5 alcanza 45,9%. GARCH + VIX presenta el menor BIC y VaR 95% con 6,2% de violaciones.
-- Limitaciones documentadas: series candidatas incompletas o con descargas fallidas, primera diferencia BEI elegida por estabilidad aunque el nivel tenga menor BIC en la comparación, y vintages históricos completos para solo 3 de 13 factores activos.
+- Limitaciones documentadas: series candidatas incompletas o con descargas fallidas, primera diferencia BEI elegida por estabilidad aunque el nivel tenga menor BIC en la comparación, y vintages históricos completos para solo 3 de 14 factores activos.
 
 ---
 
@@ -21,7 +24,7 @@ Todos los cambios relevantes del proyecto están documentados aquí. El formato 
 
 - **Vintages ALFRED completos** (PR #11): 288/288 requests exitosas via API FRED. Cobertura sube a 3/13 factores aptos para backtest genuino.
 - **Test Diebold-Mariano** (PR #11): DM stat = -1.26, p = 0.21. No se rechaza igualdad de capacidad predictiva entre pronóstico y caminata aleatoria.
-- **Modelos parsimoniosos** (PR #11): top-3 factores tiene mejor BIC (-947.6) y MAPE (2.57%) que la especificación ampliada de 13 factores.
+- **Modelos parsimoniosos** (PR #11): top-3 factores tiene mejor BIC (-947.6) y MAPE (2.57%) que la especificación integral de 13 factores.
 - **Pronóstico parsimonioso activo** (PR #12): top-3 Shapley (monedas, dólar, EMBIG) como especificación evaluada.
 - **Backtest genuino parcial** (PR #12): compara vintages reales vs último. VIX revisiones de hasta 27.5%; dólar amplio estable (0.18%).
 - **GARCH(1,1)** (PR #12): persistencia 0.94, volatilidad incondicional 2.12%/mes. Confirma clusters de volatilidad.
@@ -54,7 +57,7 @@ Todos los cambios relevantes del proyecto están documentados aquí. El formato 
 
 ### Cambiado
 
-- Archivos de validación renombrados: `validacion_metricas.csv` → `validacion_metricas_modelo_principal.csv` (consistencia de naming).
+- Archivos de validación renombrados: `validacion_metricas.csv` → `validacion_metricas_controles_externos.csv` (nomenclatura descriptiva).
 - `build_charts.py`, `build_workbook.mjs`, `check_outputs.py` actualizados con nuevas rutas.
 
 ### Corregido
@@ -102,7 +105,7 @@ Todos los cambios relevantes del proyecto están documentados aquí. El formato 
 
 ### Añadido
 
-- **Modelo ampliado y pesos explicativos** (PR #2): 12 factores, descomposición Shapley/LMG exacta del R², archivo Excel de 14 hojas.
+- **Marco macroeconómico integral y pesos explicativos** (PR #2): 12 factores, descomposición Shapley/LMG exacta del R², archivo Excel de 14 hojas.
 
 ---
 

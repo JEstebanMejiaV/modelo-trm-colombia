@@ -38,6 +38,13 @@ Son instantáneas de las descargas originales en JSON, CSV o Excel. `src/estimat
 | `clp_usd_mensual_fred.csv` | CLP por USD, OECD/FRED `CCUSMA02CLM618N` ([serie](https://fred.stlouisfed.org/series/CCUSMA02CLM618N)) | Mensual | Sin agregación adicional |
 | `mxn_usd_mensual_fred.csv` | MXN por USD, OECD/FRED `CCUSMA02MXM618N` ([serie](https://fred.stlouisfed.org/series/CCUSMA02MXM618N)) | Mensual | Sin agregación adicional |
 | `pen_usd_mensual_bcrp.json` | PEN por USD, promedio interbancario del período, BCRPData `PN01207PM` ([serie](https://estadisticas.bcrp.gob.pe/estadisticas/series/mensuales/resultados/PN01207PM/html), [API](https://estadisticas.bcrp.gob.pe/estadisticas/series/api/PN01207PM/json/2005-12/2026-4/esp)) | Mensual | Sin agregación adicional; se conserva 2005-12 para calcular el cambio de 2006-01 |
+| `ipc_colombia_banrep.json` | Índice de precios al consumidor, BanRep `15000` ([datos](https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=15000)) | Mensual | Sin agregación adicional; se transforma en logaritmo y primera diferencia sin imputación |
+| `ise_dane_12actividades_jun2026.xlsx` | Indicador de Seguimiento a la Economía (ISE) total, DANE, Cuadro 2 | Mensual | Se selecciona el total nacional; logaritmo y primera diferencia; se conservan vacíos sin imputación |
+| `ise_dane_9actividades_jun2026.xlsx` | ISE DANE, Cuadro 2 de 9 actividades | Mensual | Instantánea de contraste sectorial; la especificación activa usa el total de 12 agrupaciones |
+| `geih_dane_desestacionalizado_jun2026.xlsx` | GEIH DANE desestacionalizada, total nacional | Mensual | Candidata auditada; no se empalma ni imputa porque faltan 2 meses de la muestra |
+| `geih_dane_jun2026.xlsx` | GEIH DANE original, total nacional | Mensual | Candidata auditada; no se empalma ni imputa porque faltan 5 meses de la muestra |
+| `ipi_dane_jun2026.xlsx` | Índice de Producción Industrial (IPI) total, DANE | Mensual | Candidata auditada; comienza en 2014-01 y queda fuera de la muestra balanceada |
+| `ipp_dane_jul2026.xlsx` | Índice de Precios del Productor (IPP), producción nacional total, DANE | Mensual | Candidata auditada; comienza en 2014-12 y queda fuera de la muestra balanceada |
 | `balance_fiscal_gnc_mensual_trimestral.xlsx` | Balance del Gobierno Nacional Central, Ministerio de Hacienda ([fuente](https://www.minhacienda.gov.co/documents/d/portal/balance-fiscal-gnc-mensual-y-trimestral?download=true)) | Mensual/anual en hojas del archivo Excel | Se leen balance e ingresos en montos e ingresos como porcentaje del PIB |
 
 En la construcción activa, las dos tasas TES y `BKEVEN05` se agregan por separado antes de formar el diferencial Colombia−EE. UU. Para comprobar el efecto de calendarios distintos, el consolidado conserva además una versión calculada solo con fechas en las que existen simultáneamente las tres observaciones diarias y registra cuántos días comunes quedan en cada mes.
@@ -60,7 +67,7 @@ Estos archivos se conservan únicamente para auditoría histórica y comparacion
 | `brent_diario_fred.csv` | Brent `DCOILBRENTEU` | Sustituido por el índice de términos de intercambio de Colombia. |
 | `tes_10y_banrep.json` | TES COP cero cupón a 10 años | Formaba parte del proxy TES−Treasury; sustituido por EMBIG Colombia. |
 | `treasury_10y_diario_fred.csv` | Treasury `DGS10` | Formaba parte del proxy TES−Treasury; sustituido por EMBIG Colombia. |
-| `ipc_colombia_banrep.json` | Inflación colombiana realizada | Sustituido por compensación de inflación de mercado a cinco años. |
+
 | `ipc_eeuu_mensual_fred.csv` | Inflación estadounidense realizada | Sustituido por `BKEVEN05`; ya no se interpola `CPIAUCNS`. |
 
 ### 2. Base mensual consolidada
@@ -129,6 +136,20 @@ Todas las columnas tienen frecuencia mensual después de la consolidación.
 | `factor_monedas_regionales_4` | Misma construcción con BRL, CLP, MXN y PEN. | Es el factor activo de la explicación histórica y entra en `t`; signo `+`. | PEN mejora el ajuste histórico, pero no el BIC ni el MAPE del pronóstico. |
 | `factor_monedas_regionales` | Alias explícito de `factor_monedas_regionales_4`. | Conserva compatibilidad con salidas anteriores; la especificación activa usa el nombre numerado. | No debe confundirse con el factor de tres monedas seleccionado para pronóstico. |
 
+### Variables internas de Colombia
+
+La cobertura de las descargas nacionales se audita en [`variables_internas_cobertura.csv`](variables_internas_cobertura.csv). El corte de estimación abarca 244 meses, de 2006-01 a 2026-04.
+
+| Variable | Fuente y archivo | Cobertura en la muestra | Estado y tratamiento |
+|---|---|---:|---|
+| `ise_total_dane` → `ln_ise_total_dane` | DANE, ISE total del `ise_dane_12actividades_jun2026.xlsx`, Cuadro 2 | 244/244 | Activa; `ln(x)` y primera diferencia. Se activa el total para no añadir simultáneamente los 15 sectores y provocar colinealidad. |
+| `ipc_colombia_indice` → `ln_ipc_colombia` | Banco de la República, serie `15000`, `ipc_colombia_banrep.json` | 244/244 | Activa; `ln(x)` y primera diferencia. No se interpolan ni rellenan observaciones. |
+| GEIH DANE original y desestacionalizada | `geih_dane_jun2026.xlsx` y `geih_dane_desestacionalizado_jun2026.xlsx` | 239/244 y 242/244 | Candidatas no activas por faltantes dentro de la muestra y ruptura metodológica; se dejan vacías. |
+| IPI DANE total | `ipi_dane_jun2026.xlsx` | 148/244 | Candidata no activa: empieza en 2014-01; no se extiende hacia atrás. |
+| IPP DANE producción nacional total | `ipp_dane_jul2026.xlsx` | 133/244 | Candidata no activa: empieza en 2014-12; no se empalma artificialmente. |
+
+Las dos variables activas forman el factor Shapley **Actividad y precios domésticos**, grupo `Condiciones internas`. En la explicación histórica entran como `D.ln_ise_total_dane.L0` y `D.ln_ipc_colombia.L0`; en el pronóstico se usa `L2` para respetar el rezago conservador de publicación. La ausencia de cobertura completa es una razón para excluir GEIH, IPI e IPP, no una invitación a imputar.
+
 ### Base global mensual FRED
 
 `base_global_mensual.csv` consolida las series internacionales, sus candidatos y el identificador de cobertura. La especificación balanceada activa 17 términos en un único factor denominado `Condiciones financieras, commodities y actividad internacional`: rendimientos reales y nominales de EE. UU., expectativas de inflación a 5 y 10 años, pendiente 10Y–2Y, Brent, commodities, EPU global, STLFSI, NFCI, ANFCI, desempleo estadounidense, empleo manufacturero, producción industrial y fletes/logística. La cobertura de cada origen, incluidos los candidatos, se registra en `base_global_cobertura.csv`.
@@ -142,7 +163,7 @@ Todas las columnas tienen frecuencia mensual después de la consolidación.
 
 La base conserva además candidatos sin forzar su entrada al modelo: `high_yield_oas_pct` (high-yield), `ted_spread_pct` (TED), `desempleo_us_bls_pct` (`UNRATE`) y cuatro indicadores de China (`precios_importacion_china`, `produccion_industrial_china`, `indicador_lider_china`, `ipc_china`). High-yield no tiene una descarga utilizable que cubra 2006–2026; TED termina en 2022-01; `UNRATE` conserva un faltante publicado en 2025-10; y los indicadores chinos terminan antes o tienen faltantes dentro de la muestra. Ninguna de estas series se interpola, se rellena con cero o se incluye en la matriz balanceada. El identificador de oro solicitado devuelve HTTP 400 y no se sustituye silenciosamente.
 
-El desempleo activo usa `LRUN64TTUSM156S`, una serie mensual completa en la ventana 2006-01–2026-04. El modelo histórico utiliza el bloque global con información contemporánea realizada; el pronóstico aplica rezagos de publicación: mercados, tasas, riesgo y commodities con `.L1`, y empleo, desempleo y fletes con `.L2`. Las señales de China se mantienen exploratorias y no entran en `score_global` completo cuando no cubren toda la ventana. Agrupar los 17 términos evita aumentar los jugadores Shapley, controla la colinealidad y conserva exactamente 13 factores.
+El desempleo activo usa `LRUN64TTUSM156S`, una serie mensual completa en la ventana 2006-01–2026-04. El modelo histórico utiliza el bloque global con información contemporánea realizada; el pronóstico aplica rezagos de publicación: mercados, tasas, riesgo y commodities con `.L1`, y empleo, desempleo y fletes con `.L2`. Las señales de China se mantienen exploratorias y no entran en `score_global` completo cuando no cubren toda la ventana. Agrupar los 17 términos evita aumentar los jugadores Shapley, controla la colinealidad y conserva exactamente 14 factores al incorporar el bloque interno de actividad y precios domésticos.
 
 `data/base_global_cobertura.csv` exige para cada serie activa `estado=activa`, `cubre_muestra_completa=True` y 244 observaciones en la muestra. El registro conserva también las columnas de candidatos aunque estén vacías, para que una descarga fallida o una cobertura incompleta sea auditable en lugar de desaparecer.
 
@@ -156,7 +177,7 @@ El desempleo activo usa `LRUN64TTUSM156S`, una serie mensual completa en la vent
 | `ln_dolar_amplio` | `ln(indice_dolar_amplio)`. | Se diferencia y entra en `t`; signo `+`. | Contemporáneo: útil para explicación/nowcast, no pronóstico puro. |
 | `ln_vix` | `ln(vix)`. | Se diferencia y entra en `t`; signo `+`. | El modelo vuelve a calcular `D.ln_vix` a partir de esta columna. |
 | `ln_reservas_netas_sin_flar` | `ln(reservas_netas_sin_flar_usd_millones)`. | Se diferencia y entra con `L1`; signo `−`. | Endogeneidad por intervención y valoración de activos. |
-| `dln_vix` | `ln_vix − ln_vix_L1`. | No es un regresor separado en los modelos mensuales base/ampliado; se usa contemporáneo como variable fija en el ECM exploratorio. Signo `+`. | Duplica numéricamente `D.ln_vix`; no incluir ambos en la misma ecuación. |
+| `dln_vix` | `ln_vix − ln_vix_L1`. | No es un regresor separado en los modelos mensuales referencia/integral; se usa contemporáneo como variable fija en el ECM exploratorio. Signo `+`. | Duplica numéricamente `D.ln_vix`; no incluir ambos en la misma ecuación. |
 | `dummy_pandemia_2020` | `1` entre 2020-03 y 2020-05, ambos inclusive; `0` en otro mes. | Control contemporáneo; se anticipa signo `+`, sin interpretación estructural. | Resume un episodio excepcional y no identifica un canal económico único. |
 
 ## Columnas de la muestra de estimación y temporización efectiva
@@ -164,10 +185,10 @@ El desempleo activo usa `LRUN64TTUSM156S`, una serie mensual completa en la vent
 El encabezado exacto de `modelo_trm_muestra_estimacion.csv` es:
 
 ```text
-fecha,ln_trm,ln_terminos_intercambio,ln_remesas_12m,diferencial_tasas_pp,deficit_fiscal_12m_pct_pib,ln_dolar_amplio,ln_vix,dln_vix,embig_colombia_pp,ln_reservas_netas_sin_flar,asinh_balanza_comercial,asinh_flujos_capital,diferencial_bei_5y_pp,diferencial_bei_5y_comun_pp,factor_monedas_regionales_3,factor_monedas_regionales_4,dummy_pandemia_2020
+fecha,ln_trm,ln_terminos_intercambio,ln_remesas_12m,diferencial_tasas_pp,deficit_fiscal_12m_pct_pib,ln_dolar_amplio,ln_vix,dln_vix,embig_colombia_pp,ln_reservas_netas_sin_flar,asinh_balanza_comercial,asinh_flujos_capital,diferencial_bei_5y_pp,diferencial_bei_5y_comun_pp,factor_monedas_regionales_3,factor_monedas_regionales_4,ln_ise_total_dane,ln_ipc_colombia,yield_real_10y_tips_pct,yield_real_5y_us_pct,yield_2y_us_pct,yield_10y_us_pct,spread_10y_2y_us_pct,breakeven_5y_us_pct,breakeven_10y_us_pct,ln_brent_global,ln_commodities_global,epu_global,estres_financiero_stl,nfci_chicago,anfci_chicago,desempleo_us_pct,ln_empleo_manufactura_us,ln_produccion_industrial_us,ln_fletes_transporte_us,dummy_pandemia_2020
 ```
 
-La matriz del modelo ampliado se construye así:
+La matriz del marco macroeconómico integral se construye así:
 
 | Entrada del CSV de muestra | Regresor efectivo | Rezago | Signo esperado |
 |---|---|---:|:---:|
@@ -178,21 +199,22 @@ La matriz del modelo ampliado se construye así:
 | `deficit_fiscal_12m_pct_pib` | `Δdeficit_fiscal_12m_pct_pib` | `L1` | `+` |
 | `ln_dolar_amplio` | `Δln_dolar_amplio` | `t` | `+` |
 | `ln_vix` | `Δln_vix` | `t` | `+` |
-| `dln_vix` | Solo ECM exploratorio; no se agrega al modelo ampliado junto a `Δln_vix` | `t` | `+` |
+| `dln_vix` | Solo ECM exploratorio; no se agrega al marco macroeconómico integral junto a `Δln_vix` | `t` | `+` |
 | `embig_colombia_pp` | `Δembig_colombia_pp` | `t` | `+` |
 | `ln_reservas_netas_sin_flar` | `Δln_reservas_netas_sin_flar` | `L1` | `−` |
 | `asinh_balanza_comercial` | `Δasinh` | `L1` | `−` |
 | `asinh_flujos_capital` | `Δasinh` | `L1` | `−` |
 | `diferencial_bei_5y_pp` | Primera diferencia del diferencial de compensación de inflación a 5 años | `L1` | `+` |
 | `factor_monedas_regionales_4` | Factor de cuatro monedas | `t` en la explicación histórica | `+` |
+| `ln_ise_total_dane` y `ln_ipc_colombia` | Factor `Actividad y precios domésticos`: `Δln_ise_total_dane` y `Δln_ipc_colombia` | `L0` histórico; `L2` pronóstico | Actividad `+`; inflación según la asociación estimada |
 | `factor_monedas_regionales_3` | Factor de tres monedas | `L1` en el pronóstico seleccionado | `+` |
 | `dummy_pandemia_2020` | Dummy | `t` | Sin signo estructural |
 
-Términos de intercambio, dólar amplio, VIX, EMBIG y factor regional usan información referida o realizada dentro del mismo mes que la TRM. Por tanto, el modelo ampliado es una contabilidad histórica o nowcast condicional; no es un pronóstico disponible al comienzo del mes ni una identificación causal. La restricción es todavía más clara para términos de intercambio: aunque entra como `Δln` contemporáneo para explicar el episodio económico de `t`, BanRep suele publicar ese dato alrededor de dos meses después.
+Términos de intercambio, dólar amplio, VIX, EMBIG y factor regional usan información referida o realizada dentro del mismo mes que la TRM. Por tanto, el marco macroeconómico integral es una contabilidad histórica o nowcast condicional; no es un pronóstico disponible al comienzo del mes ni una identificación causal. La restricción es todavía más clara para términos de intercambio: aunque entra como `Δln` contemporáneo para explicar el episodio económico de `t`, BanRep suele publicar ese dato alrededor de dos meses después.
 
 ### Calendario del modelo de pronóstico
 
-La ecuación de pronóstico evita regresores contemporáneos: términos de intercambio y déficit usan `L3`; remesas, reservas, balanza y flujos de capital usan `L2`; tasas, dólar amplio, VIX, EMBIG, el último cambio completo del diferencial BEI y el factor regional de tres monedas usan `L1`. La variable dependiente incorpora un rezago propio seleccionado por BIC. El detalle factor por factor está en `results/calendario_disponibilidad_pronostico.csv`.
+La ecuación de pronóstico evita regresores contemporáneos: términos de intercambio y déficit usan `L3`; remesas, reservas, balanza y flujos de capital usan `L2`; tasas, dólar amplio, VIX, EMBIG, el último cambio completo del diferencial BEI y el factor regional de tres monedas usan `L1`; ISE total e IPC Colombia se incorporan al factor interno con `L2`. La variable dependiente incorpora un rezago propio seleccionado por BIC. El detalle factor por factor está en `results/calendario_disponibilidad_pronostico.csv`.
 
 Este calendario evita anticipar el valor del mes objetivo, pero la base usa la última revisión hoy disponible de cada serie. Por tanto, la prueba es pseudo-tiempo-real. `data/vintages/` añade un archivo inmutable hacia adelante, cataloga versiones fiscales y deja una recuperación ALFRED reanudable. La cobertura histórica versionada sigue en cero; consulte `data/vintages/README.md` y `results/cobertura_vintages_pronostico.csv`.
 

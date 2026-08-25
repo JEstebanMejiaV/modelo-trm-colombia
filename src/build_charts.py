@@ -21,23 +21,25 @@ from matplotlib.ticker import FuncFormatter
 import numpy as np
 import pandas as pd
 
+from model.config import REFERENCE_MODEL_LABEL, INTEGRATED_MODEL_LABEL
+
 
 RESULTS = ROOT / "results"
 CHARTS = ROOT / "deliverables" / "graficos"
 
 SOURCE_FILES = [
-    RESULTS / "explicacion/pesos_explicativos_modelo_ampliado.csv",
+    RESULTS / "explicacion/pesos_explicativos_marco_macro_integral.csv",
     RESULTS / "explicacion/intervalos_bootstrap_pesos_shapley.csv",
     RESULTS / "explicacion/estabilidad_submuestras_resumen.csv",
-    RESULTS / "explicacion/comparacion_modelos.csv",
-    RESULTS / "explicacion/validacion_metricas_modelo_ampliado.csv",
-    RESULTS / "explicacion/validacion_predicciones_modelo_principal.csv",
-    RESULTS / "explicacion/validacion_predicciones_modelo_ampliado.csv",
+    RESULTS / "explicacion/comparacion_especificaciones.csv",
+    RESULTS / "explicacion/validacion_metricas_marco_macro_integral.csv",
+    RESULTS / "explicacion/validacion_predicciones_controles_externos.csv",
+    RESULTS / "explicacion/validacion_predicciones_marco_macro_integral.csv",
     RESULTS / "pronostico/validacion_metricas_pronostico.csv",
     RESULTS / "pronostico/validacion_predicciones_pronostico.csv",
     RESULTS / "explicacion/comparacion_factor_regional.csv",
-    RESULTS / "explicacion/coeficientes_modelo_ampliado.csv",
-    RESULTS / "explicacion/contribuciones_modelo_ampliado.csv",
+    RESULTS / "explicacion/coeficientes_marco_macro_integral.csv",
+    RESULTS / "explicacion/contribuciones_marco_macro_integral.csv",
     RESULTS / "robustez/coeficientes_corto_plazo_ecm.csv",
     RESULTS / "robustez/coeficientes_largo_plazo_ecm.csv",
     RESULTS / "robustez/bounds_resumen.csv",
@@ -56,7 +58,7 @@ FOREGROUND = "#17324D"
 MUTED = "#5F6F7F"
 GRID = "#DCE3EA"
 BASE = "#2D6FA3"
-EXPANDED = "#23866F"
+INTEGRATED = "#23866F"
 RANDOM_WALK = "#7B8794"
 FORECAST = "#C95D3A"
 POSITIVE = "#C95D3A"
@@ -68,6 +70,7 @@ GROUP_COLORS = {
     "Regional": "#7A5195",
     "Riesgo local": "#D97732",
     "Sector externo Colombia": "#23866F",
+    "Condiciones internas": "#6A9C78",
     "Política doméstica": "#B8891B",
 }
 
@@ -85,6 +88,7 @@ LABELS = {
         "Diferencial BEI\nde inflación · 5 años"
     ),
     "Diferencial de tasas": "Diferencial de tasas",
+    "Actividad y precios domésticos": "Actividad y precios\ndomésticos",
     "Condiciones financieras, commodities y actividad internacional": (
         "Condiciones financieras,\ncommodities y actividad internacional"
     ),
@@ -295,8 +299,8 @@ def chart_performance(
     regional_comparison: pd.DataFrame,
 ) -> None:
     by_model = comparison.set_index("modelo")
-    base = by_model.loc["Base"]
-    expanded = by_model.loc["Ampliado historico"]
+    base = by_model.loc[REFERENCE_MODEL_LABEL]
+    integrated = by_model.loc[INTEGRATED_MODEL_LABEL]
     walk = validation.loc[validation["modelo"].eq("Caminata aleatoria")].iloc[0]
     forecast = regional_comparison.loc[
         regional_comparison["uso"].str.startswith("Pronóstico")
@@ -325,38 +329,38 @@ def chart_performance(
 
     add_panel_bars(
         axes[0, 0],
-        ["Principal\nex post", "Ampliado\nex post", "Pronóstico\nrezagado"],
-        [base["r_cuadrado_ajustado"] * 100, expanded["r_cuadrado_ajustado"] * 100, forecast["r_cuadrado_ajustado"] * 100],
-        [BASE, EXPANDED, FORECAST],
+        ["Controles externos\nex post", "Marco macro\nintegral ex post", "Pronóstico\nrezagado"],
+        [base["r_cuadrado_ajustado"] * 100, integrated["r_cuadrado_ajustado"] * 100, forecast["r_cuadrado_ajustado"] * 100],
+        [BASE, INTEGRATED, FORECAST],
         "R² ajustado · más alto es mejor",
         "%",
     )
     add_panel_bars(
         axes[0, 1],
-        ["Principal\ncond.", "Ampliado\ncond.", "Pronóstico\nrezagado", "Caminata"],
-        [base["mape_pct"], expanded["mape_pct"], forecast_metric["mape_pct"], walk["mape_pct"]],
-        [BASE, EXPANDED, FORECAST, RANDOM_WALK],
+        ["Controles externos\ncond.", "Marco macro\nintegral cond.", "Pronóstico\nrezagado", "Caminata"],
+        [base["mape_pct"], integrated["mape_pct"], forecast_metric["mape_pct"], walk["mape_pct"]],
+        [BASE, INTEGRATED, FORECAST, RANDOM_WALK],
         "MAPE de validación · más bajo es mejor",
         "%",
         digits=2,
     )
     add_panel_bars(
         axes[1, 0],
-        ["Principal\ncond.", "Ampliado\ncond.", "Pronóstico\nrezagado"],
+        ["Controles externos\ncond.", "Marco macro\nintegral cond.", "Pronóstico\nrezagado"],
         [
             base["r2_validacion_condicional_vs_caminata"] * 100,
-            expanded["r2_validacion_condicional_vs_caminata"] * 100,
+            integrated["r2_validacion_condicional_vs_caminata"] * 100,
             forecast["r2_validacion_vs_caminata"] * 100,
         ],
-        [BASE, EXPANDED, FORECAST],
+        [BASE, INTEGRATED, FORECAST],
         "R² frente a caminata · negativo es peor",
         "%",
     )
     add_panel_bars(
         axes[1, 1],
-        ["Principal\ncond.", "Ampliado\ncond.", "Pronóstico\nrezagado"],
-        [base["acierto_direccion_pct"], expanded["acierto_direccion_pct"], forecast_metric["acierto_direccion_pct"]],
-        [BASE, EXPANDED, FORECAST],
+        ["Controles externos\ncond.", "Marco macro\nintegral cond.", "Pronóstico\nrezagado"],
+        [base["acierto_direccion_pct"], integrated["acierto_direccion_pct"], forecast_metric["acierto_direccion_pct"]],
+        [BASE, INTEGRATED, FORECAST],
         "Acierto de dirección mensual",
         "%",
     )
@@ -373,20 +377,20 @@ def chart_performance(
 
 def chart_validation(
     base_predictions: pd.DataFrame,
-    expanded_predictions: pd.DataFrame,
+    integrated_predictions: pd.DataFrame,
     forecast_predictions: pd.DataFrame,
 ) -> None:
     base = base_predictions.copy()
-    expanded = expanded_predictions.copy()
+    integrated = integrated_predictions.copy()
     base["fecha"] = pd.to_datetime(base["fecha"])
-    expanded["fecha"] = pd.to_datetime(expanded["fecha"])
+    integrated["fecha"] = pd.to_datetime(integrated["fecha"])
     forecast = forecast_predictions.copy()
     forecast["fecha"] = pd.to_datetime(forecast["fecha"])
     data = base.merge(
-        expanded[["fecha", "trm_modelo_condicional"]],
+        integrated[["fecha", "trm_modelo_condicional"]],
         on="fecha",
         how="inner",
-        suffixes=("_principal", "_ampliado"),
+        suffixes=("_controles_externos", "_marco_macro_integral"),
         validate="one_to_one",
     )
     data = data.merge(
@@ -407,19 +411,19 @@ def chart_validation(
     )
     ax.plot(
         data["fecha"],
-        data["trm_modelo_condicional_ampliado"],
-        color=EXPANDED,
+        data["trm_modelo_condicional_marco_macro_integral"],
+        color=INTEGRATED,
         linewidth=2.2,
-        label="Modelo ampliado",
+        label="Marco macroeconómico integral",
         zorder=3,
     )
     ax.plot(
         data["fecha"],
-        data["trm_modelo_condicional_principal"],
+        data["trm_modelo_condicional_controles_externos"],
         color=BASE,
         linewidth=1.8,
         linestyle="--",
-        label="Modelo principal",
+        label="Controles externos y financieros",
         zorder=2,
     )
     ax.plot(
@@ -705,7 +709,7 @@ def plot_ecm_horizons(
                 long_y,
                 float(long["lower"]),
                 float(long["upper"]),
-                color=EXPANDED,
+                color=INTEGRATED,
                 linewidth=2.2,
             )
             ax.scatter(
@@ -713,8 +717,8 @@ def plot_ecm_horizons(
                 long_y,
                 marker="D",
                 s=58,
-                facecolor=EXPANDED if bool(long["significant"]) else BACKGROUND,
-                edgecolor=EXPANDED,
+                facecolor=INTEGRATED if bool(long["significant"]) else BACKGROUND,
+                edgecolor=INTEGRATED,
                 linewidth=2,
                 zorder=3,
             )
@@ -806,12 +810,12 @@ def chart_ecm(
     remaining_upper = np.power(1.0 + alpha_upper, months) * 100.0
     half_life_lower = float(np.log(0.5) / np.log(1.0 + alpha_lower))
     half_life_upper = float(np.log(0.5) / np.log(1.0 + alpha_upper))
-    ax_adjustment.plot(months, remaining, color=EXPANDED, linewidth=2.6)
+    ax_adjustment.plot(months, remaining, color=INTEGRATED, linewidth=2.6)
     ax_adjustment.fill_between(
         months,
         remaining_lower,
         remaining_upper,
-        color=EXPANDED,
+        color=INTEGRATED,
         alpha=0.14,
     )
     ax_adjustment.axhline(50, color=GRID, linewidth=1.0)
@@ -858,7 +862,7 @@ def chart_ecm(
             linestyle="None", label="Corto plazo"
         ),
         Line2D(
-            [0], [0], marker="D", color=EXPANDED, markerfacecolor=EXPANDED,
+            [0], [0], marker="D", color=INTEGRATED, markerfacecolor=INTEGRATED,
             linestyle="None", label="Largo plazo exploratorio"
         ),
         Line2D(
@@ -901,23 +905,23 @@ def chart_ecm(
 
 def main() -> None:
     CHARTS.mkdir(parents=True, exist_ok=True)
-    weights = pd.read_csv(RESULTS / "explicacion/pesos_explicativos_modelo_ampliado.csv")
+    weights = pd.read_csv(RESULTS / "explicacion/pesos_explicativos_marco_macro_integral.csv")
     shapley_intervals = pd.read_csv(
         RESULTS / "explicacion/intervalos_bootstrap_pesos_shapley.csv"
     )
-    comparison = pd.read_csv(RESULTS / "explicacion/comparacion_modelos.csv")
-    validation = pd.read_csv(RESULTS / "explicacion/validacion_metricas_modelo_ampliado.csv")
-    base_predictions = pd.read_csv(RESULTS / "explicacion/validacion_predicciones_modelo_principal.csv")
-    expanded_predictions = pd.read_csv(
-        RESULTS / "explicacion/validacion_predicciones_modelo_ampliado.csv"
+    comparison = pd.read_csv(RESULTS / "explicacion/comparacion_especificaciones.csv")
+    validation = pd.read_csv(RESULTS / "explicacion/validacion_metricas_marco_macro_integral.csv")
+    base_predictions = pd.read_csv(RESULTS / "explicacion/validacion_predicciones_controles_externos.csv")
+    integrated_predictions = pd.read_csv(
+        RESULTS / "explicacion/validacion_predicciones_marco_macro_integral.csv"
     )
     forecast_validation = pd.read_csv(RESULTS / "pronostico/validacion_metricas_pronostico.csv")
     forecast_predictions = pd.read_csv(
         RESULTS / "pronostico/validacion_predicciones_pronostico.csv"
     )
     regional_comparison = pd.read_csv(RESULTS / "explicacion/comparacion_factor_regional.csv")
-    coefficients = pd.read_csv(RESULTS / "explicacion/coeficientes_modelo_ampliado.csv")
-    contributions = pd.read_csv(RESULTS / "explicacion/contribuciones_modelo_ampliado.csv")
+    coefficients = pd.read_csv(RESULTS / "explicacion/coeficientes_marco_macro_integral.csv")
+    contributions = pd.read_csv(RESULTS / "explicacion/contribuciones_marco_macro_integral.csv")
     ecm_short = pd.read_csv(RESULTS / "robustez/coeficientes_corto_plazo_ecm.csv")
     ecm_long = pd.read_csv(RESULTS / "robustez/coeficientes_largo_plazo_ecm.csv")
     bounds = pd.read_csv(RESULTS / "robustez/bounds_resumen.csv")
@@ -925,7 +929,7 @@ def main() -> None:
     configure_style()
     chart_weights(weights, shapley_intervals)
     chart_performance(comparison, validation, forecast_validation, regional_comparison)
-    chart_validation(base_predictions, expanded_predictions, forecast_predictions)
+    chart_validation(base_predictions, integrated_predictions, forecast_predictions)
     chart_standardized_effects(weights, coefficients, contributions)
     chart_ecm(ecm_short, ecm_long, bounds)
     write_metadata()

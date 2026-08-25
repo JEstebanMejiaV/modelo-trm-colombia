@@ -40,12 +40,30 @@ def main() -> None:
             raise AssertionError(
                 f"La instantánea raw {filename} no coincide con su SHA-256 registrado."
             )
+    for filename, expected_hash in metadata["internal_snapshot_sha256"].items():
+        actual_hash = sha256_file(DATA / "raw" / filename)
+        if actual_hash != expected_hash:
+            raise AssertionError(
+                f"La instantánea interna {filename} no coincide con su SHA-256 registrado."
+            )
 
-    weights = pd.read_csv(RESULTS / "explicacion/pesos_explicativos_modelo_ampliado.csv")
+    weights = pd.read_csv(RESULTS / "explicacion/pesos_explicativos_marco_macro_integral.csv")
     coverage_path = DATA / "base_global_cobertura.csv"
     if not coverage_path.exists():
         raise AssertionError("Falta el registro de cobertura de variables globales.")
     coverage = pd.read_csv(coverage_path).set_index("variable")
+    internal_coverage_path = DATA / "variables_internas_cobertura.csv"
+    if not internal_coverage_path.exists():
+        raise AssertionError("Falta la matriz de cobertura de variables internas.")
+    internal_coverage = pd.read_csv(internal_coverage_path).set_index("variable")
+    for variable in ["ise_total_dane", "ipc_colombia_indice"]:
+        if variable not in internal_coverage.index:
+            raise AssertionError(f"Falta la cobertura documentada de {variable}.")
+        record = internal_coverage.loc[variable]
+        if record["estado"] != "activa" or not bool(record["cubre_muestra_completa"]):
+            raise AssertionError(f"La variable interna activa {variable} no cubre la muestra completa.")
+        if int(record["meses_faltantes_muestra"]) != 0:
+            raise AssertionError(f"La variable interna activa {variable} tiene faltantes.")
     active_variables = {
         "yield_real_10y_tips_pct",
         "yield_real_5y_us_pct",
@@ -85,8 +103,8 @@ def main() -> None:
         raise AssertionError("Persisten nombres genéricos de grupos globales.")
     if "Variables globales nuevas" in set(weights["factor"]):
         raise AssertionError("Persistió el nombre no descriptivo del factor global.")
-    if len(weights) != 13:
-        raise AssertionError("La descomposición debe contener exactamente 13 factores.")
+    if len(weights) != 14:
+        raise AssertionError("La descomposición debe contener exactamente 14 factores.")
     if (weights["shapley_r2"] < -1e-12).any():
         raise AssertionError("Un aporte Shapley dentro de muestra resultó negativo.")
     if not np.isclose(weights["peso_entre_factores_pct"].sum(), 100.0, atol=1e-8):
@@ -97,8 +115,8 @@ def main() -> None:
         raise AssertionError("Los aportes Shapley no cierran contra el R² incremental.")
 
     bootstrap = pd.read_csv(RESULTS / "explicacion/intervalos_bootstrap_pesos_shapley.csv")
-    if set(bootstrap["factor"]) != set(weights["factor"]) or len(bootstrap) != 13:
-        raise AssertionError("Los intervalos bootstrap no cubren los 13 factores Shapley.")
+    if set(bootstrap["factor"]) != set(weights["factor"]) or len(bootstrap) != 14:
+        raise AssertionError("Los intervalos bootstrap no cubren los 14 factores Shapley.")
     if not bootstrap["replicas_validas"].eq(200).all():
         raise AssertionError("Los intervalos Shapley deben usar 200 réplicas válidas.")
     if not bootstrap["bloque_meses"].eq(12).all():
@@ -118,7 +136,7 @@ def main() -> None:
         raise AssertionError("Los pesos puntuales del bootstrap no concilian con Shapley exacto.")
 
     stability_detail = pd.read_csv(
-        RESULTS / "explicacion/estabilidad_submuestras_modelo_ampliado.csv"
+        RESULTS / "explicacion/estabilidad_submuestras_marco_macro_integral.csv"
     )
     stability_summary = pd.read_csv(RESULTS / "explicacion/estabilidad_submuestras_resumen.csv")
     expected_subsamples = {
@@ -130,8 +148,8 @@ def main() -> None:
     }
     if set(stability_summary["submuestra"]) != expected_subsamples:
         raise AssertionError("Faltan cortes de estabilidad en el resumen.")
-    if len(stability_detail) != 65 or not stability_detail.groupby("submuestra").size().eq(13).all():
-        raise AssertionError("La estabilidad detallada debe tener 13 factores en cinco cortes.")
+    if len(stability_detail) != 70 or not stability_detail.groupby("submuestra").size().eq(14).all():
+        raise AssertionError("La estabilidad detallada debe tener 14 factores en cinco cortes.")
     if not stability_summary["correlacion_spearman_rangos_vs_completa"].between(-1, 1).all():
         raise AssertionError("Una correlación de rangos de estabilidad quedó fuera de [-1, 1].")
 
@@ -170,8 +188,8 @@ def main() -> None:
         raise AssertionError("El catálogo fiscal no contiene las ocho versiones verificadas.")
 
     vintage_coverage = pd.read_csv(RESULTS / "pronostico/cobertura_vintages_pronostico.csv")
-    if len(vintage_coverage) != 13:
-        raise AssertionError("La cobertura de vintages debe reportar los 13 factores.")
+    if len(vintage_coverage) != 14:
+        raise AssertionError("La cobertura de vintages debe reportar los 14 factores.")
     complete_vintage = vintage_coverage["apto_backtest_genuino"].astype("string").str.lower().eq("true")
     alfred_csv = DATA / "vintages" / "historical" / "alfred_factores_pronostico.csv"
     expected_complete = 3 if alfred_csv.exists() else 0
@@ -182,14 +200,14 @@ def main() -> None:
     if bool(metadata["backtest_genuino_disponible"]):
         raise AssertionError("El backtest no puede rotularse como genuino con cobertura parcial.")
 
-    comparison = pd.read_csv(RESULTS / "explicacion/comparacion_modelos.csv")
-    if set(comparison["modelo"]) != {"Base", "Ampliado historico"}:
-        raise AssertionError("La comparación no contiene las dos especificaciones esperadas.")
+    comparison = pd.read_csv(RESULTS / "explicacion/comparacion_especificaciones.csv")
+    if set(comparison["modelo"]) != {"Controles externos y financieros", "Marco macroeconómico integral"}:
+        raise AssertionError("La comparación no contiene las dos agrupaciones descriptivas esperadas.")
     if comparison["observaciones"].nunique() != 1:
-        raise AssertionError("Base y ampliado no usan la misma muestra efectiva.")
+        raise AssertionError("Las dos agrupaciones no usan la misma muestra efectiva.")
 
     expanded_coefficients = pd.read_csv(
-        RESULTS / "explicacion/coeficientes_modelo_ampliado.csv"
+        RESULTS / "explicacion/coeficientes_marco_macro_integral.csv"
     )
     expanded_terms = set(expanded_coefficients["termino"])
     required_active_terms = {
@@ -198,6 +216,8 @@ def main() -> None:
         "D.asinh_balanza_comercial.L1",
         "D.asinh_flujos_capital.L1",
         "D.diferencial_bei_5y_pp.L1",
+        "D.ln_ise_total_dane.L0",
+        "D.ln_ipc_colombia.L0",
         "factor_monedas_regionales_4.L0",
         "D.yield_real_10y_tips_pct.L0",
         "D.yield_real_5y_us_pct.L0",
@@ -213,7 +233,7 @@ def main() -> None:
     missing_active_terms = required_active_terms.difference(expanded_terms)
     if missing_active_terms:
         raise AssertionError(
-            "Faltan términos activos en el modelo ampliado: "
+            "Faltan términos activos en el marco macroeconómico integral: "
             f"{sorted(missing_active_terms)}"
         )
     retired_terms = {
@@ -224,7 +244,7 @@ def main() -> None:
     unexpected_retired_terms = retired_terms.intersection(expanded_terms)
     if unexpected_retired_terms:
         raise AssertionError(
-            "Persisten términos sustituidos en el modelo ampliado: "
+            "Persisten términos sustituidos en el marco macroeconómico integral: "
             f"{sorted(unexpected_retired_terms)}"
         )
 
@@ -241,6 +261,10 @@ def main() -> None:
     monthly_path = DATA / "modelo_trm_datos_mensuales.csv"
     monthly = pd.read_csv(monthly_path)
     required_columns = {
+        "ise_total_dane",
+        "ipc_colombia_indice",
+        "ln_ise_total_dane",
+        "ln_ipc_colombia",
         "terminos_intercambio",
         "ln_terminos_intercambio",
         "embig_colombia_pb",
@@ -308,6 +332,14 @@ def main() -> None:
             monthly["tes_5y_pesos_comun_pct"]
             - monthly["tes_5y_uvr_comun_pct"]
             - monthly["bei_eeuu_5y_comun_pct"],
+        ),
+        "ln ISE total DANE": (
+            monthly["ln_ise_total_dane"],
+            np.log(monthly["ise_total_dane"]),
+        ),
+        "ln IPC Colombia": (
+            monthly["ln_ipc_colombia"],
+            np.log(monthly["ipc_colombia_indice"]),
         ),
     }
     for label, (actual, expected) in identities.items():
@@ -419,8 +451,15 @@ def main() -> None:
         RESULTS / "pronostico/coeficientes_modelo_pronostico.csv"
     )
     forecast_terms = set(forecast_coefficients["termino"])
-    if "factor_monedas_regionales_3.L1" not in forecast_terms:
-        raise AssertionError("El pronóstico no usa la composición regional seleccionada.")
+    required_forecast_internal_terms = {
+        "D.ln_ise_total_dane.L2",
+        "D.ln_ipc_colombia.L2",
+    }
+    if not required_forecast_internal_terms.issubset(forecast_terms):
+        raise AssertionError(
+            "Faltan términos internos rezagados en el pronóstico: "
+            f"{sorted(required_forecast_internal_terms.difference(forecast_terms))}"
+        )
     for term in forecast_terms.difference({"const", "dummy_pandemia_2020"}):
         match = re.search(r"\.L(\d+)$", term)
         if match is None or int(match.group(1)) < 1:
@@ -443,6 +482,10 @@ def main() -> None:
     sample = pd.read_csv(DATA / "modelo_trm_muestra_estimacion.csv")
     required_sample_columns = {
         "ln_terminos_intercambio",
+        "ln_ise_total_dane",
+        "ln_ipc_colombia",
+        "ise_total_dane",
+        "ipc_colombia_indice",
         "embig_colombia_pp",
         "diferencial_bei_5y_pp",
         "diferencial_bei_5y_comun_pp",
@@ -472,8 +515,8 @@ def main() -> None:
         "Resumen",
         "Datos_fuente",
         "Transformaciones",
-        "Modelo_principal",
-        "Modelo_ampliado",
+        "Controles_externos",
+        "Marco_macro_integral",
         "Pesos_explicativos",
         "Robustez",
         "BEI_robustez",
@@ -484,9 +527,32 @@ def main() -> None:
         "Variables",
         "Fuentes",
     }
-    missing_sheets = required_sheets.difference(workbook.sheetnames)
-    if missing_sheets:
-        raise AssertionError(f"Faltan hojas en el archivo Excel: {sorted(missing_sheets)}")
+    if workbook.sheetnames != list(required_sheets):
+        expected_sheet_order = [
+            "Resumen",
+            "Datos_fuente",
+            "Transformaciones",
+            "Controles_externos",
+            "Marco_macro_integral",
+            "Pesos_explicativos",
+            "Robustez",
+            "BEI_robustez",
+            "Validacion",
+            "Pronostico",
+            "ECM_exploratorio",
+            "Diagnosticos",
+            "Variables",
+            "Fuentes",
+        ]
+        if workbook.sheetnames != expected_sheet_order:
+            raise AssertionError(f"El archivo Excel debe contener exactamente las 14 hojas descriptivas: {workbook.sheetnames}")
+
+    source_headers = {workbook["Datos_fuente"].cell(5, column).value for column in range(1, workbook["Datos_fuente"].max_column + 1)}
+    if not {"ISE total DANE (índice)", "IPC Colombia (índice)"}.issubset(source_headers):
+        raise AssertionError("Datos_fuente no contiene ISE total DANE e IPC Colombia.")
+    transformation_headers = {workbook["Transformaciones"].cell(5, column).value for column in range(1, workbook["Transformaciones"].max_column + 1)}
+    if not {"ln ISE total DANE", "Δln ISE total DANE", "ln IPC Colombia", "Δln IPC Colombia"}.issubset(transformation_headers):
+        raise AssertionError("Transformaciones no contiene los logaritmos y diferencias de ISE/IPC.")
 
     # El CI no reconstruye el archivo Excel. Estas conciliaciones impiden que un
     # cambio de resultados deje versionado un archivo Excel desactualizado.
