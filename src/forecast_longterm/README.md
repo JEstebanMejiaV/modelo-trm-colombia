@@ -2,17 +2,22 @@
 
 ## Hallazgo central
 
-La TRM colombiana tiene **reversión a la media predecible** a horizontes de 6-24 meses. La mejor señal (wavelet D3+D4+D5) explica el **46% de la variación del retorno futuro a 12 meses** out-of-sample, con acierto de dirección del 74% y significancia estadística al 0,1%.
+La señal de largo plazo más consistente sigue siendo la reversión multianual capturada por wavelets: D3+D4+D5 explica el **45,9% de la variación futura a 12 meses** out-of-sample, con dirección de 74,4% y DM p < 0,001. La nueva base global añade una señal independiente: `delta_actividad_us_12m` alcanza **12,8% de R² OOS** a 12 meses (DM p = 0,006). Estos resultados describen horizontes distintos y no convierten el pronóstico mensual en una estrategia de corto plazo.
 
-Este contraste con el corto plazo es el resultado más importante del proyecto:
+El análisis diario recalculado con mercados, condiciones financieras, commodities y logística también exige cautela: el mejor HAR obtiene R² OOS de 13,41%, pero dirección de 41,2% y Sharpe anualizado −3,91. El poder explicativo estadístico no equivale a rentabilidad ni a capacidad direccional.
 
-| Horizonte | Mejor R² OOS | p-valor | Interpretación |
+Este contraste entre frecuencias es el resultado central del proyecto:
+
+| Horizonte | Mejor R² OOS recalculado | p-valor DM | Interpretación |
 |---|---|---|---|
-| 1 día | 0,7% | 0,62 | Imprevisible (eficiencia débil) |
-| 1 mes | -11% | 0,21 | Imprevisible |
-| **6 meses** | **21%** | **0,03** | Predecible |
-| **12 meses** | **46%** | **<0,001** | Muy predecible |
-| **18 meses** | **46%** | **<0,001** | Muy predecible |
+| 1 día | 13,4%* | — | R² positivo, pero dirección y Sharpe desfavorables |
+| 1 mes | -13,4% | 0,21 | No supera la caminata |
+| **6 meses** | **-12,7%** | **0,16** | No supera la caminata |
+| **12 meses** | **-26,3%**† | **0,05** | No robusto en este backtest de señal agregada |
+| **18 meses** | **-41,3%** | **0,03** | No supera la caminata |
+| **24 meses** | **-135,9%** | **<0,001** | No supera la caminata |
+
+\* HAR con globales mensuales rezagadas; dirección 41,2% y Sharpe −3,91. † La señal global `delta_actividad_us_12m` evaluada por separado obtiene R² OOS de 12,8% y DM p = 0,006 a 12 meses; la diferencia ilustra que las especificaciones no son intercambiables.
 
 ---
 
@@ -30,6 +35,10 @@ Este contraste con el corto plazo es el resultado más importante del proyecto:
 | 8 | MA 60 meses (z-score) | -0,8% | 0,510 | 66,0% | 0,95 |
 | 9 | Cointegración TRM-dólar | -15,4% | -0,040 | 54,3% | 0,09 |
 | 10 | HP expanding | -17,8% | -0,021 | 57,8% | 0,13 |
+
+### Señales globales: condiciones financieras, actividad y logística
+
+La evaluación específica del bloque global está en `results/pronostico/variables_globales_evaluacion.csv`. Las señales disponibles se evalúan por separado con la muestra que cubre cada serie: en el corte actual, la señal de fletes/logística alcanza R² OOS de 22,7% y la producción industrial estadounidense 22,0%. Las señales de actividad, empleo, desempleo y fletes usan rezagos de disponibilidad; los candidatos de China no se mezclan en el `score_global` completo cuando no cubren toda la ventana. Estas cifras no son equivalentes al pronóstico mensual de la TRM ni a las señales de 12 meses.
 
 ---
 

@@ -7,52 +7,70 @@ Dos productos independientes: uno explica ex post, otro intenta pronosticar. El 
 
 # Parte A — Explicar la TRM
 
-El modelo ampliado distribuye la variación mensual entre 12 factores macroeconómicos usando información contemporánea y rezagada. R² ajustado: **58,52%** (R² sin ajustar: 60,77%). Los tres factores principales — monedas regionales (30%), dólar amplio (20%) y EMBIG Colombia (18%) — capturan el 68% del poder explicativo total.
+El modelo ampliado distribuye la variación mensual entre 13 factores macroeconómicos usando información contemporánea y rezagada. R² ajustado: **62,80%** (R² sin ajustar: 67,47%). Los principales bloques son monedas regionales (24,59%), condiciones financieras, commodities y actividad internacional (21,62%), dólar amplio (15,46%) y EMBIG Colombia (14,26%); juntos concentran 75,93% del peso entre factores.
 
 ## Coeficientes del modelo ampliado
 
 <!-- AUTO:coeficientes_ampliado -->
 | Término | Coeficiente | p-valor |
 |---|---:|---:|
-| Constante | 0,00318 | 0,0945 |
-| Δln términos de intercambio, mes actual | −0,09186 | 0,0014 |
-| Δln remesas 12 meses, rezago 1 | 0,10076 | 0,3217 |
-| Δ diferencial de tasas, rezago 1 | −0,00496 | 0,2946 |
-| Δ déficit fiscal 12 meses/PIB, rezago 1 | −0,00075 | 0,8276 |
-| Δln dólar amplio, mes actual | 0,24145 | 0,2524 |
-| Δln VIX, mes actual | 0,01144 | 0,2422 |
-| Δ EMBIG Colombia (pp), mes actual | 0,01710 | 0,1323 |
-| Δln reservas netas sin FLAR, rezago 1 | −0,29366 | 0,0131 |
-| Δ asinh(balanza comercial), rezago 1 | 0,04699 | <0,0001 |
-| Δ asinh(flujos de capital), rezago 1 | 0,00065 | 0,8505 |
-| Δ diferencial BEI 5 años (pp), rezago 1 | −0,00627 | 0,1771 |
-| Factor regional BRL+CLP+MXN+PEN, mes actual | 0,01653 | <0,0001 |
-| Pandemia marzo–mayo 2020 | −0,00272 | 0,6686 |
+| Constante | 0,00249 | 0,1712 |
+| Δln términos de intercambio, mes actual | 0,01682 | 0,6915 |
+| Δln remesas 12 meses, rezago 1 | 0,16805 | 0,1388 |
+| Δ diferencial de tasas, rezago 1 | 0,00109 | 0,8366 |
+| Δ déficit fiscal 12 meses/PIB, rezago 1 | 0,00003 | 0,9938 |
+| Δln dólar amplio, mes actual | 0,16176 | 0,3627 |
+| Δln VIX, mes actual | 0,01464 | 0,1687 |
+| Δ EMBIG Colombia (pp), mes actual | 0,02478 | 0,0204 |
+| Δln reservas netas sin FLAR, rezago 1 | −0,25123 | 0,0381 |
+| Δ asinh(balanza comercial), rezago 1 | 0,05448 | <0,0001 |
+| Δ asinh(flujos de capital), rezago 1 | 0,00066 | 0,8324 |
+| Δ diferencial BEI 5 años (pp), rezago 1 | −0,00240 | 0,5755 |
+| Factor regional BRL+CLP+MXN+PEN, mes actual | 0,01758 | <0,0001 |
+| `D.yield_real_10y_tips_pct.L0` | −344,51234 | 0,2405 |
+| `D.yield_real_5y_us_pct.L0` | −0,09219 | 0,1268 |
+| `D.yield_2y_us_pct.L0` | −325,01023 | 0,2153 |
+| `D.yield_10y_us_pct.L0` | 669,61408 | 0,0373 |
+| `D.spread_10y_2y_us_pct.L0` | −325,05115 | 0,2152 |
+| `D.breakeven_5y_us_pct.L0` | −0,10116 | 0,0839 |
+| `D.breakeven_10y_us_pct.L0` | −344,43964 | 0,2406 |
+| `D.epu_global.L0` | −0,00001 | 0,6528 |
+| `D.estres_financiero_stl.L0` | 0,00383 | 0,5106 |
+| `D.nfci_chicago.L0` | 0,02803 | 0,5832 |
+| `D.anfci_chicago.L0` | −0,04698 | 0,2677 |
+| `D.ln_brent_global.L0` | −0,02448 | 0,4578 |
+| `D.ln_commodities_global.L0` | −0,15359 | 0,0160 |
+| `D.desempleo_us_pct.L0` | −0,00915 | 0,0916 |
+| `D.ln_empleo_manufactura_us.L0` | 0,05646 | 0,9271 |
+| `D.ln_produccion_industrial_us.L0` | −0,54247 | 0,1272 |
+| `D.ln_fletes_transporte_us.L0` | 0,22241 | 0,0922 |
+| Pandemia marzo–mayo 2020 | 0,00515 | 0,5874 |
 <!-- /AUTO:coeficientes_ampliado -->
 
 ## Descomposición Shapley (peso de cada factor)
 
-Se calculan los 4.096 subconjuntos posibles y se promedia el aporte marginal en todos los órdenes de entrada. El bloque fijo (intercepto + pandemia) explica 1,78%; los 12 factores agregan 58,99 p.p.
+Se calculan los **8.192 subconjuntos** posibles y se promedia el aporte marginal en todos los órdenes de entrada. El bloque fijo (intercepto + pandemia) explica 1,78%; los 13 factores agregan 65,69 p.p.
 
 <!-- AUTO:pesos_shapley -->
-| Factor | Peso entre los 12 factores | Aporte al R² |
+| Factor | Peso entre los 13 factores | Aporte al R² |
 |---|---:|---:|
-| Monedas regionales | 30,13% | 17,77 p,p, |
-| Dólar amplio | 20,13% | 11,88 p,p, |
-| Riesgo soberano EMBIG Colombia | 18,22% | 10,75 p,p, |
-| VIX | 8,32% | 4,91 p,p, |
-| Balanza comercial cambiaria | 7,37% | 4,35 p,p, |
-| Términos de intercambio | 6,73% | 3,97 p,p, |
-| Flujos netos de capital | 4,22% | 2,49 p,p, |
-| Reservas internacionales | 2,58% | 1,52 p,p, |
-| Remesas | 1,15% | 0,68 p,p, |
-| Diferencial de compensación inflacionaria 5 años | 0,59% | 0,35 p,p, |
-| Diferencial de tasas | 0,43% | 0,26 p,p, |
-| Déficit fiscal | 0,13% | 0,07 p,p, |
+| Monedas regionales | 24,59% | 16,15 p.p. |
+| Condiciones financieras, commodities y actividad internacional | 21,62% | 14,20 p.p. |
+| Dólar amplio | 15,46% | 10,15 p.p. |
+| Riesgo soberano EMBIG Colombia | 14,26% | 9,37 p.p. |
+| Balanza comercial cambiaria | 6,47% | 4,25 p.p. |
+| VIX | 6,12% | 4,02 p.p. |
+| Términos de intercambio | 4,29% | 2,82 p.p. |
+| Flujos netos de capital | 3,40% | 2,24 p.p. |
+| Reservas internacionales | 2,03% | 1,33 p.p. |
+| Remesas | 1,15% | 0,75 p.p. |
+| Diferencial de compensación inflacionaria 5 años | 0,32% | 0,21 p.p. |
+| Diferencial de tasas | 0,20% | 0,13 p.p. |
+| Déficit fiscal | 0,10% | 0,06 p.p. |
 <!-- /AUTO:pesos_shapley -->
 
 <!-- AUTO:bootstrap_intervalos -->
-La incertidumbre se evalúa con 200 réplicas de un *bootstrap* circular de bloques de 12 meses. Los intervalos percentiles del 95% de los tres factores principales son: Monedas regionales, **21,65%–34,72%**; Dólar amplio, **12,02%–26,98%**; Riesgo soberano EMBIG Colombia, **12,33%–26,56%**. Son intervalos de la asignación Shapley bajo remuestreo temporal, no intervalos de un efecto causal.
+La incertidumbre se evalúa con 200 réplicas de un *bootstrap* circular de bloques de 12 meses. Los intervalos percentiles del 95% de los tres factores principales son: Monedas regionales, **17,68%–28,59%**; Condiciones financieras, commodities y actividad internacional, **18,18%–30,36%**; Dólar amplio, **9,05%–19,64%**. Son intervalos de la asignación Shapley bajo remuestreo temporal, no intervalos de un efecto causal.
 <!-- /AUTO:bootstrap_intervalos -->
 
 ## Comparación principal vs ampliado
@@ -61,11 +79,11 @@ La incertidumbre se evalúa con 200 réplicas de un *bootstrap* circular de bloq
 | Métrica | Modelo principal | Modelo ampliado |
 |---|---:|---:|
 | Observaciones efectivas | 240 | 240 |
-| R² | 49,45% | 60,77% |
-| R² ajustado | 47,92% | 58,52% |
-| MAPE, validación condicional de 48 meses | 2,01% | 1,70% |
-| Acierto de dirección | 68,75% | 81,25% |
-| R² condicional frente a caminata aleatoria | 31,92% | 47,42% |
+| R² | 49,45% | 67,47% |
+| R² ajustado | 47,92% | 62,80% |
+| MAPE, validación condicional de 48 meses | 2,01% | 1,51% |
+| Acierto de dirección | 68,75% | 83,33% |
+| R² condicional frente a caminata aleatoria | 31,92% | 55,07% |
 <!-- /AUTO:comparacion_modelos -->
 
 ## Modelo principal (7 factores)
@@ -86,7 +104,7 @@ La incertidumbre se evalúa con 200 réplicas de un *bootstrap* circular de bloq
 <!-- AUTO:metricas_principal -->
 - MAPE condicional: **2,01%**.
 - Acierto de dirección: **68,75%**.
-- R² condicional frente a caminata aleatoria: **0,32%**.
+- R² condicional frente a caminata aleatoria: **31,92%**.
 <!-- /AUTO:metricas_principal -->
 
 ## Robustez y estabilidad
@@ -97,12 +115,12 @@ Un modelo combinado (interacciones + asimetría + outliers) eleva el R² a 66% y
 
 # Parte B — Pronosticar la TRM
 
-El modelo de pronóstico usa los mismos 12 factores con rezagos de publicación (1–3 meses según disponibilidad). No emplea información contemporánea del mes objetivo.
+El modelo de pronóstico usa los 13 factores agrupados con rezagos de publicación (1–3 meses según disponibilidad). No emplea información contemporánea del mes objetivo.
 
 ## Resultado: no supera la caminata aleatoria
 
 <!-- AUTO:metricas_pronostico -->
-La validación expansiva de 48 meses obtiene MAPE de **2,63%**, acierto de dirección de **52,08%** y R² frente a la caminata aleatoria de **−10,98%**. La caminata obtiene MAPE de **2,39%**. Es decir, la ecuación explicativa no se convierte automáticamente en un buen pronóstico y, con esta información, el benchmark simple sigue siendo superior.
+La validación expansiva de 48 meses obtiene MAPE de **2,58%**, acierto de dirección de **50,00%** y R² frente a la caminata aleatoria de **−4,84%**. La caminata obtiene MAPE de **2,39%**. Es decir, la ecuación explicativa no se convierte automáticamente en un buen pronóstico y, con esta información, el benchmark simple sigue siendo superior.
 <!-- /AUTO:metricas_pronostico -->
 
 ## Evaluaciones adicionales
@@ -115,23 +133,33 @@ La validación expansiva de 48 meses obtiene MAPE de **2,63%**, acierto de direc
 | Multihorizonte h=1,2,3,6 | R² negativo en todos los plazos |
 | Threshold regression (VIX, dólar, EMBIG) | Sin regímenes significativos |
 
-La relación entre factores y TRM es lineal pero con coeficientes que cambian en el tiempo. No hay no-linealidades explotables.
+La relación entre factores y TRM es lineal pero con coeficientes que cambian en el tiempo. No hay no-linealidades explotables en el pronóstico mensual rezagado.
 
-**Conclusión:** la TRM mensual es esencialmente imprevisible con estos factores macroeconómicos rezagados.
+## Pronóstico corto y largo plazo con variables globales
+
+El pronóstico diario se recalculó incorporando señales mensuales de mercados, condiciones financieras, commodities, actividad y logística con rezagos de disponibilidad. El mejor modelo diario, HAR con globales mensuales, alcanza R² OOS de **13,41%**, pero su acierto direccional es **41,2%** y su Sharpe anualizado **−3,91**; por tanto, no se presenta como una estrategia rentable ni como éxito direccional.
+
+A horizontes largos, la señal `delta_actividad_us_12m` obtiene R² OOS de **12,8%** a 12 meses y prueba DM con p = **0,006**. La descomposición wavelet D3+D4+D5 alcanza **45,9%** de R² OOS, mientras que el panel EM recalculado alcanza aproximadamente **43,8%**. Estos resultados son señales de horizonte largo y no deben mezclarse con el pronóstico mensual de corto plazo.
+
+La volatilidad se recalculó con especificaciones GARCH y VIX: **GARCH + VIX** tiene el menor BIC. En el backtest de VaR al 95% registra 31 violaciones de 500 observaciones (**6,2%**, frente a 5% esperado). La evidencia es útil para medir riesgo, no constituye recomendación de inversión.
+
+La base global mensual activa reúne 17 componentes balanceados: rendimientos reales y nominales de EE. UU., expectativas de inflación a 5 y 10 años, pendiente 10Y–2Y, Brent, commodities, incertidumbre de política económica, STLFSI, NFCI, ANFCI, desempleo estadounidense `LRUN64TTUSM156S`, empleo manufacturero, producción industrial y fletes/logística. High-yield, TED, `UNRATE` y los indicadores de China se conservan como candidatos con cobertura incompleta o faltantes publicados; no se imputan ni entran al modelo balanceado. La cobertura completa se audita en `data/base_global_cobertura.csv`. El bloque se mantiene agrupado para controlar colinealidad y conservar una descomposición Shapley tractable con 13 jugadores.
+
+**Conclusión:** las variables globales mejoran la explicación histórica y aportan señales específicas a horizontes largos, pero el pronóstico mensual disponible ex ante continúa por debajo de la caminata aleatoria.
 
 ---
 
 # Gráficos
 
-Cinco PNGs en `graficos/`:
+Cinco PNGs en `deliverables/graficos/`:
 
 1. **Descomposición Shapley** — barras horizontales con intervalos bootstrap.
-2. **Ajuste del modelo ampliado** — Δln(TRM) observado vs ajustado.
-3. **Pronóstico vs caminata** — comparación de errores acumulados.
-4. **Rolling window** — evolución temporal de coeficientes clave.
-5. **Estabilidad de rangos** — Spearman por submuestra.
+2. **Desempeño de los modelos** — explicación histórica, pronóstico mensual y benchmark.
+3. **Validación de la TRM** — realizaciones, ajustes, pronóstico y caminata aleatoria.
+4. **Efectos típicos estandarizados** — asociaciones parciales del modelo ampliado; el factor global agrupado aparece como una sola fila.
+5. **ECM y elasticidades** — corto plazo, largo plazo y velocidad de ajuste.
 
-Ver [`graficos/README.md`](graficos/README.md) para cautelas de lectura.
+Ver [`deliverables/graficos/README.md`](deliverables/graficos/README.md) para cautelas de lectura.
 
 ---
 

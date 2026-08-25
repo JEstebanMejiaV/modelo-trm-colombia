@@ -11,3 +11,4 @@ Balanza comercial cambiaria,BanRep 16702,No disponible,0,BanRep no publica vinta
 Flujos netos de capital,BanRep 16706,No disponible,0,BanRep no publica vintages,0,2026-08-23,False
 Diferencial de compensación inflacionaria 5 años,BanRep 15273/15276 + Fed GSW,No disponible,0,Ningún componente tiene vintages completos,0,2026-08-23,False
 Monedas regionales,FRED BRL/CLP/MXN,Completo,48,Factor de 3 monedas; API FRED con realtime vintage,100,2026-08-23,True
+Variables globales nuevas,"FRED: TIPS, Treasury, Brent, commodities, EPU, STLFSI, empleo y producción industrial","No disponible",0,"Base global mensual sin vintages históricos consolidados",0,2026-08-23,False

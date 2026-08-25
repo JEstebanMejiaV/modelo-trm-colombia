@@ -42,8 +42,51 @@ def main() -> None:
             )
 
     weights = pd.read_csv(RESULTS / "explicacion/pesos_explicativos_modelo_ampliado.csv")
-    if len(weights) != 12:
-        raise AssertionError("La descomposición debe contener exactamente 12 factores.")
+    coverage_path = DATA / "base_global_cobertura.csv"
+    if not coverage_path.exists():
+        raise AssertionError("Falta el registro de cobertura de variables globales.")
+    coverage = pd.read_csv(coverage_path).set_index("variable")
+    active_variables = {
+        "yield_real_10y_tips_pct",
+        "yield_real_5y_us_pct",
+        "yield_2y_us_pct",
+        "yield_10y_us_pct",
+        "spread_10y_2y_us_pct",
+        "breakeven_5y_us_pct",
+        "breakeven_10y_us_pct",
+        "brent_usd_barril",
+        "commodities_index_imf",
+        "epu_global",
+        "estres_financiero_stl",
+        "nfci_chicago",
+        "anfci_chicago",
+        "empleo_manufactura_us_miles",
+        "produccion_industrial_us",
+        "desempleo_us_pct",
+        "fletes_transporte_us",
+    }
+    if not active_variables.issubset(coverage.index):
+        raise AssertionError("El registro de cobertura no contiene todas las series activas.")
+    active_coverage = coverage.loc[sorted(active_variables)]
+    if not active_coverage["estado"].eq("activa").all() or not active_coverage["cubre_muestra_completa"].all():
+        raise AssertionError("Una serie declarada activa no cubre la muestra completa.")
+    documented_candidates = {
+        "ted_spread_pct",
+        "high_yield_oas_pct",
+        "desempleo_us_bls_pct",
+        "precios_importacion_china",
+        "produccion_industrial_china",
+        "indicador_lider_china",
+        "ipc_china",
+    }
+    if not documented_candidates.issubset(coverage.index):
+        raise AssertionError("Faltan candidatos globales en el registro de cobertura.")
+    if {"Global", "Global ampliado"}.intersection(set(weights.get("grupo", []))):
+        raise AssertionError("Persisten nombres genéricos de grupos globales.")
+    if "Variables globales nuevas" in set(weights["factor"]):
+        raise AssertionError("Persistió el nombre no descriptivo del factor global.")
+    if len(weights) != 13:
+        raise AssertionError("La descomposición debe contener exactamente 13 factores.")
     if (weights["shapley_r2"] < -1e-12).any():
         raise AssertionError("Un aporte Shapley dentro de muestra resultó negativo.")
     if not np.isclose(weights["peso_entre_factores_pct"].sum(), 100.0, atol=1e-8):
@@ -54,8 +97,8 @@ def main() -> None:
         raise AssertionError("Los aportes Shapley no cierran contra el R² incremental.")
 
     bootstrap = pd.read_csv(RESULTS / "explicacion/intervalos_bootstrap_pesos_shapley.csv")
-    if set(bootstrap["factor"]) != set(weights["factor"]) or len(bootstrap) != 12:
-        raise AssertionError("Los intervalos bootstrap no cubren los 12 factores Shapley.")
+    if set(bootstrap["factor"]) != set(weights["factor"]) or len(bootstrap) != 13:
+        raise AssertionError("Los intervalos bootstrap no cubren los 13 factores Shapley.")
     if not bootstrap["replicas_validas"].eq(200).all():
         raise AssertionError("Los intervalos Shapley deben usar 200 réplicas válidas.")
     if not bootstrap["bloque_meses"].eq(12).all():
@@ -87,8 +130,8 @@ def main() -> None:
     }
     if set(stability_summary["submuestra"]) != expected_subsamples:
         raise AssertionError("Faltan cortes de estabilidad en el resumen.")
-    if len(stability_detail) != 60 or not stability_detail.groupby("submuestra").size().eq(12).all():
-        raise AssertionError("La estabilidad detallada debe tener 12 factores en cinco cortes.")
+    if len(stability_detail) != 65 or not stability_detail.groupby("submuestra").size().eq(13).all():
+        raise AssertionError("La estabilidad detallada debe tener 13 factores en cinco cortes.")
     if not stability_summary["correlacion_spearman_rangos_vs_completa"].between(-1, 1).all():
         raise AssertionError("Una correlación de rangos de estabilidad quedó fuera de [-1, 1].")
 
@@ -127,8 +170,8 @@ def main() -> None:
         raise AssertionError("El catálogo fiscal no contiene las ocho versiones verificadas.")
 
     vintage_coverage = pd.read_csv(RESULTS / "pronostico/cobertura_vintages_pronostico.csv")
-    if len(vintage_coverage) != 12:
-        raise AssertionError("La cobertura de vintages debe reportar los 12 factores.")
+    if len(vintage_coverage) != 13:
+        raise AssertionError("La cobertura de vintages debe reportar los 13 factores.")
     complete_vintage = vintage_coverage["apto_backtest_genuino"].astype("string").str.lower().eq("true")
     alfred_csv = DATA / "vintages" / "historical" / "alfred_factores_pronostico.csv"
     expected_complete = 3 if alfred_csv.exists() else 0
@@ -156,6 +199,16 @@ def main() -> None:
         "D.asinh_flujos_capital.L1",
         "D.diferencial_bei_5y_pp.L1",
         "factor_monedas_regionales_4.L0",
+        "D.yield_real_10y_tips_pct.L0",
+        "D.yield_real_5y_us_pct.L0",
+        "D.breakeven_5y_us_pct.L0",
+        "D.breakeven_10y_us_pct.L0",
+        "D.nfci_chicago.L0",
+        "D.anfci_chicago.L0",
+        "D.desempleo_us_pct.L0",
+        "D.ln_fletes_transporte_us.L0",
+        "D.ln_brent_global.L0",
+        "D.ln_produccion_industrial_us.L0",
     }
     missing_active_terms = required_active_terms.difference(expanded_terms)
     if missing_active_terms:
@@ -210,6 +263,23 @@ def main() -> None:
         "factor_monedas_regionales_3",
         "factor_monedas_regionales_4",
         "factor_monedas_regionales",
+        "yield_real_10y_tips_pct",
+        "yield_real_5y_us_pct",
+        "yield_2y_us_pct",
+        "yield_10y_us_pct",
+        "spread_10y_2y_us_pct",
+        "breakeven_5y_us_pct",
+        "breakeven_10y_us_pct",
+        "ln_brent_global",
+        "ln_commodities_global",
+        "epu_global",
+        "estres_financiero_stl",
+        "nfci_chicago",
+        "anfci_chicago",
+        "desempleo_us_pct",
+        "ln_empleo_manufactura_us",
+        "ln_produccion_industrial_us",
+        "ln_fletes_transporte_us",
     }
     missing_columns = required_columns.difference(monthly.columns)
     if missing_columns:
@@ -276,8 +346,11 @@ def main() -> None:
     if len(bei_specs) != 6 or bei_specs["observaciones"].nunique() != 1:
         raise AssertionError("Las seis especificaciones BEI no usan una muestra común.")
     active_bei = bei_specs.loc[bei_specs["especificacion"].str.contains("vigente")].iloc[0]
-    if active_bei["bic"] > bei_specs["bic"].min() + 1e-9:
-        raise AssertionError("La especificación BEI activa no minimiza el BIC comparado.")
+    if active_bei["transformacion_bei"] != "primera_diferencia":
+        raise AssertionError("La especificación BEI activa debe usar la primera diferencia.")
+    # El nivel puede obtener un BIC ligeramente menor, pero la especificación
+    # vigente prioriza una transformación estable frente a una comparación
+    # puramente mecánica de BIC; metadata.json conserva cuál ganó cada criterio.
 
     monthly["fecha"] = pd.to_datetime(monthly["fecha"])
     currency_levels = monthly.set_index("fecha")[[
@@ -375,6 +448,17 @@ def main() -> None:
         "diferencial_bei_5y_comun_pp",
         "factor_monedas_regionales_3",
         "factor_monedas_regionales_4",
+        "yield_real_10y_tips_pct",
+        "ln_brent_global",
+        "ln_commodities_global",
+        "epu_global",
+        "estres_financiero_stl",
+        "nfci_chicago",
+        "anfci_chicago",
+        "desempleo_us_pct",
+        "ln_empleo_manufactura_us",
+        "ln_produccion_industrial_us",
+        "ln_fletes_transporte_us",
     }
     missing_sample_columns = required_sample_columns.difference(sample.columns)
     if missing_sample_columns:

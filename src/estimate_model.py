@@ -44,6 +44,7 @@ from model.config import (
     FORECAST_AVAILABILITY,
     DIFFERENCED_COMPONENTS,
     LEVEL_COMPONENTS,
+    GLOBAL_RAW_COMPONENTS,
     SelectedModel,
     SelectedDifferenceModel,
     sha256_file,
@@ -307,6 +308,7 @@ def main() -> None:
         "asinh_balanza_comercial",
         "asinh_flujos_capital",
         *LEVEL_COMPONENTS,
+        *GLOBAL_RAW_COMPONENTS,
         "dummy_pandemia_2020",
     ]
     expected_index = pd.date_range(SAMPLE_START, SAMPLE_END, freq="MS")
@@ -783,7 +785,7 @@ def main() -> None:
         "adl_bic": float(selected_diff.result.bic),
         "adl_r_cuadrado": float(selected_diff.result.rsquared),
         "adl_r_cuadrado_ajustado": float(selected_diff.result.rsquared_adj),
-        "modelo_ampliado": "Contabilidad historica mensual en primeras diferencias con 12 factores, cuatro monedas regionales y errores HAC",
+        "modelo_ampliado": "Contabilidad historica mensual en primeras diferencias con 13 factores, cuatro monedas regionales y errores HAC",
         "ampliado_p_cambio_trm": selected_expanded.p,
         "ampliado_observaciones": int(selected_expanded.result.nobs),
         "ampliado_aic": float(selected_expanded.result.aic),
@@ -792,7 +794,7 @@ def main() -> None:
         "ampliado_r_cuadrado_ajustado": float(
             selected_expanded.result.rsquared_adj
         ),
-        "ampliado_temporizacion": "Términos de intercambio, dólar amplio, VIX, EMBIG Colombia y monedas regionales contemporáneos; cambios de remesas, tasas, déficit, reservas, balanza, flujos de capital y diferencial BEI rezagados un mes",
+        "ampliado_temporizacion": "Términos de intercambio, dólar amplio, VIX, EMBIG Colombia, monedas regionales y condiciones financieras, commodities y actividad internacional contemporáneos; cambios de remesas, tasas, déficit, reservas, balanza, flujos de capital y diferencial BEI rezagados un mes",
         "pesos_metodo": "Shapley/LMG exacto del incremento del R2 sobre intercepto, dinamica de TRM y dummy de pandemia",
         "pesos_suma_pct": float(shapley_expanded["peso_entre_factores_pct"].sum()),
         "shapley_r2_base": float(shapley_expanded["r2_base"].iloc[0]),
@@ -811,8 +813,8 @@ def main() -> None:
         "estabilidad_2020_spearman_rangos": float(
             recent_stability["correlacion_spearman_rangos_vs_completa"]
         ),
-        "estabilidad_2020_factores_mismo_signo_de_12": int(
-            recent_stability["factores_mismo_signo_de_12"]
+        "estabilidad_2020_factores_mismo_signo_de_13": int(
+            recent_stability["factores_mismo_signo_de_13"]
         ),
         "factor_regional": "Modelo activo: promedio de cambios log estandarizados de BRL, CLP, MXN y PEN por USD; comparación contra BRL, CLP y MXN; parámetros calibrados 2006-2019",
         "factor_regional_correlacion_3_4": regional_correlation,
@@ -821,7 +823,7 @@ def main() -> None:
         "pronostico_advertencia_vintages": "El backtest respeta rezagos de publicación, pero usa la última versión disponible de las series. Es pseudo-tiempo-real hasta contar con vintages históricos archivados; no debe rotularse como backtest genuino en tiempo real.",
         "vintages_archivo_inicio": "2026-08-23",
         "vintages_origenes_alfred_recuperados": 0,
-        "vintages_factores_completos_de_12": complete_vintage_factors,
+        "vintages_factores_completos_de_13": complete_vintage_factors,
         "backtest_genuino_disponible": complete_vintage_factors == len(FORECAST_FACTOR_SPECS_3),
         "pronostico_p_cambio_trm": selected_forecast.p,
         "pronostico_observaciones": int(selected_forecast.result.nobs),
@@ -1065,7 +1067,7 @@ def parsimonious_forecasts(
     """
     Estima modelos de pronóstico parsimoniosos con los top-N factores por Shapley.
 
-    Compara: top-3, top-5, top-7 y el modelo completo (12 factores).
+    Compara: top-3, top-5, top-7 y el modelo completo (13 factores).
     Todos usan rezagos de publicación (FORECAST_FACTOR_SPECS).
     """
     from copy import deepcopy
@@ -1080,7 +1082,7 @@ def parsimonious_forecasts(
     )[0].index
 
     results_rows: list[dict[str, object]] = []
-    for n_factors in [3, 5, 7, 12]:
+    for n_factors in [3, 5, 7, 13]:
         selected_names = set(ranked_factors[:n_factors])
         # Filtrar FORECAST_FACTOR_SPECS_3 a solo los factores seleccionados
         specs_subset = {

@@ -1056,7 +1056,7 @@ for (const sheet of Object.values(sheets)) baseSheet(sheet);
   subtitle(
     s,
     "A2:L3",
-    `Se adopta Δ diferencial BEI con promedios mensuales separados y rezago de un mes: BIC ${n(activeBei.bic).toFixed(2)} frente a ${n(levelBei.bic).toFixed(2)} en nivel. La evidencia de raíz unitaria del nivel cambia al incluir tendencia o quiebre; la primera diferencia es estable en todas las pruebas.`,
+    `Se adopta Δ diferencial BEI con promedios mensuales separados y rezago de un mes: la primera diferencia es la especificación vigente por estabilidad; el nivel obtiene BIC ${n(levelBei.bic).toFixed(2)} frente a ${n(activeBei.bic).toFixed(2)} en la variante diferenciada. La evidencia de raíz unitaria del nivel cambia al incluir tendencia o quiebre.`,
     COLORS.amber
   );
 

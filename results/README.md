@@ -19,7 +19,7 @@ Modelos que usan realizaciones contemporáneas de algunos factores. Sirven para 
 | Archivo | Contenido |
 |---|---|
 | `coeficientes_modelo_principal.csv` | Coeficientes HAC del modelo base (6 factores + pandemia) |
-| `coeficientes_modelo_ampliado.csv` | Coeficientes HAC del modelo ampliado (12 factores, 4 monedas) |
+| `coeficientes_modelo_ampliado.csv` | Coeficientes HAC del modelo ampliado (13 factores agrupados; 4 monedas regionales) |
 | `diagnosticos_modelo_principal.csv` | Ljung-Box, ARCH, Jarque-Bera, RESET, CUSUM |
 | `diagnosticos_modelo_ampliado.csv` | Igual para el ampliado |
 | `ajuste_historico_modelo_principal.csv` | Ajuste de un paso, residuos mensuales |
@@ -54,9 +54,17 @@ Modelo que solo usa información disponible al inicio del mes objetivo. Ningún 
 | `validacion_metricas_pronostico.csv` | MAPE, acierto y R² vs caminata aleatoria |
 | `validacion_predicciones_pronostico.csv` | Predicciones mensuales pseudo-tiempo-real |
 | `calendario_disponibilidad_pronostico.csv` | Rezago conservador de cada factor |
-| `cobertura_vintages_pronostico.csv` | Cobertura de vintages por factor (3/12 completos) |
+| `cobertura_vintages_pronostico.csv` | Cobertura de vintages por factor (3 de 13 factores activos completos) |
+| `variables_globales_series.csv` | Señales mensuales globales, transformaciones y factor agrupado |
+| `variables_globales_evaluacion.csv` | Evaluación OOS de señales globales individuales y agregadas |
+| `comparacion_modelos_diarios.csv` | Comparación OOS de modelos diarios, incluido HAR con globales rezagadas |
+| `backtest_largo_plazo_resumen.csv` | Backtest OOS a 6, 12, 18 y 24 meses |
+| `wavelets_comparacion_bandas.csv` | Evaluación OOS por bandas de frecuencia |
+| `panel_em_estimaciones.csv` | Estimaciones del panel de monedas emergentes |
+| `volatilidad_modelos_garch.csv` | Comparación GARCH, EGARCH, GJR-GARCH y GARCH + VIX |
+| `volatilidad_var_backtest.csv` | Violaciones y pruebas de cobertura de VaR |
 | `diebold_mariano_pronostico.csv` | Test DM vs caminata (p = 0.21, no rechaza igualdad) |
-| `comparacion_parsimoniosos_pronostico.csv` | Top-3, top-5, top-7 y 12 factores comparados |
+| `comparacion_parsimoniosos_pronostico.csv` | Top-3, top-5, top-7 y especificación ampliada de 13 factores comparados |
 | `coeficientes_pronostico_parsimonioso.csv` | Coeficientes del top-3 (monedas, dólar, EMBIG) |
 | `validacion_metricas_parsimonioso.csv` | MAPE 2.57% del pronóstico parsimonioso |
 | `validacion_predicciones_parsimonioso.csv` | Predicciones mensuales del top-3 |
@@ -96,7 +104,12 @@ Análisis complementarios que informan decisiones de especificación pero no pro
 
 El ECM es exploratorio: la prueba bounds no confirma cointegración al 5%, por lo que el modelo principal permanece en diferencias.
 
-## Convenciones de lectura
+## Resultados globales y de horizonte largo
+
+La base mensual global se integra como un factor agrupado en la explicación histórica para evitar una explosión de jugadores Shapley y controlar colinealidad. El factor `Condiciones financieras, commodities y actividad internacional` reúne 17 términos activos: rendimientos y expectativas de EE. UU., commodities, incertidumbre, condiciones financieras, desempleo, actividad industrial y fletes/logística. Sus series y transformaciones se describen en `data/base_global_mensual.csv` y su cobertura en `data/base_global_cobertura.csv`; high-yield, TED, `UNRATE` y China quedan como candidatos documentados cuando no cubren la muestra completa. No se imputa ningún faltante.
+
+La señal `delta_actividad_us_12m` obtiene R² OOS de 12,8% a 12 meses (DM p = 0,006). La wavelet D3+D4+D5 alcanza 45,9% y el panel EM aproximadamente 43,8%. En el corto plazo diario, el mejor HAR con globales mensuales y señales globales ampliadas tiene R² OOS de 13,4%, pero dirección de 41,2% y Sharpe −3,91. Estas métricas no son intercambiables: cada una corresponde a una frecuencia, horizonte y benchmark distintos.
+
 
 - `D.variable` = primera diferencia mensual.
 - `.L0` = contemporáneo; `.L1` = un mes de rezago.

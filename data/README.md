@@ -129,6 +129,23 @@ Todas las columnas tienen frecuencia mensual después de la consolidación.
 | `factor_monedas_regionales_4` | Misma construcción con BRL, CLP, MXN y PEN. | Es el factor activo de la explicación histórica y entra en `t`; signo `+`. | PEN mejora el ajuste histórico, pero no el BIC ni el MAPE del pronóstico. |
 | `factor_monedas_regionales` | Alias explícito de `factor_monedas_regionales_4`. | Conserva compatibilidad con salidas anteriores; la especificación activa usa el nombre numerado. | No debe confundirse con el factor de tres monedas seleccionado para pronóstico. |
 
+### Base global mensual FRED
+
+`base_global_mensual.csv` consolida las series internacionales, sus candidatos y el identificador de cobertura. La especificación balanceada activa 17 términos en un único factor denominado `Condiciones financieras, commodities y actividad internacional`: rendimientos reales y nominales de EE. UU., expectativas de inflación a 5 y 10 años, pendiente 10Y–2Y, Brent, commodities, EPU global, STLFSI, NFCI, ANFCI, desempleo estadounidense, empleo manufacturero, producción industrial y fletes/logística. La cobertura de cada origen, incluidos los candidatos, se registra en `base_global_cobertura.csv`.
+
+| Bloque | Series activas | Transformación histórica | Uso de pronóstico |
+|---|---|---|---|
+| Rendimientos y expectativas EE. UU. | `yield_real_10y_tips_pct`, `yield_real_5y_us_pct`, `yield_2y_us_pct`, `yield_10y_us_pct`, `spread_10y_2y_us_pct`, `breakeven_5y_us_pct`, `breakeven_10y_us_pct` | Primera diferencia en unidades de origen | `.L1` |
+| Commodities | `ln_brent_global`, `ln_commodities_global` | Logaritmo y primera diferencia | `.L1` |
+| Riesgo e incertidumbre | `epu_global`, `estres_financiero_stl`, `nfci_chicago`, `anfci_chicago` | Primera diferencia | `.L1` |
+| Actividad, empleo y logística | `desempleo_us_pct`, `ln_empleo_manufactura_us`, `ln_produccion_industrial_us`, `ln_fletes_transporte_us` | Desempleo en diferencia; las demás, logaritmo y primera diferencia | `.L2` por disponibilidad |
+
+La base conserva además candidatos sin forzar su entrada al modelo: `high_yield_oas_pct` (high-yield), `ted_spread_pct` (TED), `desempleo_us_bls_pct` (`UNRATE`) y cuatro indicadores de China (`precios_importacion_china`, `produccion_industrial_china`, `indicador_lider_china`, `ipc_china`). High-yield no tiene una descarga utilizable que cubra 2006–2026; TED termina en 2022-01; `UNRATE` conserva un faltante publicado en 2025-10; y los indicadores chinos terminan antes o tienen faltantes dentro de la muestra. Ninguna de estas series se interpola, se rellena con cero o se incluye en la matriz balanceada. El identificador de oro solicitado devuelve HTTP 400 y no se sustituye silenciosamente.
+
+El desempleo activo usa `LRUN64TTUSM156S`, una serie mensual completa en la ventana 2006-01–2026-04. El modelo histórico utiliza el bloque global con información contemporánea realizada; el pronóstico aplica rezagos de publicación: mercados, tasas, riesgo y commodities con `.L1`, y empleo, desempleo y fletes con `.L2`. Las señales de China se mantienen exploratorias y no entran en `score_global` completo cuando no cubren toda la ventana. Agrupar los 17 términos evita aumentar los jugadores Shapley, controla la colinealidad y conserva exactamente 13 factores.
+
+`data/base_global_cobertura.csv` exige para cada serie activa `estado=activa`, `cubre_muestra_completa=True` y 244 observaciones en la muestra. El registro conserva también las columnas de candidatos aunque estén vacías, para que una descarga fallida o una cobertura incompleta sea auditable en lugar de desaparecer.
+
 ### Logaritmos y controles
 
 | Columna exacta | Definición | Uso/rezago y signo esperado | Cautela principal |

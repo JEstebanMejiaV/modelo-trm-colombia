@@ -1,167 +1,94 @@
 # Mecanismo de transmisión de la TRM
 
-## Teoría empírica de la tasa de cambio en Colombia
+## Lectura empírica
 
-Este documento presenta el mecanismo de transmisión que emerge del modelo econométrico. No es una teoría impuesta a priori: es la estructura que los datos revelan cuando se mide la importancia relativa de cada canal.
+El modelo ampliado describe asociaciones dinámicas entre la variación mensual de la TRM y 13 factores. La muestra común cubre mayo de 2006 a abril de 2026, con 240 observaciones efectivas. El R² es 67,47%, el R² ajustado 62,80%, el MAPE histórico condicional 1,51% y el acierto de dirección 83,33%.
 
-## Diagrama de transmisión
+La ampliación conserva un único jugador Shapley para el bloque **Condiciones financieras, commodities y actividad internacional**. Ese jugador reúne 17 términos activos: rendimientos reales y nominales de EE. UU., expectativas de inflación a 5 y 10 años, pendiente 10Y–2Y, Brent, commodities, EPU global, STLFSI, NFCI, ANFCI, desempleo estadounidense, empleo manufacturero, producción industrial y fletes/logística. La agrupación evita que la colinealidad y la explosión combinatoria de jugadores hagan ilegible la descomposición.
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        CHOQUES GLOBALES                                  │
-│                                                                         │
-│  ┌──────────────┐    ┌───────────┐    ┌─────────────────────┐          │
-│  │ Dólar amplio │    │    VIX    │    │  Factor regional    │          │
-│  │  (Fed/USD)   │    │  (Cboe)   │    │  BRL+CLP+MXN+PEN   │          │
-│  └──────┬───────┘    └─────┬─────┘    └──────────┬──────────┘          │
-│         │                  │                     │                      │
-│         │ +0,24            │ +0,01               │ +0,017              │
-│         │ [20,1%]          │ [8,3%]              │ [30,1%]             │
-│         │                  │                     │                      │
-│         ├──────────────────┼─────────────────────┤                      │
-│         │         ρ = 0,35 │          ρ = 0,39   │                      │
-│         └─────────┬────────┴─────────────────────┘                      │
-│                   │                                                      │
-│                   ▼ CANAL GLOBAL (58,5% del peso total)                  │
-└───────────────────┼─────────────────────────────────────────────────────┘
-                    │
-                    │
-┌───────────────────┼─────────────────────────────────────────────────────┐
-│                   │     RIESGO SOBERANO                                  │
-│                   │                                                      │
-│         ┌─────────▼──────────┐                                          │
-│         │ EMBIG Colombia     │                                          │
-│         │ (Reuters/JPMorgan) │                                          │
-│         │  +0,017 [18,2%]   │                                          │
-│         └─────────┬──────────┘                                          │
-│                   │ ρ = 0,60 con dólar                                   │
-│                   │ ρ = 0,64 con VIX                                     │
-│                   │                                                      │
-│                   ▼ CANAL DE RIESGO LOCAL (18,2% del peso)               │
-└───────────────────┼─────────────────────────────────────────────────────┘
-                    │
-                    │
-┌───────────────────┼─────────────────────────────────────────────────────┐
-│                   │     SECTOR EXTERNO COLOMBIA                          │
-│                   │                                                      │
-│  ┌────────────────┼────────────────────────────────────────────┐        │
-│  │                │                                            │        │
-│  ▼                ▼                    ▼                  ▼    │        │
-│ ┌──────────┐ ┌──────────┐ ┌───────────────┐ ┌──────────────┐ │        │
-│ │Términos  │ │Balanza   │ │Flujos de      │ │Reservas      │ │        │
-│ │intercamb.│ │comercial │ │capital        │ │internac.     │ │        │
-│ │ -0,09    │ │ +0,047   │ │ +0,001        │ │ -0,29        │ │        │
-│ │ [6,7%]   │ │ [7,4%]   │ │ [4,2%]        │ │ [2,6%]       │ │        │
-│ └──────────┘ └──────────┘ └───────────────┘ └──────────────┘ │        │
-│                                                                │        │
-│           CANAL EXTERNO COLOMBIA (21,0% del peso)              │        │
-└────────────────────────────────────────────────────────────────┼────────┘
-                                                                 │
-                                                                 │
-┌────────────────────────────────────────────────────────────────┼────────┐
-│                   POLÍTICA DOMÉSTICA                            │        │
-│                                                                │        │
-│  ┌──────────────┐  ┌──────────────┐  ┌─────────────────────┐ │        │
-│  │Diferencial   │  │Déficit       │  │Diferencial BEI      │ │        │
-│  │de tasas      │  │fiscal        │  │5 años Col-EEUU      │ │        │
-│  │ -0,005       │  │ -0,001       │  │ -0,006              │ │        │
-│  │ [0,4%]       │  │ [0,1%]       │  │ [0,6%]              │ │        │
-│  └──────────────┘  └──────────────┘  └─────────────────────┘ │        │
-│                                                                │        │
-│           CANAL DE POLÍTICA (1,1% del peso)                    │        │
-└────────────────────────────────────────────────────────────────┼────────┘
-                                                                 │
-                    ┌────────────────────────────────────────────┘
-                    │
-                    ▼
-          ┌─────────────────┐
-          │                 │
-          │   Δ ln(TRM)     │
-          │   COP por USD   │
-          │                 │
-          │  R² = 60,77%    │
-          │  MAPE = 1,70%   │
-          │                 │
-          └─────────────────┘
+El desempleo activo usa `LRUN64TTUSM156S`, que cubre la muestra completa. High-yield, TED, `UNRATE` y los indicadores de China permanecen como candidatos documentados cuando no cubren la ventana; no se interpolan ni se incorporan al modelo balanceado. La cobertura se audita en `data/base_global_cobertura.csv`.
+
+## Canales y pesos Shapley
+
+Los pesos son participaciones descriptivas del R² incremental, no efectos causales. Se calculan sobre los 8.192 subconjuntos de los 13 factores y suman 100% entre factores.
+
+| Canal o factor | Peso entre factores | Coeficiente principal | Lectura cautelosa |
+|---|---:|---:|---|
+| Monedas regionales BRL, CLP, MXN y PEN | 24,59% | +0,01758 | La depreciación regional se mueve junto con la TRM; contiene shocks globales compartidos. |
+| Condiciones financieras, commodities y actividad internacional | 21,62% | Bloque de 17 términos | Agrupa tasas, expectativas, riesgo, commodities, actividad, desempleo y logística. |
+| Dólar amplio | 15,46% | +0,16176 | La fortaleza global del USD se asocia con depreciación del COP. |
+| Riesgo soberano EMBIG Colombia | 14,26% | +0,02478 | El spread contiene riesgo idiosincrático, liquidez y aversión global al riesgo. |
+| Balanza comercial cambiaria | 6,47% | +0,05448 | El signo estimado es contrario al canal simple de oferta de divisas; puede reflejar simultaneidad. |
+| VIX | 6,12% | +0,01464 | Aversión global al riesgo; comparte información con el dólar y las monedas regionales. |
+| Términos de intercambio | 4,29% | +0,01682 | La entrada contemporánea es explicación histórica, no información disponible al inicio del mes. |
+| Flujos netos de capital | 3,40% | +0,00066 | Alta volatilidad y endogeneidad reducen la precisión del coeficiente. |
+| Reservas internacionales | 2,03% | −0,25123 | El coeficiente grande no implica un peso explicativo grande; la intervención puede responder a la TRM. |
+| Remesas | 1,15% | +0,16805 | El signo no coincide con una lectura simple de oferta de dólares; puede haber respuesta a shocks cambiarios. |
+| Diferencial BEI 5 años | 0,32% | −0,00240 | Compensación de mercado, no expectativa pura; entra en primera diferencia y con L1. |
+| Diferencial de tasas | 0,20% | +0,00109 | Diferencial nominal endógeno; no identifica un shock monetario. |
+| Déficit fiscal | 0,10% | +0,00003 | Participación marginal y coeficiente impreciso. |
+
+El canal global y regional —monedas regionales, dólar amplio, VIX y el bloque financiero/internacional— suma 67,79% del peso entre factores. El riesgo soberano aporta 14,26%, el sector externo colombiano 17,34% y la política doméstica 0,61%. Esta suma organiza la lectura; no debe interpretarse como una partición causal de la depreciación.
+
+## Secuencia de transmisión
+
+```text
+Condiciones financieras, expectativas y actividad internacional
+        │
+        ├── dólar global, tasas, BEI, NFCI/ANFCI, EPU, VIX
+        ├── commodities y fletes/logística
+        └── empleo, producción y desempleo de EE. UU.
+                         │
+                         ▼
+             apetito por riesgo y liquidez internacional
+                         │
+        ┌────────────────┼────────────────┐
+        ▼                ▼                ▼
+   monedas EM       EMBIG Colombia    precios/flujo externo
+  BRL-CLP-MXN-PEN       riesgo país     TI, balanza, capitales,
+                                      reservas y remesas
+        └────────────────┼────────────────┘
+                         ▼
+                 Δ ln(TRM): COP por USD
 ```
 
-## Interpretación cuantitativa por canal
+Un episodio de aversión al riesgo puede fortalecer el dólar, depreciar las monedas regionales y elevar el EMBIG al mismo tiempo. Shapley distribuye la señal compartida entre esos factores; no demuestra que uno de ellos cause los demás.
 
-### Canal global (58,5% del poder explicativo)
+## Explicación histórica frente a pronóstico
 
-| Componente | Peso Shapley | Coeficiente | Lectura |
-|---|---|---|---|
-| Factor regional (BRL+CLP+MXN+PEN) | 30,1% | +0,017 | Un z-score de presión regional se asocia con +1,7% en TRM |
-| Dólar amplio (DTWEXBGS) | 20,1% | +0,241 | Un +1% del USD global se asocia con +0,24% en TRM |
-| VIX | 8,3% | +0,011 | Un +10% de volatilidad se asocia con +0,11% en TRM |
+La explicación histórica usa algunos valores contemporáneos realizados: términos de intercambio, dólar amplio, VIX, EMBIG, monedas regionales y los términos del bloque global. Por eso sirve para responder qué variables se movieron junto con la TRM *ex post* o como nowcast condicional.
 
-Estos tres factores comparten ~40% de su variación (ρ dólar-VIX = 0,35; ρ dólar-regional = 0,39; ρ VIX-regional = 0,39). Son manifestaciones del mismo fenómeno: **risk-on/risk-off global**. Cuando el apetito por riesgo cae, el dólar se fortalece, el VIX sube y las monedas emergentes se deprecian simultáneamente.
+El pronóstico mensual evita regresores contemporáneos y aplica el calendario de publicación:
 
-**Implicación**: la TRM colombiana es primordialmente un activo de riesgo global. Casi el 60% de su variación mensual responde a fuerzas sobre las que la política económica local tiene poco control inmediato.
+- mercados, rendimientos, riesgo, commodities y diferencial BEI: `.L1`;
+- remesas, reservas, balanza y flujos de capital: `.L2`;
+- términos de intercambio y déficit fiscal: `.L3`;
+- empleo, desempleo y fletes/logística: `.L2`;
+- factor regional seleccionado: BRL, CLP y MXN con `.L1`.
 
-### Canal de riesgo soberano (18,2%)
+La validación mensual obtiene MAPE 2,58%, frente a 2,39% de la caminata aleatoria, y R² −4,84% frente a ese benchmark. El resultado confirma que un buen ajuste histórico con información contemporánea no es automáticamente un pronóstico ex ante. Además, el backtest sigue siendo pseudo-tiempo-real porque solo 3 de los 13 factores tienen vintages históricos completos para los 48 orígenes.
 
-| Componente | Peso Shapley | Coeficiente | Lectura |
-|---|---|---|---|
-| EMBIG Colombia | 18,2% | +0,017 | Un +1 pp de spread se asocia con +1,7% en TRM |
+## BEI, candidatos y política de faltantes
 
-El EMBIG está altamente correlacionado con el dólar (ρ = 0,60) y el VIX (ρ = 0,64), pero Shapley le asigna su propio 18% porque contiene información idiosincrática de Colombia no capturada por los factores globales puros.
+El diferencial BEI compara la compensación inflacionaria colombiana a cinco años —TES nominal menos TES UVR— con `BKEVEN05` de EE. UU. Se promedian por separado las curvas y se conserva una versión sobre fechas diarias comunes como robustez. La primera diferencia con rezago de un mes es la especificación vigente por estabilidad; el nivel obtiene un BIC algo menor en la comparación mecánica, pero su evidencia de estacionariedad cambia al incluir tendencia o quiebres. Ninguna de las dos medidas es una expectativa pura: incorpora primas de inflación, plazo, liquidez y riesgo.
 
-**Implicación**: el mercado de deuda externa colombiana aporta una señal propia sobre la percepción de riesgo-país. Deterioros crediticios (o mejoras) tienen un canal independiente hacia la TRM.
+Las series candidatas se tratan como evidencia de cobertura, no como datos que deban completarse artificialmente:
 
-### Canal externo Colombia (21,0%)
+| Candidato | Estado | Decisión |
+|---|---|---|
+| High-yield OAS `BAMLH0A0HYM2` | Descarga/cobertura no utilizable para 2006–2026 | Documentado, fuera del modelo. |
+| TED `TEDRATE` | Termina en 2022-01 | Documentado, fuera del modelo. |
+| `UNRATE` | Faltante publicado en 2025-10 | Se conserva el vacío; el modelo usa `LRUN64TTUSM156S`. |
+| Indicadores de China | Varias series terminan antes de abril de 2026 o tienen faltantes | Exploratorios; no entran al score global completo. |
 
-| Componente | Peso Shapley | Coeficiente | Lectura |
-|---|---|---|---|
-| Balanza comercial cambiaria | 7,4% | +0,047 | Asinh del flujo; signo contraintuitivo |
-| Términos de intercambio | 6,7% | -0,092 | Un +10% se asocia con -0,9% en TRM |
-| Flujos netos de capital | 4,2% | +0,001 | Coeficiente casi nulo |
-| Reservas internacionales | 2,6% | -0,294 | Un +10% se asocia con -2,9% en TRM |
+La regla es conservar la columna y la cobertura, pero no interpolar, transportar el último valor, convertir el faltante en cero ni seleccionar una muestra distinta solo para hacer entrar el candidato.
 
-Los términos de intercambio (dominados por petróleo y carbón) deprecian el COP cuando caen: una mejora de 10% aprecia la TRM en 0,9%. Las reservas tienen el mayor coeficiente individual (-0,29), pero su peso Shapley es bajo (2,6%) porque varían poco y comparten señal con otros factores.
+## Diagnósticos y límites
 
-**Implicación**: la cuenta corriente y la posición externa importan, pero menos que los factores globales. Colombia no tiene el "petro-peso" que se le atribuye — los términos de intercambio solo pesan 6,7%.
+En el ampliado, Jarque–Bera rechaza normalidad al 5% (`p = 0,004`), mientras ARCH-LM no rechaza heterocedasticidad condicional (`p = 0,147`). No se detecta autocorrelación relevante; RESET (`p = 0,241`) y CUSUM (`p = 0,617`) no rechazan la forma funcional ni una inestabilidad global. Los errores estándar HAC se mantienen para la inferencia de la media, pero no convierten las asociaciones en relaciones causales.
 
-### Canal de política doméstica (1,1%)
+La prueba bounds del ECM es no concluyente al 5%: el p-valor del límite I(1) es aproximadamente 0,075. Por ello, el modelo principal permanece en primeras diferencias y los coeficientes de largo plazo del ECM son exploratorios.
 
-| Componente | Peso Shapley | Coeficiente | Lectura |
-|---|---|---|---|
-| Diferencial BEI 5 años | 0,6% | -0,006 | Marginal |
-| Diferencial de tasas | 0,4% | -0,005 | Marginal |
-| Déficit fiscal | 0,1% | -0,001 | Irrelevante |
+## Conclusión
 
-**Implicación**: la política monetaria (tasas), fiscal (déficit) y las expectativas de inflación (BEI) explican en conjunto apenas el 1,1% de la variación mensual de la TRM. Esto no significa que no importen en horizontes más largos, pero su efecto mensual es absorbido por las demás variables.
-
-## Síntesis: Teoría de la TRM colombiana
-
-```
-La TRM colombiana se comporta como un activo de riesgo global
-con un componente idiosincrático de spread soberano.
-
-    60% = Risk appetite global (dólar + VIX + monedas EM)
-    18% = Riesgo-país Colombia (EMBIG)
-    21% = Sector externo (TI, balanza, reservas)
-     1% = Política doméstica (tasas, fiscal, inflación)
-   ────
-   100% = R² incremental de los 12 factores
-```
-
-### Proposiciones derivadas
-
-1. **La TRM no es un "petro-peso"**: los términos de intercambio (proxy del petróleo) pesan solo 6,7%. El canal dominante es global, no de commodities.
-
-2. **La política monetaria no mueve la TRM en el corto plazo**: el diferencial de tasas pesa 0,4%. BanRep influye más vía EMBIG (credibilidad → spread → TRM) que vía carry trade directo.
-
-3. **Las intervenciones cambiarias son irrelevantes**: el coeficiente es cero (p = 0,77). BanRep interviene REACTIVAMENTE, no preventivamente.
-
-4. **El contagio regional domina**: cuando Brasil, Chile y México se deprecian, Colombia lo hace más intensamente (factor regional = 30%). Es el mayor predictor individual.
-
-5. **La TRM es imprevisible a un mes**: ninguna combinación de estos factores rezagados supera la caminata aleatoria. La explicación funciona porque usa info contemporánea, pero los coeficientes son inestables en el tiempo.
-
-6. **La volatilidad viene en clusters**: GARCH muestra persistencia de 0,94. Un mes volátil predice otro mes volátil, pero no la dirección.
-
-## Limitación fundamental
-
-Este modelo describe **asociaciones estadísticas**, no mecanismos causales. La correlación dólar→TRM no implica que comprar dólares cause depreciación del COP; ambas pueden responder al mismo shock global subyacente. La descomposición Shapley distribuye la variación explicada, pero no identifica quién causa qué.
-
-Para causalidad se necesitarían choques exógenos (sorpresas de política, eventos geopolíticos) o instrumentos válidos — no observaciones mensuales de equilibrio.
+La TRM colombiana se comporta en la muestra como una moneda emergente expuesta a un factor global y regional común, con un componente adicional de riesgo soberano y canales externos domésticos. Las nuevas expectativas de inflación, condiciones financieras, desempleo estadounidense, actividad industrial y fletes enriquecen la información disponible y elevan la explicación histórica, pero los candidatos incompletos no justifican imputaciones. La evidencia de pronóstico mensual exige mantener la caminata aleatoria como benchmark y separar siempre la explicación contemporánea de la disponibilidad ex ante.

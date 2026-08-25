@@ -52,6 +52,30 @@ ECM_LEVEL_VARIABLES = [
     "ln_dolar_amplio",
 ]
 
+# Componentes globales con cobertura completa en 2006-01--2026-04. Las series
+# candidatas como TED, high-yield y actividad industrial china se descargan y se
+# documentan, pero quedan fuera por cobertura incompleta y sin imputación.
+GLOBAL_RAW_COMPONENTS = [
+    "yield_real_10y_tips_pct",
+    "yield_real_5y_us_pct",
+    "yield_2y_us_pct",
+    "yield_10y_us_pct",
+    "spread_10y_2y_us_pct",
+    "breakeven_5y_us_pct",
+    "breakeven_10y_us_pct",
+    "ln_brent_global",
+    "ln_commodities_global",
+    "epu_global",
+    "estres_financiero_stl",
+    "nfci_chicago",
+    "anfci_chicago",
+    "desempleo_us_pct",
+    "ln_empleo_manufactura_us",
+    "ln_produccion_industrial_us",
+    "ln_fletes_transporte_us",
+]
+GLOBAL_BASE_FILE = DATA / "base_global_mensual.csv"
+
 
 # Cada factor es un jugador de la descomposicion Shapley. Todos sus terminos
 # (transformaciones y rezagos) entran o salen juntos al calcular el R2 marginal.
@@ -73,45 +97,78 @@ BASE_FACTOR_SPECS = {
         "terminos": [("D.deficit_fiscal_12m_pct_pib", 1)],
     },
     "Dólar amplio": {
-        "grupo": "Global",
+        "grupo": "Mercados financieros globales",
         "terminos": [("D.ln_dolar_amplio", 0)],
     },
     "VIX": {
-        "grupo": "Global",
+        "grupo": "Mercados financieros globales",
         "terminos": [("D.ln_vix", 0)],
     },
 }
 
 
+def _global_terms(lag_market: int, lag_monthly: int) -> list[tuple[str, int]]:
+    """Construye términos globales con rezagos por disponibilidad de publicación."""
+    market_terms = [
+        "D.yield_real_10y_tips_pct",
+        "D.yield_real_5y_us_pct",
+        "D.yield_2y_us_pct",
+        "D.yield_10y_us_pct",
+        "D.spread_10y_2y_us_pct",
+        "D.breakeven_5y_us_pct",
+        "D.breakeven_10y_us_pct",
+        "D.epu_global",
+        "D.estres_financiero_stl",
+        "D.nfci_chicago",
+        "D.anfci_chicago",
+        "D.ln_brent_global",
+        "D.ln_commodities_global",
+    ]
+    monthly_terms = [
+        "D.desempleo_us_pct",
+        "D.ln_empleo_manufactura_us",
+        "D.ln_produccion_industrial_us",
+        "D.ln_fletes_transporte_us",
+    ]
+    return [
+        *[(term, lag_market) for term in market_terms],
+        *[(term, lag_monthly) for term in monthly_terms],
+    ]
+
+
 def expanded_factor_specs(regional_component: str) -> dict[str, dict[str, object]]:
     return {
-    **BASE_FACTOR_SPECS,
-    "Riesgo soberano EMBIG Colombia": {
-        "grupo": "Riesgo local",
-        # Contemporaneo: esta version es contabilidad historica/nowcast, no causal.
-        "terminos": [("D.embig_colombia_pp", 0)],
-    },
-    "Reservas internacionales": {
-        "grupo": "Sector externo Colombia",
-        "terminos": [("D.ln_reservas_netas_sin_flar", 1)],
-    },
-    "Balanza comercial cambiaria": {
-        "grupo": "Sector externo Colombia",
-        "terminos": [("D.asinh_balanza_comercial", 1)],
-    },
-    "Flujos netos de capital": {
-        "grupo": "Sector externo Colombia",
-        "terminos": [("D.asinh_flujos_capital", 1)],
-    },
-    "Diferencial de compensación inflacionaria 5 años": {
-        "grupo": "Política doméstica",
-        "terminos": [("D.diferencial_bei_5y_pp", 1)],
-    },
-    "Monedas regionales": {
-        "grupo": "Regional",
-        "terminos": [(regional_component, 0)],
-    },
-}
+        **BASE_FACTOR_SPECS,
+        "Riesgo soberano EMBIG Colombia": {
+            "grupo": "Riesgo local",
+            # Contemporaneo: esta version es contabilidad historica/nowcast, no causal.
+            "terminos": [("D.embig_colombia_pp", 0)],
+        },
+        "Reservas internacionales": {
+            "grupo": "Sector externo Colombia",
+            "terminos": [("D.ln_reservas_netas_sin_flar", 1)],
+        },
+        "Balanza comercial cambiaria": {
+            "grupo": "Sector externo Colombia",
+            "terminos": [("D.asinh_balanza_comercial", 1)],
+        },
+        "Flujos netos de capital": {
+            "grupo": "Sector externo Colombia",
+            "terminos": [("D.asinh_flujos_capital", 1)],
+        },
+        "Diferencial de compensación inflacionaria 5 años": {
+            "grupo": "Política doméstica",
+            "terminos": [("D.diferencial_bei_5y_pp", 1)],
+        },
+        "Monedas regionales": {
+            "grupo": "Regional",
+            "terminos": [(regional_component, 0)],
+        },
+        "Condiciones financieras, commodities y actividad internacional": {
+            "grupo": "Condiciones financieras y actividad internacional",
+            "terminos": _global_terms(0, 0),
+        },
+    }
 
 
 EXPANDED_FACTOR_SPECS_3 = expanded_factor_specs("factor_monedas_regionales_3")
@@ -139,11 +196,11 @@ def forecast_factor_specs(regional_component: str) -> dict[str, dict[str, object
             "terminos": [("D.deficit_fiscal_12m_pct_pib", 3)],
         },
         "Dólar amplio": {
-            "grupo": "Global",
+            "grupo": "Mercados financieros globales",
             "terminos": [("D.ln_dolar_amplio", 1)],
         },
         "VIX": {
-            "grupo": "Global",
+            "grupo": "Mercados financieros globales",
             "terminos": [("D.ln_vix", 1)],
         },
         "Riesgo soberano EMBIG Colombia": {
@@ -170,6 +227,10 @@ def forecast_factor_specs(regional_component: str) -> dict[str, dict[str, object
             "grupo": "Regional",
             "terminos": [(regional_component, 1)],
         },
+        "Condiciones financieras, commodities y actividad internacional": {
+            "grupo": "Condiciones financieras y actividad internacional",
+            "terminos": _global_terms(1, 2),
+        },
     }
 
 
@@ -190,6 +251,12 @@ FORECAST_AVAILABILITY = [
     ("Flujos netos de capital", 2, "Mensual; publicación posterior al cierre", "Supuesto conservador: t-2"),
     ("Diferencial de compensación inflacionaria 5 años", 1, "Curvas diarias", "Promedios completos conocidos para t-1"),
     ("Monedas regionales", 1, "Tipos de cambio mensuales", "Promedios completos conocidos para t-1"),
+    (
+        "Condiciones financieras, commodities y actividad internacional",
+        2,
+        "FRED; mercados diarios/semanales e indicadores mensuales",
+        "Rendimientos, expectativas, riesgo y commodities t-1; empleo, desempleo, fletes y China t-2",
+    ),
 ]
 
 
@@ -206,6 +273,7 @@ DIFFERENCED_COMPONENTS = [
     "asinh_flujos_capital",
     "diferencial_bei_5y_pp",
     "diferencial_bei_5y_comun_pp",
+    *GLOBAL_RAW_COMPONENTS,
 ]
 
 

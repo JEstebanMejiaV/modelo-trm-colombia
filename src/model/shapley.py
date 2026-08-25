@@ -329,7 +329,7 @@ def subsample_stability(
                 "correlacion_spearman_rangos_vs_completa": rank_correlation,
                 "mediana_diferencia_abs_peso_pp": float(differences.abs().median()),
                 "max_diferencia_abs_peso_pp": float(differences.abs().max()),
-                "factores_mismo_signo_de_12": int(sum(sign_matches)),
+                "factores_mismo_signo_de_{}".format(len(factor_specs)): int(sum(sign_matches)),
             }
         )
     return pd.DataFrame(detail_rows), pd.DataFrame(summary_rows)
