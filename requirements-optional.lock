@@ -1,0 +1,9 @@
+# Optional products only. Install after requirements.lock when those products are needed.
+scikit-learn==1.9.0
+joblib==1.5.3
+threadpoolctl==3.5.0
+xgboost==3.4.1
+lightgbm==4.7.0
+torch==2.13.0
+PyWavelets==1.9.0
+arch==8.0.0

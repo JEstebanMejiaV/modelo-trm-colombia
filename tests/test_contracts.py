@@ -1,0 +1,135 @@
+from __future__ import annotations
+
+import json
+from datetime import datetime, timezone
+
+import pytest
+
+from trm_model.data.registry import load_source_registry
+from trm_model.output_contract import (
+    flatten_output_ownership,
+    monthly_generated_output_ownership,
+)
+from trm_model.paths import project_paths
+from trm_model.provenance.manifest import build_run_manifest, contract_files
+from trm_model.specifications.products import (
+    load_product_manifest,
+    load_products,
+    validate_product_output_ownership,
+)
+from trm_model.validation.contracts import (
+    ContractError,
+    validate_product_manifest,
+    validate_run_manifest,
+)
+
+
+def test_source_registry_and_product_manifests_are_valid() -> None:
+    paths = project_paths()
+    registry = load_source_registry(paths=paths)
+    assert len(registry.active_sources) == 26
+    assert registry.missing_monthly_model_inputs() == []
+
+    products = load_products(paths=paths)
+    assert set(products) == {
+        "daily_direction",
+        "daily_volatility",
+        "long_horizon_research",
+        "monthly_explanation",
+        "monthly_forecast",
+        "robustness",
+    }
+    for product_id in products:
+        manifest = load_product_manifest(product_id, paths=paths)
+        validate_product_output_ownership(product_id, manifest, paths=paths)
+        validate_product_manifest(manifest, paths=paths)
+
+
+def test_run_manifest_can_be_built_and_validated_without_writing() -> None:
+    paths = project_paths()
+    manifest = build_run_manifest(
+        product_id="monthly_forecast",
+        config_files=[paths.configs / "common.toml"],
+        input_files=[paths.source_registry()],
+        output_files=[paths.schemas / "run_manifest.json"],
+        paths=paths,
+        status="success",
+        started_at=datetime(2026, 8, 23, tzinfo=timezone.utc),
+        finished_at=datetime(2026, 8, 23, 0, 1, tzinfo=timezone.utc),
+    )
+    validate_run_manifest(manifest, paths=paths)
+    assert manifest["run_id"].startswith("20260823T000000Z-")
+    assert manifest["input_files"][0]["sha256"]
+
+
+def test_contract_rejects_unknown_product_output_kind() -> None:
+    paths = project_paths()
+    manifest = json.loads(
+        (paths.product_manifest("monthly_forecast")).read_text(encoding="utf-8")
+    )
+    manifest["outputs"][0]["kind"] = "not-a-kind"
+    with pytest.raises(ContractError):
+        validate_product_manifest(manifest, paths=paths)
+
+
+def test_output_catalog_covers_legacy_results_without_unclassified_files() -> None:
+    paths = project_paths()
+    catalog = json.loads(
+        (paths.results / "output_catalog.json").read_text(encoding="utf-8")
+    )
+    listed = {
+        output_path
+        for group in catalog["groups"]
+        for output_path in group["paths"]
+    }
+    actual = {
+        paths.relative(path)
+        for folder in (paths.results / "explicacion", paths.results / "pronostico", paths.results / "robustez")
+        for path in folder.iterdir()
+        if path.is_file() and path.suffix.lower() in {".csv", ".json"}
+    }
+    actual.add(paths.relative(paths.results / "metadata.json"))
+    assert listed == actual
+    assert len(listed) == len({path for path in listed})
+
+
+def test_compatibility_wrappers_and_legacy_packages_are_importable() -> None:
+    from pipelines.daily_direction import run as run_daily_direction
+    from pipelines.daily_volatility import run as run_daily_volatility
+    from pipelines.long_horizon import run as run_long_horizon
+    from pipelines.monthly import run_monthly
+
+    import forecast_daily.run  # noqa: F401
+    import forecast_longterm.global_variables  # noqa: F401
+    import volatility_model  # noqa: F401
+
+    assert callable(run_daily_direction)
+    assert callable(run_daily_volatility)
+    assert callable(run_long_horizon)
+    assert callable(run_monthly)
+
+
+def test_run_manifest_rejects_stale_contract_tree_hash() -> None:
+    paths = project_paths()
+    manifest = build_run_manifest(
+        product_id="monthly_forecast",
+        config_files=[paths.configs / "common.toml"],
+        input_files=[paths.source_registry()],
+        output_files=[paths.schemas / "run_manifest.json"],
+        paths=paths,
+        status="success",
+        started_at=datetime(2026, 8, 23, tzinfo=timezone.utc),
+        finished_at=datetime(2026, 8, 23, 0, 1, tzinfo=timezone.utc),
+    )
+    manifest["contract_tree_sha256"] = "0" * 64
+    with pytest.raises(ContractError, match="contract_tree_sha256"):
+        validate_run_manifest(manifest, paths=paths)
+
+
+def test_monthly_output_contract_is_exact_and_disjoint() -> None:
+    ownership = monthly_generated_output_ownership(project_paths())
+    output_paths = flatten_output_ownership(ownership)
+    assert len(output_paths) == 42
+    assert len(output_paths) == len(set(output_paths))
+    contract_paths = {project_paths().relative(path) for path in contract_files(project_paths().root)}
+    assert {"requirements.lock", "requirements-optional.lock"}.issubset(contract_paths)

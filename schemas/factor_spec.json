@@ -1,0 +1,30 @@
+{
+  "title": "TRM factor specification",
+  "type": "object",
+  "required": ["schema_version", "factor_id", "label", "group", "terms"],
+  "properties": {
+    "schema_version": {"type": "integer", "minimum": 1},
+    "factor_id": {"type": "string", "minLength": 1},
+    "label": {"type": "string", "minLength": 1},
+    "group": {"type": "string", "minLength": 1},
+    "terms": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["component", "lag_months"],
+        "properties": {
+          "component": {"type": "string", "minLength": 1},
+          "lag_months": {"type": "integer", "minimum": 0},
+          "availability_lag_months": {"type": "integer", "minimum": 0}
+        },
+        "additionalProperties": false
+      }
+    },
+    "information_set": {
+      "type": "string",
+      "enum": ["ex_post", "pseudo_real_time", "vintage_backtest", "in_sample", "exploratory"]
+    }
+  },
+  "additionalProperties": false
+}

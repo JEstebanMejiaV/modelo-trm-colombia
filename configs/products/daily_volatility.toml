@@ -1,0 +1,14 @@
+schema_version = 1
+product_id = "daily_volatility"
+label = "Volatilidad diaria y VaR"
+frequency = "daily"
+horizon_days = 1
+information_set = "pseudo_real_time"
+vintage_policy = "latest_available"
+status = "supporting"
+benchmark = "conditional_volatility"
+source_of_truth = "artifacts/runs"
+
+[validation]
+var_confidences = [0.90, 0.95, 0.99]
+evaluation_days = 500
