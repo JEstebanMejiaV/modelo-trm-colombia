@@ -1,5 +1,9 @@
 # Código de estimación y construcción del archivo Excel
 
+> Índice de desarrollo: [`docs/desarrollo/arquitectura_actual.md`](../docs/desarrollo/arquitectura_actual.md) · [`docs/desarrollo/compatibilidad_legacy.md`](../docs/desarrollo/compatibilidad_legacy.md) · [`docs/desarrollo/validacion_ci.md`](../docs/desarrollo/validacion_ci.md).
+>
+> Este README conserva el mapa técnico de scripts. El estado normativo de productos, contratos, provenance y límites está en [`docs/README.md`](../docs/README.md). La migración target es incremental: `trm_model.monthly` todavía consume componentes de `model`.
+
 Esta carpeta contiene el pipeline de estimación, validación y documentación del modelo. Los scripts se organizan en dos niveles: el pipeline principal (que produce los resultados versionados) y los scripts de exploración (que informan decisiones pero no forman parte de la corrida oficial).
 
 ## Pipeline principal
@@ -31,8 +35,9 @@ La capa instalable concentra rutas (`paths.py`), catálogo de fuentes, contratos
 validación de leakage, hashes, ambiente y manifests de corrida. Sus loaders y
 transformaciones llaman explícitamente al paquete `model/` durante la
 migración; no duplican la econometría mensual. La CLI se instala como
-`trm-model` y ofrece `validate` y `run-monthly`. Los wrappers de productos
-adicionales están en `pipelines/`; sus outputs se clasifican en
+`trm-model` y ofrece `validate`, `run-monthly`, `run-daily-direction`,
+`run-daily-volatility`, `run-research` y `vintage-status`. Los wrappers de
+productos adicionales están en `pipelines/`; sus outputs se clasifican en
 `results/output_catalog.json`.
 
 

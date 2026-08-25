@@ -81,21 +81,21 @@ def fit_elastic_net(X_train, y_train, X_test, alpha=0.0001, l1_ratio=0.5):
 
 
 def fit_random_forest(X_train, y_train, X_test):
-    """Random Forest con hiperparámetros conservadores."""
+    """Random Forest con hiperparámetros conservadores y un hilo."""
     from sklearn.ensemble import RandomForestRegressor
     model = RandomForestRegressor(
         n_estimators=200,
         max_depth=5,
         min_samples_leaf=20,
         random_state=42,
-        n_jobs=-1,
+        n_jobs=1,
     )
     model.fit(X_train, y_train)
     return model.predict(X_test), model.feature_importances_
 
 
 def fit_xgboost(X_train, y_train, X_test):
-    """XGBoost con regularización fuerte para evitar overfitting."""
+    """XGBoost regularizado con semilla y paralelismo controlados."""
     from xgboost import XGBRegressor
     model = XGBRegressor(
         n_estimators=200,
@@ -106,6 +106,7 @@ def fit_xgboost(X_train, y_train, X_test):
         reg_alpha=0.1,
         reg_lambda=1.0,
         random_state=42,
+        n_jobs=1,
         verbosity=0,
     )
     model.fit(X_train, y_train)
@@ -113,7 +114,7 @@ def fit_xgboost(X_train, y_train, X_test):
 
 
 def fit_lightgbm(X_train, y_train, X_test):
-    """LightGBM con early stopping conceptual."""
+    """LightGBM determinista con paralelismo controlado."""
     from lightgbm import LGBMRegressor
     model = LGBMRegressor(
         n_estimators=200,
@@ -124,6 +125,9 @@ def fit_lightgbm(X_train, y_train, X_test):
         reg_alpha=0.1,
         reg_lambda=1.0,
         random_state=42,
+        n_jobs=1,
+        deterministic=True,
+        force_col_wise=True,
         verbose=-1,
     )
     model.fit(X_train, y_train)

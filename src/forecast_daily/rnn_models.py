@@ -133,8 +133,23 @@ def train_rnn(
     train_dataset = SequenceDataset(X_train, y_train, seq_length)
     val_dataset = SequenceDataset(X_val, y_val, seq_length)
 
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=len(val_dataset), shuffle=False)
+    # El generator explícito evita que el orden de shuffle dependa de RNG
+    # consumido por la inicialización de otra red dentro de la misma corrida.
+    train_generator = torch.Generator()
+    train_generator.manual_seed(torch.initial_seed())
+    train_loader = DataLoader(
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        generator=train_generator,
+        num_workers=0,
+    )
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=len(val_dataset),
+        shuffle=False,
+        num_workers=0,
+    )
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
     criterion = nn.MSELoss()

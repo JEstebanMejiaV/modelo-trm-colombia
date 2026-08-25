@@ -1,5 +1,9 @@
 # Diccionario y trazabilidad de los datos
 
+> Índice del área: [`docs/datos/README.md`](../docs/datos/README.md) · fuentes y catálogo · transformaciones · vintages · política de faltantes.
+>
+> Este archivo conserva el diccionario técnico exhaustivo, las URLs y las notas de atribución. El registro ejecutable de fuentes es [`data/catalog/sources.json`](catalog/sources.json); los contratos están en [`schemas/`](../schemas/).
+
 Este directorio contiene tres capas distintas. No deben confundirse los archivos fuente con la base mensual ni esta última con la matriz que finalmente entra a la estimación.
 
 ## Registro canónico de fuentes

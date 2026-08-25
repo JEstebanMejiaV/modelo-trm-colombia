@@ -1,5 +1,9 @@
 # Archivo Excel del modelo de TRM
 
+> Índice del área: [`docs/operacion/salidas.md`](../docs/operacion/salidas.md) · [`docs/README.md`](../docs/README.md).
+>
+> Este README describe las hojas del workbook y su ruta de auditoría. El archivo efectivo es [`modelo_trm_colombia.xlsx`](modelo_trm_colombia.xlsx); las cifras deben reconciliarse con los CSV y el manifest de corrida.
+
 `modelo_trm_colombia.xlsx` reúne en un solo archivo Excel los datos, transformaciones, estimaciones, controles y fuentes del modelo mensual de COP por USD. Está diseñado para lectura ejecutiva y auditoría técnica.
 
 ## Contenido de las 14 hojas

@@ -1,4 +1,4 @@
-"""CLI instalable para validación, manifests y ejecución mensual legacy."""
+"""CLI instalable para validación, ejecución de productos y provenance."""
 
 from __future__ import annotations
 
@@ -66,7 +66,10 @@ def _validate_repository() -> int:
         validate_product_output_ownership(product_id, manifest, paths=paths)
         validate_product_manifest(manifest, paths=paths)
 
-    from model.config import FORECAST_FACTOR_SPECS_3, FORECAST_FACTOR_SPECS_4
+    from trm_model.monthly.specifications import (
+        FORECAST_FACTOR_SPECS_3,
+        FORECAST_FACTOR_SPECS_4,
+    )
 
     validate_forecast_specs(FORECAST_FACTOR_SPECS_3)
     validate_forecast_specs(FORECAST_FACTOR_SPECS_4)
@@ -118,9 +121,9 @@ def _run_monthly() -> int:
     write_run_manifest(running, paths=paths)
 
     try:
-        from estimate_model import main as legacy_main
+        from trm_model.monthly.core import main as monthly_main
 
-        legacy_main()
+        monthly_main()
         output_files = _monthly_output_files(paths, ownership)
         completed = build_run_manifest(
             product_id=product_id,
@@ -163,7 +166,24 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="trm-model")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("validate", help="Valida contratos, fuentes y leakage mensual")
-    subparsers.add_parser("run-monthly", help="Ejecuta el entry point mensual legacy con manifest")
+    subparsers.add_parser("run-monthly", help="Ejecuta el bundle mensual target con manifest")
+    subparsers.add_parser(
+        "run-daily-direction",
+        help="Ejecuta el producto diario direccional con manifest",
+    )
+    subparsers.add_parser(
+        "run-daily-volatility",
+        help="Ejecuta volatilidad diaria y VaR con manifest",
+    )
+    subparsers.add_parser(
+        "vintage-status",
+        help="Valida snapshots fechados y cobertura point-in-time sin imputar",
+    )
+    research = subparsers.add_parser(
+        "run-research",
+        help="Ejecuta un módulo de investigación de largo plazo con manifest",
+    )
+    research.add_argument("--module", required=True)
     return parser
 
 
@@ -173,6 +193,26 @@ def main(argv: list[str] | None = None) -> int:
         return _validate_repository()
     if args.command == "run-monthly":
         return _run_monthly()
+    if args.command == "vintage-status":
+        from trm_model.data.vintages import vintage_status
+
+        print(json.dumps(vintage_status(paths=project_paths()), ensure_ascii=False, indent=2))
+        return 0
+    if args.command == "run-daily-direction":
+        from pipelines.daily_direction import run
+
+        run()
+        return 0
+    if args.command == "run-daily-volatility":
+        from pipelines.daily_volatility import run
+
+        run()
+        return 0
+    if args.command == "run-research":
+        from pipelines.long_horizon import run
+
+        run(args.module)
+        return 0
     raise AssertionError(f"Comando no implementado: {args.command}")
 
 

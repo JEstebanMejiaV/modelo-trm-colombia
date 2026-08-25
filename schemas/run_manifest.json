@@ -211,6 +211,47 @@
       "items": {
         "type": "string"
       }
+    },
+    "run_context": {
+      "type": "object",
+      "properties": {
+        "information_set": {
+          "type": "string",
+          "minLength": 1
+        },
+        "vintage_policy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "origin_date": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "snapshot_manifest": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "product_status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "imputation": {
+          "type": "boolean"
+        },
+        "input_policy": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": true
     }
   },
   "additionalProperties": false

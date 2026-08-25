@@ -6,6 +6,11 @@ Uso:
 """
 from __future__ import annotations
 
+from forecast_daily.reproducibility import (
+    DAILY_RANDOM_SEED,
+    configure_determinism,
+    configure_torch_determinism,
+)
 from pathlib import Path
 
 import numpy as np
@@ -27,6 +32,10 @@ from forecast_daily.models import (
 
 ROOT = Path(__file__).resolve().parents[2]
 RESULTS = ROOT / "results" / "pronostico"
+
+# Configurar antes de entrenar cualquier estimador; también cubre la ejecución
+# directa de este módulo fuera del runner instalable.
+configure_determinism(DAILY_RANDOM_SEED)
 
 
 def main() -> None:
@@ -91,6 +100,10 @@ def main() -> None:
     try:
         from forecast_daily.rnn_models import fit_lstm, fit_gru, fit_lstm_attention
 
+        # PyTorch se inicializa después de SciPy/XGBoost/LightGBM para evitar
+        # runtimes OpenMP incompatibles en Windows.
+        configure_torch_determinism(DAILY_RANDOM_SEED)
+
         print("  LSTM...")
         pred_lstm = fit_lstm(X_train, y_train, X_test)
         predictions["LSTM"] = pred_lstm
@@ -127,7 +140,15 @@ def main() -> None:
     })
 
     print("\n[3/4] Resultados...")
-    comparison = pd.DataFrame(results).sort_values("r2_vs_caminata_pct", ascending=False)
+    comparison = (
+        pd.DataFrame(results)
+        .sort_values(
+            ["r2_vs_caminata_pct", "modelo"],
+            ascending=[False, True],
+            kind="mergesort",
+        )
+        .reset_index(drop=True)
+    )
     print(comparison[["modelo", "r2_vs_caminata_pct", "acierto_direccion_pct", "dm_p_valor"]].to_string(index=False))
 
     # Feature importance (promedio RF + XGBoost + LightGBM)
@@ -138,7 +159,11 @@ def main() -> None:
         "lightgbm": imp_lgbm,
     })
     importance["promedio"] = importance[["random_forest", "xgboost", "lightgbm"]].mean(axis=1)
-    importance = importance.sort_values("promedio", ascending=False)
+    importance = (
+        importance
+        .sort_values(["promedio", "feature"], ascending=[False, True], kind="mergesort")
+        .reset_index(drop=True)
+    )
 
     print("\n  Top 10 features (importancia promedio ML):")
     for _, row in importance.head(10).iterrows():
