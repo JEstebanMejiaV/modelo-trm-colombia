@@ -43,7 +43,7 @@ jobs:
           assert any(name.endswith("trm_model/output_contract.py") for name in names)
           assert not any(name.startswith("configs/") for name in names)
           assert not any(name.startswith("data/raw/") for name in names)
-          sys.path.insert(0, str(wheel))
+          sys.path[:0] = [str(wheel)]
           import trm_model
           from trm_model.output_contract import MONTHLY_GENERATED_OUTPUT_COUNT
 
