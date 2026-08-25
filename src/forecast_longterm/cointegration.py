@@ -30,9 +30,7 @@ from statsmodels.tsa.stattools import adfuller, coint
 from statsmodels.tsa.vector_ar.vecm import coint_johansen
 from scipy import stats
 
-import sys
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "src"))
 
 from estimate_model import build_dataset, SAMPLE_START
 

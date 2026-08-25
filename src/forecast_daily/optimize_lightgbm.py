@@ -14,9 +14,6 @@ import json
 import numpy as np
 import pandas as pd
 
-import sys
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 from forecast_daily.data import load_daily_features, train_test_split_temporal
 from forecast_daily.models import evaluate_forecast
 

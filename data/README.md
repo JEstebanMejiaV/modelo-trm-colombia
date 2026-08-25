@@ -2,7 +2,13 @@
 
 Este directorio contiene tres capas distintas. No deben confundirse los archivos fuente con la base mensual ni esta última con la matriz que finalmente entra a la estimación.
 
-## Convenciones
+## Registro canónico de fuentes
+
+`data/catalog/sources.json` es el registro canónico de proveedor, serie, archivo
+raw, transformación, rezago de disponibilidad y atribución. `data/vintages/`
+conserva snapshots y manifiestos por fecha de origen; no reemplaza el catálogo.
+Los contratos ejecutables correspondientes viven en `schemas/`.
+
 
 - La fecha se guarda como el primer día del mes (`AAAA-MM-01`).
 - La variable que se explica es el precio del dólar en Colombia, medido como COP por USD. Un aumento significa depreciación del peso colombiano.

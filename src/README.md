@@ -25,7 +25,16 @@ Esta carpeta contiene el pipeline de estimación, validación y documentación d
 | `forecast_short_term.py` | Pronóstico diario/semanal con señales mensuales globales rezagadas y comparación OOS. |
 | `forecast_longterm/` | Señales de largo plazo, filtros, Markov, BN, panel EM, wavelets, cointegración, carry y volatilidad. |
 
-## Paquete `model/`
+## Paquete `trm_model/`
+
+La capa instalable concentra rutas (`paths.py`), catálogo de fuentes, contratos,
+validación de leakage, hashes, ambiente y manifests de corrida. Sus loaders y
+transformaciones llaman explícitamente al paquete `model/` durante la
+migración; no duplican la econometría mensual. La CLI se instala como
+`trm-model` y ofrece `validate` y `run-monthly`. Los wrappers de productos
+adicionales están en `pipelines/`; sus outputs se clasifican en
+`results/output_catalog.json`.
+
 
 Toda la lógica de estimación está modularizada en `src/model/`:
 
@@ -105,10 +114,17 @@ Desde la raíz del repositorio:
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -r requirements.txt
-python .\src\estimate_model.py
+python -m pip install -r requirements.lock
+python -m pip install -e . --no-deps
+trm-model validate
+python -m pytest
+trm-model run-monthly
 python .\src\build_charts.py
 ```
+
+`python .\src\estimate_model.py` permanece como entry point legacy. La CLI
+nueva registra hashes de inputs/outputs y ambiente en un manifest por corrida;
+`results/output_catalog.json` mantiene la clasificación sin mover los CSV.
 
 La construcción del archivo Excel puede usar el generador Node cuando el entorno privado está disponible. En este workspace `@oai/artifact-tool` no está publicado, por lo que la ruta reproducible es el fallback local:
 
