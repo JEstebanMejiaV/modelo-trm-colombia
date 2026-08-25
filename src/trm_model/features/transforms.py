@@ -1,4 +1,4 @@
-"""Fachada de transformaciones mensuales ya validadas."""
+"""Fachada estable de las transformaciones mensuales canónicas."""
 
 from __future__ import annotations
 
@@ -6,12 +6,15 @@ from typing import Any, Mapping
 
 import pandas as pd
 
+from .monthly_transforms import (
+    difference_components as _difference_components,
+    make_timed_difference_design as _make_timed_difference_design,
+)
+
 
 def difference_components(model_data: pd.DataFrame) -> pd.DataFrame:
-    """Aplica exactamente las diferencias y componentes del paquete legacy."""
-    from model.transforms import difference_components as legacy_difference_components
-
-    return legacy_difference_components(model_data)
+    """Aplica las diferencias y componentes del dominio mensual target."""
+    return _difference_components(model_data)
 
 
 def make_timed_difference_design(
@@ -20,10 +23,10 @@ def make_timed_difference_design(
     factor_specs: Mapping[str, Mapping[str, Any]],
     index: pd.Index | None = None,
 ) -> tuple[pd.Series, pd.DataFrame]:
-    """Construye el diseño temporal usando el mismo código econométrico vigente."""
-    from model.transforms import make_timed_difference_design as legacy_design
-
-    return legacy_design(components, p=p, factor_specs=dict(factor_specs), index=index)
+    """Construye el diseño temporal del dominio mensual target."""
+    return _make_timed_difference_design(
+        components, p=p, factor_specs=dict(factor_specs), index=index
+    )
 
 
 def term_lags(factor_specs: Mapping[str, Mapping[str, Any]]) -> dict[str, list[int]]:

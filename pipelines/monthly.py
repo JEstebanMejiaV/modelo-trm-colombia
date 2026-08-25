@@ -1,9 +1,8 @@
 """Orquestación mensual declarativa.
 
-La implementación mensual sigue siendo ``estimate_model.main`` detrás de la
-CLI instalable, que añade validación de inputs y un manifest por corrida. Este
-módulo conserva el entry point ``trm-monthly`` y permite inyectar un runner en
-usos programáticos o pruebas.
+La implementación mensual target vive en ``trm_model.monthly.core`` detrás de
+la CLI instalable. Este módulo conserva el entry point ``trm-monthly`` y
+permite inyectar un runner en usos programáticos o pruebas.
 """
 
 from __future__ import annotations

@@ -1,10 +1,4 @@
-"""Puente de datos curados hacia los loaders mensuales validados.
-
-Durante la migración, ``model.loaders`` sigue siendo la única implementación
-canónica de la consolidación mensual. Este módulo evita que las nuevas capas
-importen scripts o manipulen ``sys.path`` y deja explícito el punto de corte
-para una futura extracción del loader.
-"""
+"""Loaders mensuales curados de la capa target."""
 
 from __future__ import annotations
 
@@ -13,24 +7,19 @@ from pathlib import Path
 import pandas as pd
 
 from ..paths import ProjectPaths, project_paths
+from .monthly_loaders import build_dataset
+from ..monthly.specifications import ROOT as monthly_root
 
 
 def build_monthly_dataset(*, paths: ProjectPaths | None = None) -> pd.DataFrame:
-    """Construye la base mensual usando el loader legacy sin duplicar lógica."""
+    """Construye la base mensual con el loader canónico de ``trm_model``."""
     project = paths or project_paths()
-    legacy_root = project.root
-    from model.loaders import build_dataset as legacy_build_dataset
-
-    # ``model.config`` conserva la raíz del repositorio para compatibilidad.
-    # La comprobación evita ejecutar accidentalmente una base distinta.
-    from model.config import ROOT as legacy_root_config
-
-    if legacy_root_config.resolve() != legacy_root.resolve():
+    if monthly_root.resolve() != project.root.resolve():
         raise RuntimeError(
-            "La raíz de ProjectPaths no coincide con la raíz que usa model.config: "
-            f"{legacy_root} != {legacy_root_config}"
+            "La raíz de ProjectPaths no coincide con la raíz del dominio mensual: "
+            f"{project.root} != {monthly_root}"
         )
-    return legacy_build_dataset()
+    return build_dataset()
 
 
 def load_monthly_estimation_sample(

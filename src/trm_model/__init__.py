@@ -1,8 +1,8 @@
-"""Capa instalable y contratos del modelo de TRM Colombia.
+"""Capa instalable del modelo TRM Colombia.
 
-La econometría mensual validada sigue viviendo en ``model`` durante la
-migración. Este paquete ofrece interfaces estables para datos, productos,
-validación y trazabilidad sin duplicar esa lógica.
+El dominio mensual canónico, los productos, contratos, validación y
+trazabilidad viven en este paquete. Los módulos de ``model`` se conservan
+como compatibilidad legacy durante la migración.
 """
 
 from __future__ import annotations

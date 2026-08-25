@@ -119,6 +119,7 @@ def build_run_manifest(
     finished_at: datetime | None = None,
     error: str | None = None,
     warnings: Iterable[str] = (),
+    run_context: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     project = paths or project_paths()
     selected_config_paths = {path.resolve() for path in config_files}
@@ -154,6 +155,7 @@ def build_run_manifest(
             (path for path in output_files if path.is_file()), root=project.root
         ),
         "environment": environment_snapshot(),
+        "run_context": dict(run_context or {}),
         "error": error,
         "warnings": manifest_warnings,
     }
