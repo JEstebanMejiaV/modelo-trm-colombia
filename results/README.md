@@ -1,5 +1,9 @@
 # Resultados econométricos
 
+> Índice del área: [`docs/operacion/salidas.md`](../docs/operacion/salidas.md) · [`docs/README.md`](../docs/README.md).
+>
+> Este README conserva el diccionario de archivos heredados. Para saber qué produjo una corrida concreta, use `artifacts/runs/<run_id>/manifest.json`; para ownership general, use [`output_catalog.json`](output_catalog.json).
+
 Esta carpeta contiene las salidas tabulares del modelo mensual de la TRM, organizadas en tres subcarpetas según su propósito:
 
 ```

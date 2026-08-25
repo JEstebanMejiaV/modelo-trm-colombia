@@ -1,4 +1,8 @@
-# Pronóstico de la TRM a largo plazo (6-24 meses)
+# Investigación de señales de la TRM a largo plazo (6–24 meses)
+
+> Página técnica del área: [`docs/productos/investigacion_largo_plazo.md`](../../docs/productos/investigacion_largo_plazo.md) · [`docs/metodologia/validacion_predictiva.md`](../../docs/metodologia/validacion_predictiva.md).
+>
+> Estos módulos son exploratorios. No constituyen el producto mensual, no se promueven automáticamente a forecast operativo y algunas señales existentes pueden usar información de toda la muestra. Revise el manifest de research antes de interpretar cualquier cifra.
 
 ## Hallazgo central
 
@@ -143,25 +147,11 @@ Períodos de alta volatilidad predicen depreciación adicional — es una prima 
 
 ---
 
-## Implicaciones prácticas
+## Usos exploratorios y límites
 
-### Para tesorería corporativa
+Estas señales pueden servir para formular hipótesis de investigación, comparar filtros y orientar preguntas de estabilidad. No deben transformarse directamente en instrucciones de cobertura, asignación de portafolio o política económica. Cualquier uso aplicado requiere validación independiente, información point-in-time, costos, riesgo y aprobación metodológica.
 
-- Si la señal CF > +1σ (TRM cara): considerar no cubrir posiciones cortas en USD al 100%
-- Si la señal CF < -1σ (TRM barata): considerar cubrir más agresivamente
-- **Acierto: 74-82% a 12 meses** según la señal usada
-
-### Para inversión de portafolio
-
-- La señal no da timing preciso (Sharpe negativo por timing error)
-- Útil como **tilt estratégico**: sobreponderar/subponderar exposición a COP
-- Combinar con vol realizada para sizing de posición
-
-### Para política económica
-
-- Confirma convergencia PPP de largo plazo (~β = -1,13, vida media ~9 meses en régimen turbulento)
-- Las desviaciones extremas son temporales pero pueden durar 2-3 años
-- La intervención cambiaria no es necesaria si el mercado corrige solo a largo plazo
+La señal no ofrece timing preciso; en particular, un R² OOS positivo puede coexistir con dirección o Sharpe desfavorables. Las cifras de 12 meses deben acompañarse de la señal exacta, la ventana, el benchmark y la regla de reconstrucción.
 
 ---
 

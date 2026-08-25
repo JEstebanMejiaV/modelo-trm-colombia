@@ -1,6 +1,8 @@
 # Arquitectura target del modelo TRM Colombia
 
-**Estado:** objetivo de migración, con implementación incremental
+> Documento de decisión y destino de migración. Para el estado ejecutable actual consulte [`desarrollo/arquitectura_actual.md`](desarrollo/arquitectura_actual.md); para la entrada documental consulte [`README.md`](README.md).
+
+**Estado:** objetivo de migración, con implementación incremental; no describe cumplimiento completo
 **Última revisión:** 2026-08-23
 **Alcance:** producto mensual de explicación y pronóstico, productos diarios de apoyo, investigación de largo plazo, provenance y vintages point-in-time.
 
