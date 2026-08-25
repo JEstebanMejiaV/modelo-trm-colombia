@@ -42,8 +42,8 @@ def main() -> None:
             )
 
     weights = pd.read_csv(RESULTS / "explicacion/pesos_explicativos_modelo_ampliado.csv")
-    if len(weights) != 12:
-        raise AssertionError("La descomposición debe contener exactamente 12 factores.")
+    if len(weights) != 13:
+        raise AssertionError("La descomposición debe contener exactamente 13 factores.")
     if (weights["shapley_r2"] < -1e-12).any():
         raise AssertionError("Un aporte Shapley dentro de muestra resultó negativo.")
     if not np.isclose(weights["peso_entre_factores_pct"].sum(), 100.0, atol=1e-8):
@@ -54,8 +54,8 @@ def main() -> None:
         raise AssertionError("Los aportes Shapley no cierran contra el R² incremental.")
 
     bootstrap = pd.read_csv(RESULTS / "explicacion/intervalos_bootstrap_pesos_shapley.csv")
-    if set(bootstrap["factor"]) != set(weights["factor"]) or len(bootstrap) != 12:
-        raise AssertionError("Los intervalos bootstrap no cubren los 12 factores Shapley.")
+    if set(bootstrap["factor"]) != set(weights["factor"]) or len(bootstrap) != 13:
+        raise AssertionError("Los intervalos bootstrap no cubren los 13 factores Shapley.")
     if not bootstrap["replicas_validas"].eq(200).all():
         raise AssertionError("Los intervalos Shapley deben usar 200 réplicas válidas.")
     if not bootstrap["bloque_meses"].eq(12).all():
@@ -87,8 +87,8 @@ def main() -> None:
     }
     if set(stability_summary["submuestra"]) != expected_subsamples:
         raise AssertionError("Faltan cortes de estabilidad en el resumen.")
-    if len(stability_detail) != 60 or not stability_detail.groupby("submuestra").size().eq(12).all():
-        raise AssertionError("La estabilidad detallada debe tener 12 factores en cinco cortes.")
+    if len(stability_detail) != 65 or not stability_detail.groupby("submuestra").size().eq(13).all():
+        raise AssertionError("La estabilidad detallada debe tener 13 factores en cinco cortes.")
     if not stability_summary["correlacion_spearman_rangos_vs_completa"].between(-1, 1).all():
         raise AssertionError("Una correlación de rangos de estabilidad quedó fuera de [-1, 1].")
 
@@ -127,8 +127,8 @@ def main() -> None:
         raise AssertionError("El catálogo fiscal no contiene las ocho versiones verificadas.")
 
     vintage_coverage = pd.read_csv(RESULTS / "pronostico/cobertura_vintages_pronostico.csv")
-    if len(vintage_coverage) != 12:
-        raise AssertionError("La cobertura de vintages debe reportar los 12 factores.")
+    if len(vintage_coverage) != 13:
+        raise AssertionError("La cobertura de vintages debe reportar los 13 factores.")
     complete_vintage = vintage_coverage["apto_backtest_genuino"].astype("string").str.lower().eq("true")
     alfred_csv = DATA / "vintages" / "historical" / "alfred_factores_pronostico.csv"
     expected_complete = 3 if alfred_csv.exists() else 0
@@ -156,6 +156,9 @@ def main() -> None:
         "D.asinh_flujos_capital.L1",
         "D.diferencial_bei_5y_pp.L1",
         "factor_monedas_regionales_4.L0",
+        "D.yield_real_10y_tips_pct.L0",
+        "D.ln_brent_global.L0",
+        "D.ln_produccion_industrial_us.L0",
     }
     missing_active_terms = required_active_terms.difference(expanded_terms)
     if missing_active_terms:
@@ -210,6 +213,16 @@ def main() -> None:
         "factor_monedas_regionales_3",
         "factor_monedas_regionales_4",
         "factor_monedas_regionales",
+        "yield_real_10y_tips_pct",
+        "yield_2y_us_pct",
+        "yield_10y_us_pct",
+        "spread_10y_2y_us_pct",
+        "ln_brent_global",
+        "ln_commodities_global",
+        "epu_global",
+        "estres_financiero_stl",
+        "ln_empleo_manufactura_us",
+        "ln_produccion_industrial_us",
     }
     missing_columns = required_columns.difference(monthly.columns)
     if missing_columns:
@@ -375,6 +388,13 @@ def main() -> None:
         "diferencial_bei_5y_comun_pp",
         "factor_monedas_regionales_3",
         "factor_monedas_regionales_4",
+        "yield_real_10y_tips_pct",
+        "ln_brent_global",
+        "ln_commodities_global",
+        "epu_global",
+        "estres_financiero_stl",
+        "ln_empleo_manufactura_us",
+        "ln_produccion_industrial_us",
     }
     missing_sample_columns = required_sample_columns.difference(sample.columns)
     if missing_sample_columns:

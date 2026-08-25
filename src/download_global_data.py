@@ -1,22 +1,13 @@
 """
-Descarga todas las variables académicas de FRED y las consolida en un CSV.
+Descarga variables globales de FRED y las consolida en la base mensual activa.
 
-Variables:
-- DFII10: US 10Y real yield (TIPS)
-- GOLDPMGBD228NLBM: Gold PM fix (London, USD/oz)
-- GEPUCURRENT: Global Economic Policy Uncertainty
-- PALLFNFINDEXM: All Commodities Price Index (IMF)
-- MANEMP: US Manufacturing Employment (thousands)
-- DGS2: US 2Y Treasury Constant Maturity
-- DGS10: US 10Y Treasury (para spread 10Y-2Y)
-- TEDRATE: TED spread (proxy stress interbancario)
-- STLFSI4: St. Louis Financial Stress Index
-- DCOILBRENTEU: Brent crude oil (EUR, diario)
-- T10Y2Y: 10Y-2Y Treasury spread (yield curve)
-- BAMLH0A0HYM2: US High Yield OAS (risk appetite)
+La base se conserva separada de las series raw porque estas variables se usan
+como factores globales mensuales, con transformaciones y rezagos explícitos en
+el modelo. La descarga no implica que todas las series sean aptas para todos
+los modelos: el pipeline verifica cobertura antes de incorporarlas.
 
 Uso:
-    python src/download_academic_data.py
+    python src/download_global_data.py
 """
 from __future__ import annotations
 
@@ -43,7 +34,7 @@ SERIES = {
     # Commodities
     "DCOILBRENTEU": "brent_usd_barril",
     "PALLFNFINDEXM": "commodities_index_imf",
-    "GOLDPMGBD228NLBM": "gold_usd_oz",
+    "GOLDAMGBD228NLBM": "oro_usd_oz",
     # Risk / Uncertainty
     "GEPUCURRENT": "epu_global",
     "STLFSI4": "estres_financiero_stl",
@@ -123,7 +114,7 @@ def main():
     base = base.sort_index()
 
     # Guardar
-    output = DATA / "base_variables_academicas.csv"
+    output = DATA / "base_global_mensual.csv"
     base.to_csv(output, encoding="utf-8-sig", float_format="%.6g")
     print(f"\n  Base guardada: {output.relative_to(ROOT)}")
     print(f"  Shape: {base.shape[0]} meses x {base.shape[1]} variables")
@@ -138,7 +129,7 @@ def main():
         print(f"    {col:<30} {valid:>4} obs  ({first.date() if first else '?'} a {last.date() if last else '?'})")
 
     print("\n" + "=" * 70)
-    print(f"  Listo. {len(all_series)} variables en data/base_variables_academicas.csv")
+    print(f"  Listo. {len(all_series)} variables en data/base_global_mensual.csv")
     print("=" * 70)
 
 

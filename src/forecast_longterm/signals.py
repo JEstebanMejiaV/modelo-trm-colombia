@@ -104,7 +104,31 @@ def compute_signals(data: pd.DataFrame) -> pd.DataFrame:
         cycle_d, trend_d = sm.tsa.filters.hpfilter(ln_dolar.dropna(), lamb=14400)
         signals["dolar_desviacion_hp_pct"] = 100 * (ln_dolar - trend_d.reindex(ln_dolar.index))
 
-    # --- 6. Score compuesto (promedio de z-scores) ---
+    # --- 7. Factores globales mensuales (rezagados implícitamente en evaluación) ---
+    global_specs = {
+        "yield_real_10y_tips_pct": ("z_global_yield_real", +1),
+        "yield_2y_us_pct": ("z_global_yield_2y", +1),
+        "spread_10y_2y_us_pct": ("z_global_spread_10y2y", +1),
+        "epu_global": ("z_global_epu", +1),
+        "estres_financiero_stl": ("z_global_stress", +1),
+        "ln_brent_global": ("z_global_brent", -1),
+        "ln_commodities_global": ("z_global_commodities", -1),
+        "ln_empleo_manufactura_us": ("z_global_employment", -1),
+        "ln_produccion_industrial_us": ("z_global_industry", -1),
+    }
+    global_parts = []
+    for source, (output, sign) in global_specs.items():
+        if source not in data.columns:
+            continue
+        series = data[source].loc[SAMPLE_START:]
+        rolling_mean = series.rolling(60, min_periods=36).mean()
+        rolling_std = series.rolling(60, min_periods=36).std()
+        signals[output] = (series - rolling_mean) / rolling_std
+        global_parts.append(sign * signals[output])
+        signals[f"mom12_{output[2:]}"] = series.diff(12)
+    if global_parts:
+        signals["score_global"] = pd.concat(global_parts, axis=1).mean(axis=1)
+
     # Señal negativa = TRM está "cara" → esperar apreciación
     z_cols = [c for c in signals.columns if "zscore" in c]
     if z_cols:

@@ -5,8 +5,8 @@
 ## Contenido de las 14 hojas
 
 1. **Resumen**: principales métricas del modelo principal y el ampliado, lectura económica de la especificación base, comparación de desempeño, pesos Shapley destacados y cautelas de interpretación.
-2. **Datos_fuente**: niveles mensuales de todas las series activas. Incluye PEN por USD, términos de intercambio, EMBIG Colombia, curvas TES nominal y UVR a cinco años y compensación de inflación estadounidense.
-3. **Transformaciones**: fórmulas enlazadas a `Datos_fuente` para logaritmos, primeras diferencias, rezagos auditables, transformaciones `asinh`, diferencial BEI y factores regionales de tres y cuatro monedas.
+2. **Datos_fuente**: niveles mensuales de todas las series activas. Incluye PEN por USD, términos de intercambio, EMBIG Colombia, curvas TES nominal y UVR a cinco años, compensación de inflación estadounidense y la base global FRED consolidada.
+3. **Transformaciones**: fórmulas enlazadas a `Datos_fuente` para logaritmos, primeras diferencias, rezagos auditables, transformaciones `asinh`, diferencial BEI, factores regionales y el bloque de variables globales nuevas.
 4. **Modelo_principal**: coeficientes con errores HAC, métricas del ajuste y reconstrucción mensual por contribuciones. Las referencias a coeficientes se determinan por nombre del término, no por una posición fija.
 5. **Modelo_ampliado**: coeficientes y diagnósticos de la especificación ampliada, ajuste histórico, contribución mensual de cada término y control que reconcilia la suma de contribuciones con el cambio ajustado.
 6. **Pesos_explicativos**: descomposición Shapley/LMG del R² incremental, tabla completa, gráfico de columnas y controles de suma del R² y de las participaciones.
@@ -41,9 +41,9 @@ No equivale al tamaño del coeficiente, a su p-valor ni a un porcentaje causal d
 ## Cautelas principales
 
 - Las regresiones describen asociaciones dinámicas; no prueban causalidad.
-- `Validacion` es condicional porque usa realizaciones contemporáneas. `Pronostico` usa rezagos de publicación, pero 0 de 12 factores tienen vintages versionados completos para los 48 orígenes; por eso sigue siendo pseudo-tiempo-real.
-- En la muestra actual, el ampliado de cuatro monedas mejora frente al principal el R² ajustado (`0,585` frente a `0,479`), MAPE condicional (`1,70%` frente a `2,01%`) y acierto de dirección (`81,25%` frente a `68,75%`).
-- El pronóstico seleccionado usa tres monedas: su MAPE es `2,63%`, peor que el `2,39%` de la caminata aleatoria, y su R² frente a ese benchmark es `−0,110`.
+- `Validacion` es condicional porque usa realizaciones contemporáneas. `Pronostico` usa rezagos de publicación, pero solo 3 de 13 factores activos tienen vintages versionados completos para los 48 orígenes; por eso sigue siendo pseudo-tiempo-real.
+- En la muestra actual, el ampliado alcanza R² ajustado de `0,611`, MAPE condicional de `1,62%` y acierto de dirección de `79,17%`; el peso Shapley del bloque global es `17,33%`.
+- El pronóstico mensual obtiene MAPE de `2,68%`, frente a `2,39%` de la caminata aleatoria, y R² frente a ese benchmark de `−13,38%`.
 - En el ampliado, ARCH-LM y Jarque–Bera rechazan sus hipótesis nulas; RESET no rechaza al 5%. No se detecta autocorrelación ni inestabilidad CUSUM.
 - Remesas, flujos de capital, reservas y variables fiscales pueden responder a la propia TRM; sus coeficientes pueden reflejar endogeneidad.
 - Los términos de intercambio se usan contemporáneamente para explicación *ex post*, pero suelen publicarse con cerca de dos meses de rezago.
@@ -51,6 +51,10 @@ No equivale al tamaño del coeficiente, a su p-valor ni a un porcentaje causal d
 - El diferencial BEI a cinco años entra en primera diferencia porque el nivel es sensible a tendencias. La agregación sobre fechas comunes es casi idéntica, pero puede conservar solo 4 días en un mes. El BEI compara compensaciones de mercado, no expectativas puras.
 - Los factores regionales están estandarizados con una ventana histórica fija; su escala no representa un cambio porcentual directo de una moneda concreta. PEN mejora la explicación histórica, no el pronóstico.
 - La prueba bounds no confirma cointegración al 5%. Los resultados de largo plazo del ECM son exploratorios.
+
+## Resultados de corto y largo plazo
+
+El archivo Excel documenta el modelo mensual y sus salidas auditables. Los análisis diarios y de largo plazo se mantienen tabulares en `results/pronostico/`: el mejor HAR con señales globales tiene R² OOS de 13,20%, aunque dirección 41,6% y Sharpe −4,03; la señal global de actividad a 12 meses alcanza R² OOS de 12,8% (DM p = 0,006), y la wavelet D3+D4+D5 45,9%. No se deben comparar estas cifras sin considerar frecuencia, horizonte y benchmark.
 
 ## Uso recomendado
 

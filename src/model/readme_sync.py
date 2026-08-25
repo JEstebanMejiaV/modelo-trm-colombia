@@ -27,6 +27,26 @@ _TERM_LABELS: dict[str, str] = {
     "D.diferencial_bei_5y_pp.L1": "Δ diferencial BEI 5 años (pp), rezago 1",
     "factor_monedas_regionales_4.L0": "Factor regional BRL+CLP+MXN+PEN, mes actual",
     "factor_monedas_regionales_3.L1": "Factor regional BRL+CLP+MXN, rezago 1",
+    "D.yield_real_10y_tips_pct.L0": "Δ rendimiento real EE. UU. 10 años, mes actual",
+    "D.yield_2y_us_pct.L0": "Δ Treasury EE. UU. 2 años, mes actual",
+    "D.yield_10y_us_pct.L0": "Δ Treasury EE. UU. 10 años, mes actual",
+    "D.spread_10y_2y_us_pct.L0": "Δ pendiente 10Y–2Y EE. UU., mes actual",
+    "D.ln_brent_global.L0": "Δln Brent global, mes actual",
+    "D.ln_commodities_global.L0": "Δln índice global de commodities, mes actual",
+    "D.epu_global.L0": "Δ incertidumbre económica global, mes actual",
+    "D.estres_financiero_stl.L0": "Δ estrés financiero STL, mes actual",
+    "D.ln_empleo_manufactura_us.L0": "Δln empleo manufacturero EE. UU., mes actual",
+    "D.ln_produccion_industrial_us.L0": "Δln producción industrial EE. UU., mes actual",
+    "D.yield_real_10y_tips_pct.L1": "Δ rendimiento real EE. UU. 10 años, rezago 1",
+    "D.yield_2y_us_pct.L1": "Δ Treasury EE. UU. 2 años, rezago 1",
+    "D.yield_10y_us_pct.L1": "Δ Treasury EE. UU. 10 años, rezago 1",
+    "D.spread_10y_2y_us_pct.L1": "Δ pendiente 10Y–2Y EE. UU., rezago 1",
+    "D.ln_brent_global.L1": "Δln Brent global, rezago 1",
+    "D.ln_commodities_global.L1": "Δln índice global de commodities, rezago 1",
+    "D.epu_global.L1": "Δ incertidumbre económica global, rezago 1",
+    "D.estres_financiero_stl.L1": "Δ estrés financiero STL, rezago 1",
+    "D.ln_empleo_manufactura_us.L2": "Δln empleo manufacturero EE. UU., rezago 2",
+    "D.ln_produccion_industrial_us.L2": "Δln producción industrial EE. UU., rezago 2",
     "dummy_pandemia_2020": "Pandemia marzo–mayo 2020",
 }
 
@@ -190,7 +210,7 @@ def update_readme_fragments(
         "peso_entre_factores_pct", ascending=False
     )
     rows_shapley = [
-        "| Factor | Peso entre los 12 factores | Aporte al R² |",
+        f"| Factor | Peso entre los {len(shapley_expanded)} factores | Aporte al R² |",
         "|---|---:|---:|",
     ]
     for _, row in shapley_sorted.iterrows():

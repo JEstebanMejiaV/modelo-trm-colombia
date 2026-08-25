@@ -123,7 +123,7 @@ def markov_switching_beta(data: pd.DataFrame, horizon: int = 12) -> pd.DataFrame
         "prob_regimen_1": ms_result.smoothed_marginal_probabilities[0],
         "prob_regimen_2": ms_result.smoothed_marginal_probabilities[1],
         "regimen_mas_probable": np.argmax(
-            ms_result.smoothed_marginal_probabilities, axis=0
+            ms_result.smoothed_marginal_probabilities.to_numpy(), axis=1
         ),
     })
 
@@ -185,6 +185,22 @@ def macro_momentum_signals(data: pd.DataFrame) -> pd.DataFrame:
         signals["delta_diferencial_6m"] = diff - diff.shift(6)
         # Positivo = Colombia sube más que Fed = atractivo para COP
 
+    # Señales globales nuevas: tasas, commodities, riesgo y actividad.
+    global_momentum = {
+        "delta_yield_real_12m": "yield_real_10y_tips_pct",
+        "delta_yield_2y_12m": "yield_2y_us_pct",
+        "momentum_commodities_12m": "ln_commodities_global",
+        "momentum_brent_12m": "ln_brent_global",
+        "delta_epu_6m": "epu_global",
+        "delta_actividad_us_12m": "ln_produccion_industrial_us",
+    }
+    for output, source in global_momentum.items():
+        if source not in data.columns:
+            continue
+        series = data[source].loc[SAMPLE_START:]
+        horizon = 6 if "epu" in output else 12
+        signals[output] = series - series.shift(horizon)
+
     # Score macro compuesto (signos ajustados para predecir depreciación)
     score_cols = []
     if "delta_fed_12m" in signals.columns:
@@ -196,8 +212,17 @@ def macro_momentum_signals(data: pd.DataFrame) -> pd.DataFrame:
     if "delta_embig_6m" in signals.columns:
         # EMBIG subiendo → depreciación COP
         score_cols.append(signals["delta_embig_6m"] / signals["delta_embig_6m"].rolling(60, min_periods=24).std())
-
-    if score_cols:
+    for col, sign in {
+        "delta_yield_real_12m": +1,
+        "delta_yield_2y_12m": +1,
+        "momentum_commodities_12m": -1,
+        "momentum_brent_12m": -1,
+        "delta_epu_6m": +1,
+        "delta_actividad_us_12m": -1,
+    }.items():
+        if col in signals.columns:
+            scale = signals[col].rolling(60, min_periods=24).std()
+            score_cols.append(sign * signals[col] / scale)
         signals["score_macro_momentum"] = pd.concat(score_cols, axis=1).mean(axis=1)
 
     return signals.dropna(how="all")

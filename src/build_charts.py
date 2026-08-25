@@ -64,6 +64,7 @@ NEGATIVE = "#277DA1"
 
 GROUP_COLORS = {
     "Global": "#2D6FA3",
+    "Global ampliado": "#4C78A8",
     "Regional": "#7A5195",
     "Riesgo local": "#D97732",
     "Sector externo Colombia": "#23866F",
@@ -84,6 +85,7 @@ LABELS = {
         "Diferencial BEI\nde inflación · 5 años"
     ),
     "Diferencial de tasas": "Diferencial de tasas",
+    "Variables globales nuevas": "Variables globales\nnuevas",
     "Déficit fiscal": "Déficit fiscal",
 }
 
@@ -486,22 +488,54 @@ def chart_standardized_effects(
     coef_by_term = coefficients.set_index("termino")
     rows: list[dict[str, object]] = []
     for weight in weights.itertuples(index=False):
-        term = str(weight.terminos)
-        if term not in coef_by_term.index or term not in contributions.columns:
-            raise KeyError(f"No se encontró {term} para construir el gráfico de efectos.")
-        coef = coef_by_term.loc[term]
-        coefficient = float(coef["coeficiente"])
-        if np.isclose(coefficient, 0.0):
-            raise ValueError(f"No se puede recuperar la escala del regresor para {term}.")
-        regressor = contributions[term] / coefficient
-        scale = float(regressor.std(ddof=1))
+        terms = [term.strip() for term in str(weight.terminos).split(",")]
+        missing_terms = [
+            term
+            for term in terms
+            if term not in coef_by_term.index or term not in contributions.columns
+        ]
+        if missing_terms:
+            raise KeyError(
+                "No se encontraron "
+                f"{', '.join(missing_terms)} para construir el gráfico de efectos."
+            )
+
+        standardized_effects: list[float] = []
+        lower_effects: list[float] = []
+        upper_effects: list[float] = []
+        grouped_contribution = contributions[terms].sum(axis=1)
+        if grouped_contribution.isna().any():
+            raise ValueError(
+                f"Las contribuciones agrupadas de {weight.factor} contienen faltantes."
+            )
+
+        for term in terms:
+            coef = coef_by_term.loc[term]
+            coefficient = float(coef["coeficiente"])
+            if np.isclose(coefficient, 0.0):
+                raise ValueError(
+                    f"No se puede recuperar la escala del regresor para {term}."
+                )
+            regressor = contributions[term] / coefficient
+            scale = float(regressor.std(ddof=1))
+            standardized_effects.append(coefficient * scale * 100)
+            lower_effects.append(float(coef["ic_95_inferior"]) * scale * 100)
+            upper_effects.append(float(coef["ic_95_superior"]) * scale * 100)
+
+        # A grouped factor has no single regression coefficient. Aggregate the
+        # signed standardized term effects and retain the summed contribution
+        # series so the grouping is explicit and auditable.
         rows.append(
             {
                 "factor": weight.factor,
-                "efecto": coefficient * scale * 100,
-                "inferior": float(coef["ic_95_inferior"]) * scale * 100,
-                "superior": float(coef["ic_95_superior"]) * scale * 100,
-                "significativo": float(coef["p_valor"]) < 0.05,
+                "efecto": sum(standardized_effects),
+                "inferior": sum(lower_effects),
+                "superior": sum(upper_effects),
+                "significativo": all(
+                    float(coef_by_term.loc[term]["p_valor"]) < 0.05
+                    for term in terms
+                ),
+                "contribucion_std": float(grouped_contribution.std(ddof=1)) * 100,
             }
         )
     data = pd.DataFrame(rows)

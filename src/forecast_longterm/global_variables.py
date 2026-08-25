@@ -99,18 +99,24 @@ def build_academic_signals(data: pd.DataFrame, new_series: dict[str, pd.Series])
     # Señal compuesta: promedio de z-scores (signos ajustados)
     # Yield real alto + gold alto + EPU alto + commodities bajo = depreciación
     z_cols = {
-        "z_yield_real_10y_tips": +1,   # yield real alto → COP deprecia
-        "z_gold_usd": +1,             # gold alto → risk-off → COP deprecia
-        "z_epu_global": +1,           # incertidumbre → COP deprecia
-        "z_commodities_index": -1,    # commodities alto → COP aprecia
-        "z_yield_2y_us": +1,          # yield 2Y alto → Fed hawkish → COP deprecia
+        "z_yield_real_10y_tips": +1,
+        "z_yield_2y_us": +1,
+        "z_yield_10y_us": +1,
+        "z_spread_10y_2y_us": +1,
+        "z_gold_usd": +1,
+        "z_epu_global": +1,
+        "z_commodities_index": -1,
+        "z_brent_usd": -1,
+        "z_estres_financiero_stl": +1,
+        "z_us_manufacturing_emp": -1,
+        "z_us_industrial_production": -1,
     }
     parts = []
     for col, sign in z_cols.items():
         if col in signals.columns:
             parts.append(sign * signals[col])
     if parts:
-        signals["score_academico"] = pd.concat(parts, axis=1).mean(axis=1)
+        signals["score_global"] = pd.concat(parts, axis=1).mean(axis=1)
 
     return signals.dropna(how="all")
 
@@ -204,23 +210,32 @@ def evaluate_incremental(
 
 def main():
     print("=" * 70)
-    print("VARIABLES ACADÉMICAS: EVALUACIÓN PARA PRONÓSTICO TRM")
+    print("VARIABLES GLOBALES: EVALUACIÓN PARA PRONÓSTICO TRM")
     print("=" * 70)
 
-    print("\n[1/4] Descargando 6 series de FRED...")
-    new_series = {}
-    for fred_id, name in SERIES_TO_DOWNLOAD.items():
-        try:
-            s = download_fred_series(fred_id, name)
-            new_series[name] = s
-            print(f"  {fred_id:<20} -> {name:<25} ({len(s)} obs, {s.index.min().date()} a {s.index.max().date()})")
-        except Exception as e:
-            print(f"  {fred_id:<20} -> ERROR: {e}")
-        time.sleep(0.6)
-
-    print("\n[2/4] Construyendo señales...")
+    print("\n[1/4] Cargando la base global mensual consolidada...")
     data = build_dataset()
+    source_map = {
+        "yield_real_10y_tips": "yield_real_10y_tips_pct",
+        "yield_2y_us": "yield_2y_us_pct",
+        "yield_10y_us": "yield_10y_us_pct",
+        "spread_10y_2y_us": "spread_10y_2y_us_pct",
+        "commodities_index": "ln_commodities_global",
+        "brent_usd": "ln_brent_global",
+        "epu_global": "epu_global",
+        "estres_financiero_stl": "estres_financiero_stl",
+        "us_manufacturing_emp": "ln_empleo_manufactura_us",
+        "us_industrial_production": "ln_produccion_industrial_us",
+    }
+    new_series = {
+        name: data[column].loc[SAMPLE_START:].rename(name)
+        for name, column in source_map.items()
+        if column in data.columns
+    }
     ln_trm = np.log(data["trm_cop_usd"].loc[SAMPLE_START:].where(data["trm_cop_usd"] > 0)).dropna()
+    print(f"  Series integradas: {list(new_series)}")
+
+    print("\n[2/4] Construyendo señales globales...")
     signals = build_academic_signals(data, new_series)
     print(f"  Señales construidas: {list(signals.columns)}")
 
@@ -235,13 +250,11 @@ def main():
             m["senal"] = col
             results.append(m)
             sig = "**" if m["dm_p_valor"] < 0.05 else "*" if m["dm_p_valor"] < 0.10 else ""
-            print(f"  {col:<30} R2={m['r2_oos_pct']:>6.2f}%  corr={m['correlacion']:.3f}  dir={m['direccion_pct']:.1f}%  DM p={m['dm_p_valor']:.3f}{sig}")
+            print(f"  {col:<34} R2={m['r2_oos_pct']:>6.2f}%  corr={m['correlacion']:.3f}  dir={m['direccion_pct']:.1f}%  DM p={m['dm_p_valor']:.3f}{sig}")
 
-    # Evaluar mejora incremental sobre CF filter
     print("\n[4/4] Mejora incremental sobre CF filter...")
     cf_cycle, _ = sm.tsa.filters.cffilter(ln_trm, low=6, high=96)
     cf_signal = cf_cycle * 100
-
     incremental_results = []
     for col in signals.columns:
         s = signals[col].dropna()
@@ -251,35 +264,28 @@ def main():
         if inc:
             inc["senal_nueva"] = col
             incremental_results.append(inc)
-            mejora = inc["mejora_r2_pp"]
-            marca = "+" if mejora > 0 else ""
-            print(f"  CF + {col:<25} R2_cf={inc['r2_oos_cf_solo_pct']:.1f}% -> R2_combo={inc['r2_oos_cf_mas_nueva_pct']:.1f}% ({marca}{mejora:.1f} pp)")
+            print(f"  CF + {col:<28} mejora R2={inc['mejora_r2_pp']:+.1f} pp")
 
-    # Guardar
     RESULTS.mkdir(parents=True, exist_ok=True)
     if results:
         pd.DataFrame(results).sort_values("r2_oos_pct", ascending=False).to_csv(
-            RESULTS / "variables_academicas_evaluacion.csv", index=False, encoding="utf-8-sig"
+            RESULTS / "variables_globales_evaluacion.csv", index=False, encoding="utf-8-sig"
         )
     if incremental_results:
         pd.DataFrame(incremental_results).sort_values("mejora_r2_pp", ascending=False).to_csv(
-            RESULTS / "variables_academicas_incremental.csv", index=False, encoding="utf-8-sig"
+            RESULTS / "variables_globales_incremental.csv", index=False, encoding="utf-8-sig"
         )
-    signals.to_csv(RESULTS / "variables_academicas_series.csv", encoding="utf-8-sig")
+    signals.to_csv(RESULTS / "variables_globales_series.csv", encoding="utf-8-sig")
 
     print("\n" + "=" * 70)
     print("RESUMEN")
     print("=" * 70)
     if results:
         best = max(results, key=lambda x: x["r2_oos_pct"])
-        print(f"  Mejor variable individual: {best['senal']} (R2 OOS = {best['r2_oos_pct']:.2f}%)")
+        print(f"  Mejor señal individual: {best['senal']} (R2 OOS = {best['r2_oos_pct']:.2f}%)")
     if incremental_results:
         best_inc = max(incremental_results, key=lambda x: x["mejora_r2_pp"])
-        print(f"  Mayor mejora sobre CF: +{best_inc['senal_nueva']} ({best_inc['mejora_r2_pp']:+.1f} pp)")
-        if best_inc["mejora_r2_pp"] > 2:
-            print("  -> HAY valor incremental de las variables académicas")
-        else:
-            print("  -> El CF filter ya captura la mayor parte de la señal")
+        print(f"  Mayor mejora sobre CF: {best_inc['senal_nueva']} ({best_inc['mejora_r2_pp']:+.1f} pp)")
     print("=" * 70)
 
 

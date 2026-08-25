@@ -41,6 +41,44 @@ RESULTS = ROOT / "results" / "pronostico"
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def load_monthly_global_features(index: pd.DatetimeIndex) -> pd.DataFrame:
+    """Construye señales mensuales globales rezagadas para el modelo diario.
+
+    Las variables mensuales no se imputan contemporáneamente: cada día del mes
+    usa únicamente el último promedio mensual disponible (t-1). Así se evita
+    convertir una observación mensual revisada en información intradía.
+    """
+    path = ROOT / "data" / "base_global_mensual.csv"
+    raw = pd.read_csv(path, parse_dates=["fecha"]).set_index("fecha").sort_index()
+    raw.index = raw.index.to_period("M").to_timestamp()
+    raw = raw.groupby(level=0).mean()
+
+    features = pd.DataFrame(index=raw.index)
+    rate_columns = [
+        "yield_real_10y_tips_pct",
+        "yield_2y_us_pct",
+        "yield_10y_us_pct",
+        "spread_10y_2y_us_pct",
+    ]
+    features["global_rates_mom"] = raw[rate_columns].diff().mean(axis=1)
+    features["global_commodities_mom"] = (
+        np.log(raw["brent_usd_barril"].where(raw["brent_usd_barril"] > 0)).diff()
+        + np.log(raw["commodities_index_imf"].where(raw["commodities_index_imf"] > 0)).diff()
+    ) / 2.0
+    features["global_risk_mom"] = (
+        np.log(raw["epu_global"].where(raw["epu_global"] > 0)).diff()
+        + raw["estres_financiero_stl"].diff()
+    ) / 2.0
+    features["global_activity_mom"] = (
+        np.log(raw["empleo_manufactura_us_miles"].where(raw["empleo_manufactura_us_miles"] > 0)).diff()
+        + np.log(raw["produccion_industrial_us"].where(raw["produccion_industrial_us"] > 0)).diff()
+    ) / 2.0
+
+    # El valor mensual t solo puede alimentar días de t+1 en el pronóstico.
+    lagged = features.shift(1)
+    return lagged.reindex(index, method="ffill")
+
+
 def load_daily_data() -> pd.DataFrame:
     """Carga y alinea las series diarias disponibles."""
     # TRM diaria
@@ -93,6 +131,7 @@ def load_daily_data() -> pd.DataFrame:
         "vix": vix,
         "embig_pb": embig,
     }).sort_index()
+    daily = daily.join(load_monthly_global_features(daily.index), how="left")
 
     # Forward fill para cubrir feriados locales (máx 5 días)
     daily = daily.ffill(limit=5)
@@ -157,8 +196,12 @@ def build_designs(daily: pd.DataFrame) -> dict[str, tuple[pd.Series, pd.DataFram
         "r_dolar_L1": daily["r_dolar"].shift(1),
         "r_vix_L1": daily["r_vix"].shift(1),
         "d_embig_L1": daily["d_embig"].shift(1),
+        "global_rates_mom_L1": daily["global_rates_mom"].shift(1),
+        "global_commodities_mom_L1": daily["global_commodities_mom"].shift(1),
+        "global_risk_mom_L1": daily["global_risk_mom"].shift(1),
+        "global_activity_mom_L1": daily["global_activity_mom"].shift(1),
     }, index=daily.index)
-    designs["HAR + globales"] = (y, x_har_global)
+    designs["HAR + globales mensuales"] = (y, x_har_global)
 
     # 5. HAR + globales + volatilidad realizada
     x_full = pd.DataFrame({
@@ -169,9 +212,13 @@ def build_designs(daily: pd.DataFrame) -> dict[str, tuple[pd.Series, pd.DataFram
         "r_dolar_L1": daily["r_dolar"].shift(1),
         "r_vix_L1": daily["r_vix"].shift(1),
         "d_embig_L1": daily["d_embig"].shift(1),
+        "global_rates_mom_L1": daily["global_rates_mom"].shift(1),
+        "global_commodities_mom_L1": daily["global_commodities_mom"].shift(1),
+        "global_risk_mom_L1": daily["global_risk_mom"].shift(1),
+        "global_activity_mom_L1": daily["global_activity_mom"].shift(1),
         "rv_5d_L1": daily["rv_5d"].shift(1),
     }, index=daily.index)
-    designs["HAR + globales + vol"] = (y, x_full)
+    designs["HAR + globales mensuales + vol"] = (y, x_full)
 
     return designs
 
@@ -254,6 +301,10 @@ def weekly_backtest(daily: pd.DataFrame, holdout_weeks: int = 52) -> dict:
         "r_dolar_L1": daily["r_dolar"].shift(1),
         "r_vix_L1": daily["r_vix"].shift(1),
         "d_embig_L1": daily["d_embig"].shift(1),
+        "global_rates_mom_L1": daily["global_rates_mom"].shift(1),
+        "global_commodities_mom_L1": daily["global_commodities_mom"].shift(1),
+        "global_risk_mom_L1": daily["global_risk_mom"].shift(1),
+        "global_activity_mom_L1": daily["global_activity_mom"].shift(1),
         "rv_5d_L1": daily["rv_5d"].shift(1),
     }, index=daily.index)
 

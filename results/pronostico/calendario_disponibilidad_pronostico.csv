@@ -11,3 +11,4 @@ Balanza comercial cambiaria,2,Mensual; publicación posterior al cierre,Supuesto
 Flujos netos de capital,2,Mensual; publicación posterior al cierre,Supuesto conservador: t-2
 Diferencial de compensación inflacionaria 5 años,1,Curvas diarias,Promedios completos conocidos para t-1
 Monedas regionales,1,Tipos de cambio mensuales,Promedios completos conocidos para t-1
+Variables globales nuevas,2,FRED; mezcla de precios diarios e indicadores mensuales,Precios/yields t-1; actividad y desempleo t-2

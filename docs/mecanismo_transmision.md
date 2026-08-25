@@ -2,7 +2,7 @@
 
 ## Teoría empírica de la tasa de cambio en Colombia
 
-Este documento presenta el mecanismo de transmisión que emerge del modelo econométrico. No es una teoría impuesta a priori: es la estructura que los datos revelan cuando se mide la importancia relativa de cada canal.
+Este documento presenta el mecanismo de transmisión que emerge del modelo econométrico. La actualización con variables globales FRED conserva la lectura por canales, pero recalcula los pesos: el modelo ampliado tiene 13 factores, R² = 64,84%, R² ajustado = 61,10% y MAPE condicional = 1,62%. El bloque `Variables globales nuevas` agrupa diez términos y recibe 17,33% del peso Shapley; no debe desagregarse como jugadores independientes sin recalcular la descomposición.
 
 ## Diagrama de transmisión
 
@@ -22,7 +22,7 @@ Este documento presenta el mecanismo de transmisión que emerge del modelo econo
 │         │         ρ = 0,35 │          ρ = 0,39   │                      │
 │         └─────────┬────────┴─────────────────────┘                      │
 │                   │                                                      │
-│                   ▼ CANAL GLOBAL (58,5% del peso total)                  │
+│                   ▼ CANAL GLOBAL (65,9% del peso total)                  │
 └───────────────────┼─────────────────────────────────────────────────────┘
                     │
                     │
@@ -79,21 +79,22 @@ Este documento presenta el mecanismo de transmisión que emerge del modelo econo
           │   Δ ln(TRM)     │
           │   COP por USD   │
           │                 │
-          │  R² = 60,77%    │
-          │  MAPE = 1,70%   │
+          │  R² = 64,84%    │
+          │  MAPE = 1,62%   │
           │                 │
           └─────────────────┘
 ```
 
 ## Interpretación cuantitativa por canal
 
-### Canal global (58,5% del poder explicativo)
+### Canal global (65,9% del poder explicativo)
 
 | Componente | Peso Shapley | Coeficiente | Lectura |
 |---|---|---|---|
 | Factor regional (BRL+CLP+MXN+PEN) | 30,1% | +0,017 | Un z-score de presión regional se asocia con +1,7% en TRM |
 | Dólar amplio (DTWEXBGS) | 20,1% | +0,241 | Un +1% del USD global se asocia con +0,24% en TRM |
-| VIX | 8,3% | +0,011 | Un +10% de volatilidad se asocia con +0,11% en TRM |
+| VIX | 6,71% | +0,019 | Un cambio del VIX se asocia con depreciación, con incertidumbre HAC |
+| Variables globales nuevas (10 términos) | 17,33% | Bloque agrupado | Se compone de tasas, commodities, incertidumbre, estrés financiero y actividad de EE. UU.; sus términos se describen en `data/README.md` |
 
 Estos tres factores comparten ~40% de su variación (ρ dólar-VIX = 0,35; ρ dólar-regional = 0,39; ρ VIX-regional = 0,39). Son manifestaciones del mismo fenómeno: **risk-on/risk-off global**. Cuando el apetito por riesgo cae, el dólar se fortalece, el VIX sube y las monedas emergentes se deprecian simultáneamente.
 
@@ -138,12 +139,12 @@ Los términos de intercambio (dominados por petróleo y carbón) deprecian el CO
 La TRM colombiana se comporta como un activo de riesgo global
 con un componente idiosincrático de spread soberano.
 
-    60% = Risk appetite global (dólar + VIX + monedas EM)
-    18% = Riesgo-país Colombia (EMBIG)
-    21% = Sector externo (TI, balanza, reservas)
-     1% = Política doméstica (tasas, fiscal, inflación)
+   66% = Canal global ampliado (dólar + VIX + monedas EM + variables globales nuevas)
+   15% = Riesgo-país Colombia (EMBIG)
+   17% = Sector externo (TI, balanza, capitales, reservas, remesas)
+    2% = Política doméstica (tasas, fiscal, inflación)
    ────
-   100% = R² incremental de los 12 factores
+   100% = R² incremental de los 13 factores
 ```
 
 ### Proposiciones derivadas

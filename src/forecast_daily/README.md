@@ -97,5 +97,5 @@ Requiere: `pip install xgboost lightgbm scikit-learn torch`
 1. **La caminata es imbatible a frecuencia diaria** — el retorno diario de la TRM tiene relación señal/ruido ≈ 0.
 2. **Los modelos más complejos overfittean más** — OLS < Ridge < RF/XGBoost < LSTM < GRU (de menos a más overfitting).
 3. **La señal está en la volatilidad, no en la dirección** — vol_trm_22d es el feature #1 pero no predice signo.
-4. **El efecto de zona horaria es real pero frágil** — en otro período de test (modelo `forecast_short_term.py`) el HAR+globales dio R²=13.6%. La inestabilidad temporal de los coeficientes explica la discrepancia.
+4. **La señal diaria es frágil** — en otro período de test, el HAR con globales mensuales rezagadas dio R²=13,2%, pero dirección 41,6% y Sharpe anualizado −4,03. La inestabilidad temporal de los coeficientes explica por qué una mejora de RMSE no basta para construir una estrategia.
 5. **Consistente con eficiencia débil** — información pública rezagada no permite superar sistemáticamente al mercado.

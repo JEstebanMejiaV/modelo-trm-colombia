@@ -129,6 +129,19 @@ Todas las columnas tienen frecuencia mensual después de la consolidación.
 | `factor_monedas_regionales_4` | Misma construcción con BRL, CLP, MXN y PEN. | Es el factor activo de la explicación histórica y entra en `t`; signo `+`. | PEN mejora el ajuste histórico, pero no el BIC ni el MAPE del pronóstico. |
 | `factor_monedas_regionales` | Alias explícito de `factor_monedas_regionales_4`. | Conserva compatibilidad con salidas anteriores; la especificación activa usa el nombre numerado. | No debe confundirse con el factor de tres monedas seleccionado para pronóstico. |
 
+### Base global mensual FRED
+
+`base_global_mensual.csv` consolida 14 series mensuales internacionales desde FRED. Diez componentes entran al factor agrupado `Variables globales nuevas`: `yield_real_10y_tips_pct`, `yield_2y_us_pct`, `yield_10y_us_pct`, `spread_10y_2y_us_pct`, Brent, índice de commodities, EPU global, estrés financiero STLFSI, empleo manufacturero y producción industrial de EE. UU. Brent, commodities, empleo y producción industrial se transforman con logaritmos antes de diferenciarse; tasas, pendiente, EPU y estrés se diferencian en sus unidades de origen.
+
+| Serie | Transformación activa | Uso histórico | Uso de pronóstico |
+|---|---|---|---|
+| TIPS real 10Y, Treasury 2Y/10Y y spread 10Y–2Y | Primera diferencia | Contemporáneo dentro del bloque global | Rezago `.L1` |
+| Brent y commodities | `D.ln` | Contemporáneo dentro del bloque global | Rezago `.L1` |
+| EPU global y estrés financiero STLFSI | Primera diferencia | Contemporáneo dentro del bloque global | Rezago `.L1` |
+| Empleo manufacturero y producción industrial de EE. UU. | `D.ln` | Contemporáneo dentro del bloque global | Rezago `.L2` |
+
+La tasa de desempleo de EE. UU. queda fuera de la especificación activa por un faltante en 2025-10. TED spread, high-yield spread y dólar amplio alternativo no se usan por cobertura incompleta o descarga fallida. El identificador de oro solicitado devolvió HTTP 400 y no se sustituye silenciosamente. Estas decisiones preservan la política de faltantes y evitan imputaciones artificiales. Las series globales se agrupan para controlar colinealidad y mantener exacta la descomposición Shapley con 13 jugadores.
+
 ### Logaritmos y controles
 
 | Columna exacta | Definición | Uso/rezago y signo esperado | Cautela principal |

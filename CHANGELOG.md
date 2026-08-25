@@ -6,7 +6,11 @@ Todos los cambios relevantes del proyecto están documentados aquí. El formato 
 
 ### Pendiente de merge
 
-- PR #15: Modelo combinado (interacciones + asimetría + outliers) → R² 66%, ARCH resuelto.
+- Reestimación completa con la base global mensual FRED: explicación histórica, pronóstico mensual y diario, señales de largo plazo, robustez, gráficos, Excel y documentación.
+- El modelo ampliado queda en 13 factores con el bloque `Variables globales nuevas`; el cálculo Shapley usa 8.192 subconjuntos.
+- Resultados principales: R² ajustado 61,10%, MAPE condicional 1,62% y peso Shapley global 17,33%. El pronóstico mensual mantiene MAPE 2,68% y R² −13,38% frente a la caminata.
+- La mejor señal global de largo plazo obtiene R² OOS 12,8% a 12 meses (DM p = 0,006); wavelet D3+D4+D5 alcanza 45,9%. GARCH + VIX presenta el menor BIC y VaR 95% con 6,2% de violaciones.
+- Limitaciones documentadas: oro no disponible con el identificador solicitado, series con cobertura incompleta excluidas, y vintages históricos completos para solo 3 de 13 factores activos.
 
 ---
 
@@ -14,9 +18,9 @@ Todos los cambios relevantes del proyecto están documentados aquí. El formato 
 
 ### Añadido
 
-- **Vintages ALFRED completos** (PR #11): 288/288 requests exitosas via API FRED. Cobertura sube a 3/12 factores aptos para backtest genuino.
+- **Vintages ALFRED completos** (PR #11): 288/288 requests exitosas via API FRED. Cobertura sube a 3/13 factores aptos para backtest genuino.
 - **Test Diebold-Mariano** (PR #11): DM stat = -1.26, p = 0.21. No se rechaza igualdad de capacidad predictiva entre pronóstico y caminata aleatoria.
-- **Modelos parsimoniosos** (PR #11): top-3 factores tiene mejor BIC (-947.6) y MAPE (2.57%) que los 12 completos.
+- **Modelos parsimoniosos** (PR #11): top-3 factores tiene mejor BIC (-947.6) y MAPE (2.57%) que la especificación ampliada de 13 factores.
 - **Pronóstico parsimonioso activo** (PR #12): top-3 Shapley (monedas, dólar, EMBIG) como especificación evaluada.
 - **Backtest genuino parcial** (PR #12): compara vintages reales vs último. VIX revisiones de hasta 27.5%; dólar amplio estable (0.18%).
 - **GARCH(1,1)** (PR #12): persistencia 0.94, volatilidad incondicional 2.12%/mes. Confirma clusters de volatilidad.

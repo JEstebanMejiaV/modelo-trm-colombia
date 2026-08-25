@@ -52,6 +52,23 @@ ECM_LEVEL_VARIABLES = [
     "ln_dolar_amplio",
 ]
 
+# Variables globales con cobertura completa en la muestra 2006-01--2026-04.
+# Las series con huecos estructurales (TED, high-yield OAS y dólar mensual)
+# quedan documentadas, pero no entran al modelo activo.
+GLOBAL_RAW_COMPONENTS = [
+    "yield_real_10y_tips_pct",
+    "yield_2y_us_pct",
+    "yield_10y_us_pct",
+    "spread_10y_2y_us_pct",
+    "ln_brent_global",
+    "ln_commodities_global",
+    "epu_global",
+    "estres_financiero_stl",
+    "ln_empleo_manufactura_us",
+    "ln_produccion_industrial_us",
+]
+GLOBAL_BASE_FILE = DATA / "base_global_mensual.csv"
+
 
 # Cada factor es un jugador de la descomposicion Shapley. Todos sus terminos
 # (transformaciones y rezagos) entran o salen juntos al calcular el R2 marginal.
@@ -111,7 +128,22 @@ def expanded_factor_specs(regional_component: str) -> dict[str, dict[str, object
         "grupo": "Regional",
         "terminos": [(regional_component, 0)],
     },
-}
+    "Variables globales nuevas": {
+        "grupo": "Global ampliado",
+        "terminos": [
+            ("D.yield_real_10y_tips_pct", 0),
+            ("D.yield_2y_us_pct", 0),
+            ("D.yield_10y_us_pct", 0),
+            ("D.spread_10y_2y_us_pct", 0),
+            ("D.ln_brent_global", 0),
+            ("D.ln_commodities_global", 0),
+            ("D.epu_global", 0),
+            ("D.estres_financiero_stl", 0),
+            ("D.ln_empleo_manufactura_us", 0),
+            ("D.ln_produccion_industrial_us", 0),
+        ],
+    },
+    }
 
 
 EXPANDED_FACTOR_SPECS_3 = expanded_factor_specs("factor_monedas_regionales_3")
@@ -170,6 +202,21 @@ def forecast_factor_specs(regional_component: str) -> dict[str, dict[str, object
             "grupo": "Regional",
             "terminos": [(regional_component, 1)],
         },
+        "Variables globales nuevas": {
+            "grupo": "Global ampliado",
+            "terminos": [
+                ("D.yield_real_10y_tips_pct", 1),
+                ("D.yield_2y_us_pct", 1),
+                ("D.yield_10y_us_pct", 1),
+                ("D.spread_10y_2y_us_pct", 1),
+                ("D.ln_brent_global", 1),
+                ("D.ln_commodities_global", 1),
+                ("D.epu_global", 1),
+                ("D.estres_financiero_stl", 1),
+                ("D.ln_empleo_manufactura_us", 2),
+                ("D.ln_produccion_industrial_us", 2),
+            ],
+        },
     }
 
 
@@ -190,6 +237,7 @@ FORECAST_AVAILABILITY = [
     ("Flujos netos de capital", 2, "Mensual; publicación posterior al cierre", "Supuesto conservador: t-2"),
     ("Diferencial de compensación inflacionaria 5 años", 1, "Curvas diarias", "Promedios completos conocidos para t-1"),
     ("Monedas regionales", 1, "Tipos de cambio mensuales", "Promedios completos conocidos para t-1"),
+    ("Variables globales nuevas", 2, "FRED; mezcla de precios diarios e indicadores mensuales", "Precios/yields t-1; actividad y desempleo t-2"),
 ]
 
 
@@ -206,6 +254,7 @@ DIFFERENCED_COMPONENTS = [
     "asinh_flujos_capital",
     "diferencial_bei_5y_pp",
     "diferencial_bei_5y_comun_pp",
+    *GLOBAL_RAW_COMPONENTS,
 ]
 
 

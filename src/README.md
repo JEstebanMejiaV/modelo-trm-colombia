@@ -21,6 +21,8 @@ Esta carpeta contiene el pipeline de estimación, validación y documentación d
 | `extended_forecast.py` | Pronóstico parsimonioso (top-3), backtest genuino parcial, GARCH(1,1) y forecast combination. |
 | `advanced_diagnostics.py` | Rolling window (120 meses), pronóstico multihorizonte (h=1,2,3,6) y threshold regression. |
 | `improve_explanation_2.py` | PDL del dólar amplio, intervención cambiaria BanRep y estimación robusta (Huber, LAD). |
+| `forecast_short_term.py` | Pronóstico diario/semanal con señales mensuales globales rezagadas y comparación OOS. |
+| `forecast_longterm/` | Señales de largo plazo, filtros, Markov, BN, panel EM, wavelets, cointegración, carry y volatilidad. |
 
 ## Paquete `model/`
 
@@ -60,8 +62,9 @@ deliverables/modelo_trm_colombia.xlsx
 
 `BASE_FACTOR_SPECS`, `EXPANDED_FACTOR_SPECS_3/4` y `FORECAST_FACTOR_SPECS_3/4` declaran cada factor, su grupo, transformación y rezago. `make_timed_difference_design()` usa esas especificaciones para mantener una sola ruta de construcción.
 
-- Factores contemporáneos del histórico: términos de intercambio, dólar amplio, VIX, EMBIG Colombia y factor regional de cuatro monedas.
+- Factores contemporáneos del histórico: términos de intercambio, dólar amplio, VIX, EMBIG Colombia, factor regional de cuatro monedas y los diez términos del bloque `Variables globales nuevas`.
 - Factores rezagados un mes: remesas, diferencial de tasas, déficit fiscal, reservas, balanza cambiaria, capitales y primera diferencia del BEI a cinco años.
+- En el pronóstico, los precios, rendimientos y medidas de riesgo globales usan `.L1`; empleo y producción industrial de EE. UU. usan `.L2` conforme al calendario de disponibilidad.
 - Variable dependiente: cambio mensual del logaritmo de la TRM.
 - Inferencia: OLS con errores estándar HAC de seis meses.
 - Selección dinámica: BIC entre cero y tres rezagos de la variación de la TRM; la selección actual es cero.
@@ -79,7 +82,7 @@ En las validaciones recursivas se reestiman los coeficientes, pero se conserva l
 
 ## Pesos explicativos
 
-`exact_shapley_r2()` calcula los 4.096 subconjuntos de 12 factores. Cada factor entra con todos sus términos y recibe su aporte marginal medio al R². El control automático exige que:
+`exact_shapley_r2()` calcula los **8.192 subconjuntos de 13 factores**. Cada factor entra con todos sus términos y recibe su aporte marginal medio al R². El factor `Variables globales nuevas` se conserva como un único jugador, aunque sus contribuciones mensuales se calculan término por término. El control automático exige que:
 
 - los aportes sumen el R² incremental;
 - los pesos entre factores sumen 100%;
@@ -92,7 +95,7 @@ Los pesos son descriptivos. No identifican causalidad ni sustituyen pruebas de e
 
 ## Archivo de vintages
 
-`archive_vintage.py` no forma parte de la ejecución normal del estimador porque requiere acceso a los proveedores. Un snapshot completo se crea con `snapshot --origin-date`; las fechas existentes no se sobrescriben. `alfred-history` intenta recuperar los 48 orígenes, valida que cada observación sea anterior a su origen y reanuda desde caché, pero solo publica el consolidado cuando las 288 respuestas están completas. En esta actualización el proveedor cortó las conexiones, por lo que la cobertura sigue en cero. `coverage` regenera el CSV y CI valida las huellas versionadas sin volver a conectarse a Internet.
+`archive_vintage.py` no forma parte de la ejecución normal del estimador porque requiere acceso a los proveedores. Un snapshot completo se crea con `snapshot --origin-date`; las fechas existentes no se sobrescriben. `alfred-history` intenta recuperar los 48 orígenes, valida que cada observación sea anterior a su origen y reanuda desde caché, pero solo publica el consolidado cuando las 288 respuestas están completas. La validación pseudo-tiempo-real cubre 48 meses; solo 3 de los 13 factores activos tienen vintages históricos completos (dólar amplio, VIX y monedas regionales). La base global mensual usa el último vintage disponible, por lo que sus señales también se interpretan con esta cautela.
 
 ## Reproducción
 
