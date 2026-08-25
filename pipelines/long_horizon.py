@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from importlib import import_module
 
+from trm_model.experiments.registry import research_experiment_id
 from trm_model.provenance import ProductRun, run_product
 
 ALLOWED_MODULES = {
@@ -43,6 +44,7 @@ def run(module_name: str) -> None:
             product_id="long_horizon_research",
             runner=lambda: _run_module(module_name),
             run_context={"research_module": module_name},
+            experiment_id=research_experiment_id(module_name),
         )
     )
 

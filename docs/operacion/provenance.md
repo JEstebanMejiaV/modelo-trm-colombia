@@ -1,5 +1,7 @@
 # Provenance y manifests de corrida
 
+El provenance de ejecución y el registro experimental son complementarios. `experiment_id` identifica la especificación, hipótesis y variante; `run_id` identifica una ejecución concreta con hashes, inputs, outputs y ambiente. La guía operativa está en [`experimentos.md`](experimentos.md).
+
 ## Dos tipos de manifest
 
 ### Manifest de producto

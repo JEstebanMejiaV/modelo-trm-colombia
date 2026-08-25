@@ -10,6 +10,7 @@ Esta es la entrada canónica de documentación. El repositorio separa la narrati
 4. [`productos/diario_direccion.md`](productos/diario_direccion.md) y [`productos/diario_volatilidad.md`](productos/diario_volatilidad.md): productos diarios de apoyo.
 5. [`productos/investigacion_largo_plazo.md`](productos/investigacion_largo_plazo.md): señales exploratorias de 6–24 meses.
 6. [`operacion/salidas.md`](operacion/salidas.md) y [`operacion/provenance.md`](operacion/provenance.md): outputs y evidencia de las corridas.
+7. [`operacion/experimentos.md`](operacion/experimentos.md): variantes, hipótesis, métricas y decisiones.
 
 ## Por audiencia
 

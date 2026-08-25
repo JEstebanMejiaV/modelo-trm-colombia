@@ -1,0 +1,953 @@
+{
+  "schema_version": 1,
+  "description": "Inventario versionado de especificaciones, variantes y resultados resumidos del modelo TRM Colombia. Cada nueva variante debe usar un experiment_id nuevo.",
+  "generated_at_utc": "2026-08-23T00:00:00Z",
+  "experiments": [
+    {
+      "schema_version": 1,
+      "experiment_id": "monthly_explanation.controles_externos.v1",
+      "product_id": "monthly_explanation",
+      "model_id": "controles_externos",
+      "title": "Controles externos y financieros: baseline histórico",
+      "status": "active",
+      "change_type": "baseline",
+      "created_at_utc": "2026-08-23T00:00:00Z",
+      "parent_experiment_id": null,
+      "hypothesis": "Los factores externos y financieros explican parte de la variación mensual de la TRM.",
+      "change_summary": "Especificación de referencia en diferencias con rezagos económicos y errores HAC.",
+      "code_paths": [
+        "src/trm_model/monthly/specifications.py",
+        "src/model/estimation.py"
+      ],
+      "config_paths": [
+        "configs/common.toml",
+        "configs/products/monthly_explanation.toml",
+        "pipelines/manifests/monthly_explanation.json"
+      ],
+      "input_sources": [
+        "data/catalog/sources.json",
+        "data/modelo_trm_muestra_estimacion.csv"
+      ],
+      "parameters": {
+        "effective_observations": 240,
+        "hac_maxlags": 6,
+        "lag_selection": "BIC_0_to_3"
+      },
+      "metrics": [
+        {
+          "name": "mape",
+          "value": 2.0066,
+          "unit": "percent",
+          "split": "48_month_conditional_holdout"
+        },
+        {
+          "name": "direction_accuracy",
+          "value": 68.75,
+          "unit": "percent",
+          "split": "48_month_conditional_holdout"
+        }
+      ],
+      "decision": {
+        "outcome": "reference",
+        "rationale": "Referencia histórica; no es un pronóstico ex ante ni una identificación causal."
+      },
+      "evidence": [
+        "results/explicacion/coeficientes_controles_externos.csv",
+        "results/explicacion/validacion_metricas_controles_externos.csv",
+        "results/metadata.json"
+      ],
+      "tags": [
+        "monthly",
+        "ex_post",
+        "ols_hac",
+        "baseline"
+      ],
+      "notes": [
+        "Las métricas deben leerse junto al manifest de la corrida que las produjo."
+      ]
+    },
+    {
+      "schema_version": 1,
+      "experiment_id": "monthly_explanation.marco_macro_integral.v1",
+      "product_id": "monthly_explanation",
+      "model_id": "marco_macro_integral",
+      "title": "Marco macroeconómico integral: baseline histórico",
+      "status": "active",
+      "change_type": "specification",
+      "created_at_utc": "2026-08-23T00:00:00Z",
+      "parent_experiment_id": "monthly_explanation.controles_externos.v1",
+      "hypothesis": "Los factores domésticos, regionales y globales agrupados mejoran la explicación histórica.",
+      "change_summary": "14 jugadores Shapley, cuatro monedas regionales y bloque global de 17 términos.",
+      "code_paths": [
+        "src/trm_model/monthly/specifications.py",
+        "src/trm_model/monthly/core.py",
+        "src/model/shapley.py"
+      ],
+      "config_paths": [
+        "configs/common.toml",
+        "configs/products/monthly_explanation.toml",
+        "pipelines/manifests/monthly_explanation.json"
+      ],
+      "input_sources": [
+        "data/catalog/sources.json",
+        "data/base_global_mensual.csv",
+        "data/variables_internas_cobertura.csv"
+      ],
+      "parameters": {
+        "factor_count": 14,
+        "shapley_subsets": 16384,
+        "bootstrap_replications": 200,
+        "bootstrap_block_months": 12,
+        "bootstrap_seed": 20260823,
+        "hac_maxlags": 6
+      },
+      "metrics": [
+        {
+          "name": "mape",
+          "value": 1.4881,
+          "unit": "percent",
+          "split": "48_month_conditional_holdout"
+        },
+        {
+          "name": "direction_accuracy",
+          "value": 83.3333,
+          "unit": "percent",
+          "split": "48_month_conditional_holdout"
+        }
+      ],
+      "decision": {
+        "outcome": "reference",
+        "rationale": "Especificación integral de referencia; sus pesos son descriptivos, no causales."
+      },
+      "evidence": [
+        "results/explicacion/coeficientes_marco_macro_integral.csv",
+        "results/explicacion/pesos_explicativos_marco_macro_integral.csv",
+        "results/explicacion/validacion_metricas_marco_macro_integral.csv"
+      ],
+      "tags": [
+        "monthly",
+        "ex_post",
+        "shapley",
+        "integrated"
+      ],
+      "notes": []
+    },
+    {
+      "schema_version": 1,
+      "experiment_id": "monthly_forecast.full.v1",
+      "product_id": "monthly_forecast",
+      "model_id": "forecast_full",
+      "title": "Pronóstico mensual con factores rezagados",
+      "status": "active",
+      "change_type": "baseline",
+      "created_at_utc": "2026-08-23T00:00:00Z",
+      "parent_experiment_id": "monthly_explanation.marco_macro_integral.v1",
+      "hypothesis": "Los factores disponibles con rezagos conservadores pueden mejorar la caminata aleatoria.",
+      "change_summary": "Modelo de un paso con calendario de disponibilidad y latest_available.",
+      "code_paths": [
+        "src/trm_model/monthly/specifications.py",
+        "src/trm_model/monthly/core.py",
+        "src/trm_model/validation/leakage.py"
+      ],
+      "config_paths": [
+        "configs/common.toml",
+        "configs/products/monthly_forecast.toml",
+        "pipelines/manifests/monthly_forecast.json"
+      ],
+      "input_sources": [
+        "data/catalog/sources.json",
+        "results/pronostico/calendario_disponibilidad_pronostico.csv",
+        "results/pronostico/cobertura_vintages_pronostico.csv"
+      ],
+      "parameters": {
+        "horizon_months": 1,
+        "holdout_months": 48,
+        "vintage_policy": "latest_available",
+        "factor_count": 14,
+        "regional_currencies": [
+          "BRL",
+          "CLP",
+          "MXN"
+        ]
+      },
+      "metrics": [
+        {
+          "name": "mape",
+          "value": 2.4862,
+          "unit": "percent",
+          "benchmark": "random_walk",
+          "split": "48_month_expanding_validation"
+        },
+        {
+          "name": "direction_accuracy",
+          "value": 52.0833,
+          "unit": "percent",
+          "benchmark": "random_walk",
+          "split": "48_month_expanding_validation"
+        },
+        {
+          "name": "r2_vs_benchmark",
+          "value": -1.4612,
+          "unit": "percent",
+          "benchmark": "random_walk",
+          "split": "48_month_expanding_validation"
+        }
+      ],
+      "decision": {
+        "outcome": "reference",
+        "rationale": "Forecast operativo pseudo-tiempo-real; no es backtest genuino por cobertura PIT incompleta."
+      },
+      "evidence": [
+        "results/pronostico/validacion_metricas_pronostico.csv",
+        "results/pronostico/diebold_mariano_pronostico.csv",
+        "results/metadata.json"
+      ],
+      "tags": [
+        "monthly",
+        "forecast",
+        "pseudo_real_time",
+        "random_walk"
+      ],
+      "notes": [
+        "La cobertura registrada es 3/14 factores completos."
+      ]
+    },
+    {
+      "schema_version": 1,
+      "experiment_id": "monthly_forecast.parsimonious.v1",
+      "product_id": "monthly_forecast",
+      "model_id": "forecast_parsimonious_top3",
+      "title": "Pronóstico mensual parsimonioso",
+      "status": "completed",
+      "change_type": "specification",
+      "created_at_utc": "2026-08-23T00:00:00Z",
+      "parent_experiment_id": "monthly_forecast.full.v1",
+      "hypothesis": "Un subconjunto pequeño de factores puede competir con el modelo completo.",
+      "change_summary": "Comparación top-3/top-5/top-7 con la misma validación pseudo-tiempo-real.",
+      "code_paths": [
+        "src/extended_forecast.py",
+        "src/trm_model/monthly/core.py"
+      ],
+      "config_paths": [
+        "configs/products/monthly_forecast.toml",
+        "pipelines/manifests/monthly_forecast.json"
+      ],
+      "input_sources": [
+        "results/pronostico/seleccion_rezagos_modelo_pronostico.csv"
+      ],
+      "parameters": {
+        "selected_factors": 3,
+        "holdout_months": 48,
+        "benchmark": "random_walk"
+      },
+      "metrics": [
+        {
+          "name": "mape",
+          "value": 2.5706,
+          "unit": "percent",
+          "benchmark": "random_walk",
+          "split": "48_month_expanding_validation"
+        },
+        {
+          "name": "direction_accuracy",
+          "value": 45.8333,
+          "unit": "percent",
+          "split": "48_month_expanding_validation"
+        }
+      ],
+      "decision": {
+        "outcome": "supporting",
+        "rationale": "No supera la referencia completa ni la caminata; queda como comparación de parsimonia."
+      },
+      "evidence": [
+        "results/pronostico/comparacion_parsimoniosos_pronostico.csv",
+        "results/pronostico/validacion_metricas_parsimonioso.csv"
+      ],
+      "tags": [
+        "monthly",
+        "forecast",
+        "parsimonious",
+        "benchmark"
+      ],
+      "notes": []
+    },
+    {
+      "schema_version": 1,
+      "experiment_id": "robustness.bei_ecm.v1",
+      "product_id": "robustness",
+      "model_id": "bei_ecm_robustness",
+      "title": "Robustez BEI y ECM exploratorio",
+      "status": "active",
+      "change_type": "validation",
+      "created_at_utc": "2026-08-23T00:00:00Z",
+      "parent_experiment_id": "monthly_explanation.marco_macro_integral.v1",
+      "hypothesis": "Las conclusiones deben revisarse frente a transformaciones BEI, bounds, ECM y estabilidad temporal.",
+      "change_summary": "Comparaciones de agregación, estacionariedad, bounds, ECM y submuestras.",
+      "code_paths": [
+        "src/model/bei.py",
+        "src/trm_model/monthly/inference.py"
+      ],
+      "config_paths": [
+        "configs/common.toml",
+        "configs/products/robustness.toml",
+        "pipelines/manifests/robustness.json"
+      ],
+      "input_sources": [
+        "data/raw/tes_5y_pesos_banrep.json",
+        "data/raw/tes_5y_uvr_banrep.json",
+        "data/raw/bei_5y_eeuu_diario_fed.csv"
+      ],
+      "parameters": {
+        "ecm_status": "exploratory",
+        "rolling_window_months": 120
+      },
+      "metrics": [],
+      "decision": {
+        "outcome": "supporting",
+        "rationale": "Informa la especificación, pero no confirma cointegración ni reemplaza el modelo en diferencias."
+      },
+      "evidence": [
+        "results/robustez/comparacion_especificaciones_bei_5y.csv",
+        "results/robustez/bounds_resumen.csv",
+        "results/robustez/rolling_window_estabilidad.csv"
+      ],
+      "tags": [
+        "monthly",
+        "robustness",
+        "bei",
+        "ecm"
+      ],
+      "notes": [
+        "La prueba bounds no confirma cointegración al 5%."
+      ]
+    },
+    {
+      "schema_version": 1,
+      "experiment_id": "daily_direction.model_comparison.v1",
+      "product_id": "daily_direction",
+      "model_id": "daily_model_comparison",
+      "title": "Comparación de modelos diarios direccionales",
+      "status": "active",
+      "change_type": "baseline",
+      "created_at_utc": "2026-08-23T00:00:00Z",
+      "parent_experiment_id": null,
+      "hypothesis": "Algún modelo diario puede mejorar la caminata en retorno o dirección sin ser automáticamente rentable.",
+      "change_summary": "Comparación de modelos diarios con semilla y límite de hilos declarados.",
+      "code_paths": [
+        "pipelines/daily_direction.py",
+        "src/forecast_daily/",
+        "src/forecast_short_term.py"
+      ],
+      "config_paths": [
+        "configs/products/daily_direction.toml",
+        "pipelines/manifests/daily_direction.json"
+      ],
+      "input_sources": [
+        "data/catalog/sources.json"
+      ],
+      "parameters": {
+        "random_seed": 42,
+        "thread_limit": 1,
+        "information_set": "pseudo_real_time"
+      },
+      "metrics": [
+        {
+          "name": "best_model_r2",
+          "value": 0.5584,
+          "unit": "percent",
+          "benchmark": "random_walk"
+        },
+        {
+          "name": "best_model_direction_accuracy",
+          "value": 32.4,
+          "unit": "percent"
+        },
+        {
+          "name": "best_model_sharpe",
+          "value": -0.6998,
+          "unit": "annualized"
+        }
+      ],
+      "decision": {
+        "outcome": "supporting",
+        "rationale": "Producto de apoyo; sus métricas no se mezclan con la validación mensual."
+      },
+      "evidence": [
+        "results/pronostico/comparacion_modelos_diarios.csv",
+        "results/pronostico/feature_importance_ml_diario.csv"
+      ],
+      "tags": [
+        "daily",
+        "direction",
+        "machine_learning",
+        "supporting"
+      ],
+      "notes": []
+    },
+    {
+      "schema_version": 1,
+      "experiment_id": "daily_volatility.garch_family.v1",
+      "product_id": "daily_volatility",
+      "model_id": "garch_family_var",
+      "title": "Familia GARCH y backtest VaR diario",
+      "status": "active",
+      "change_type": "baseline",
+      "created_at_utc": "2026-08-23T00:00:00Z",
+      "parent_experiment_id": null,
+      "hypothesis": "La volatilidad condicional y VIX pueden mejorar la medición de riesgo diario.",
+      "change_summary": "Comparación GARCH/EGARCH/GJR-GARCH y backtest VaR de 90%, 95% y 99%.",
+      "code_paths": [
+        "pipelines/daily_volatility.py",
+        "src/volatility_model.py"
+      ],
+      "config_paths": [
+        "configs/products/daily_volatility.toml",
+        "pipelines/manifests/daily_volatility.json"
+      ],
+      "input_sources": [
+        "data/catalog/sources.json"
+      ],
+      "parameters": {
+        "evaluation_days": 500,
+        "var_confidences": [
+          0.9,
+          0.95,
+          0.99
+        ],
+        "information_set": "pseudo_real_time"
+      },
+      "metrics": [
+        {
+          "name": "var_95_violations",
+          "value": 31,
+          "unit": "count",
+          "split": "500_day_backtest"
+        },
+        {
+          "name": "var_95_violation_rate",
+          "value": 6.2,
+          "unit": "percent",
+          "split": "500_day_backtest"
+        },
+        {
+          "name": "kupiec_pvalue_95",
+          "value": 0.2346
+        },
+        {
+          "name": "christoffersen_pvalue_95",
+          "value": 0.9548
+        }
+      ],
+      "decision": {
+        "outcome": "supporting",
+        "rationale": "Sirve para riesgo y cobertura; no es recomendación de inversión."
+      },
+      "evidence": [
+        "results/pronostico/volatilidad_modelos_garch.csv",
+        "results/pronostico/volatilidad_var_backtest.csv"
+      ],
+      "tags": [
+        "daily",
+        "volatility",
+        "garch",
+        "var",
+        "risk"
+      ],
+      "notes": []
+    },
+    {
+      "schema_version": 1,
+      "experiment_id": "long_horizon_research.backtest.v1",
+      "product_id": "long_horizon_research",
+      "model_id": "long_horizon_backtest",
+      "title": "Backtest de señales a 6–24 meses",
+      "status": "completed",
+      "change_type": "baseline",
+      "created_at_utc": "2026-08-23T00:00:00Z",
+      "parent_experiment_id": null,
+      "hypothesis": "Algunas señales de tendencia o reversión pueden contener información a horizontes largos.",
+      "change_summary": "Suite exploratoria de backtests a 6, 12, 18 y 24 meses.",
+      "code_paths": [
+        "src/forecast_longterm/backtest.py",
+        "src/forecast_longterm/signals.py"
+      ],
+      "config_paths": [
+        "configs/products/long_horizon_research.toml",
+        "research/manifests/long_horizon_research.json"
+      ],
+      "input_sources": [
+        "data/catalog/sources.json"
+      ],
+      "parameters": {
+        "horizons_months": [
+          6,
+          12,
+          18,
+          24
+        ],
+        "benchmark": "random_walk",
+        "information_set": "exploratory"
+      },
+      "metrics": [
+        {
+          "name": "r2_oos_6m",
+          "value": -12.7,
+          "unit": "percent"
+        },
+        {
+          "name": "r2_oos_12m",
+          "value": -26.34,
+          "unit": "percent"
+        },
+        {
+          "name": "r2_oos_18m",
+          "value": -41.26,
+          "unit": "percent"
+        },
+        {
+          "name": "r2_oos_24m",
+          "value": -135.92,
+          "unit": "percent"
+        }
+      ],
+      "decision": {
+        "outcome": "research",
+        "rationale": "No se promueve a producto; las señales, ventanas y reconstrucciones no son intercambiables."
+      },
+      "evidence": [
+        "results/pronostico/backtest_largo_plazo_resumen.csv",
+        "results/pronostico/backtest_largo_plazo_6m.csv",
+        "results/pronostico/backtest_largo_plazo_12m.csv"
+      ],
+      "tags": [
+        "research",
+        "long_horizon",
+        "backtest"
+      ],
+      "notes": [
+        "Algunos filtros existentes pueden usar la muestra completa."
+      ]
+    },
+    {
+      "schema_version": 1,
+      "experiment_id": "long_horizon_research.wavelets.v1",
+      "product_id": "long_horizon_research",
+      "model_id": "wavelets",
+      "title": "Descomposición wavelet de señales de largo plazo",
+      "status": "completed",
+      "change_type": "model",
+      "created_at_utc": "2026-08-23T00:00:00Z",
+      "parent_experiment_id": "long_horizon_research.backtest.v1",
+      "hypothesis": "La señal puede concentrarse en bandas de frecuencia de varios años.",
+      "change_summary": "Comparación de bandas wavelet y combinaciones D3+D4+D5.",
+      "code_paths": [
+        "src/forecast_longterm/wavelets.py"
+      ],
+      "config_paths": [
+        "configs/products/long_horizon_research.toml",
+        "research/manifests/long_horizon_research.json"
+      ],
+      "input_sources": [
+        "data/catalog/sources.json"
+      ],
+      "parameters": {
+        "wavelet": "Daubechies-4",
+        "information_set": "exploratory"
+      },
+      "metrics": [],
+      "decision": {
+        "outcome": "research",
+        "rationale": "Requiere reconstrucción OOS por origen antes de considerarse operativa."
+      },
+      "evidence": [
+        "results/pronostico/wavelets_comparacion_bandas.csv",
+        "results/pronostico/wavelets_componentes.csv"
+      ],
+      "tags": [
+        "research",
+        "long_horizon",
+        "wavelets"
+      ],
+      "notes": []
+    },
+    {
+      "schema_version": 1,
+      "experiment_id": "long_horizon_research.panel_em.v1",
+      "product_id": "long_horizon_research",
+      "model_id": "panel_em",
+      "title": "Panel de monedas emergentes",
+      "status": "completed",
+      "change_type": "model",
+      "created_at_utc": "2026-08-23T00:00:00Z",
+      "parent_experiment_id": "long_horizon_research.backtest.v1",
+      "hypothesis": "La reversión de la TRM puede compartir un componente regional con monedas emergentes.",
+      "change_summary": "Panel EM y desviaciones de tendencia para cuatro monedas.",
+      "code_paths": [
+        "src/forecast_longterm/panel_em.py"
+      ],
+      "config_paths": [
+        "configs/products/long_horizon_research.toml",
+        "research/manifests/long_horizon_research.json"
+      ],
+      "input_sources": [
+        "data/catalog/sources.json"
+      ],
+      "parameters": {
+        "currencies": [
+          "COP",
+          "BRL",
+          "CLP",
+          "MXN"
+        ],
+        "information_set": "exploratory"
+      },
+      "metrics": [],
+      "decision": {
+        "outcome": "research",
+        "rationale": "Exploratorio; no se mezcla con el forecast mensual."
+      },
+      "evidence": [
+        "results/pronostico/panel_em_estimaciones.csv",
+        "results/pronostico/panel_em_desviaciones_cf.csv"
+      ],
+      "tags": [
+        "research",
+        "long_horizon",
+        "panel",
+        "emerging_markets"
+      ],
+      "notes": []
+    },
+    {
+      "schema_version": 1,
+      "experiment_id": "long_horizon_research.global_variables.v1",
+      "product_id": "long_horizon_research",
+      "model_id": "global_variables",
+      "title": "Señales globales de actividad y finanzas",
+      "status": "completed",
+      "change_type": "feature",
+      "created_at_utc": "2026-08-23T00:00:00Z",
+      "parent_experiment_id": "long_horizon_research.backtest.v1",
+      "hypothesis": "Variables globales de actividad, empleo y logística contienen señales específicas por horizonte.",
+      "change_summary": "Evaluación individual y agrupada de variables globales mensuales.",
+      "code_paths": [
+        "src/forecast_longterm/global_variables.py"
+      ],
+      "config_paths": [
+        "configs/products/long_horizon_research.toml",
+        "research/manifests/long_horizon_research.json"
+      ],
+      "input_sources": [
+        "data/base_global_mensual.csv",
+        "data/base_global_cobertura.csv"
+      ],
+      "parameters": {
+        "information_set": "exploratory"
+      },
+      "metrics": [],
+      "decision": {
+        "outcome": "research",
+        "rationale": "Las señales tienen muestras y rezagos distintos; se comparan por separado."
+      },
+      "evidence": [
+        "results/pronostico/variables_globales_evaluacion.csv",
+        "results/pronostico/variables_globales_series.csv"
+      ],
+      "tags": [
+        "research",
+        "long_horizon",
+        "global"
+      ],
+      "notes": []
+    },
+    {
+      "schema_version": 1,
+      "experiment_id": "long_horizon_research.cointegration.v1",
+      "product_id": "long_horizon_research",
+      "model_id": "cointegration",
+      "title": "Cointegración TRM–dólar global",
+      "status": "completed",
+      "change_type": "validation",
+      "created_at_utc": "2026-08-23T00:00:00Z",
+      "parent_experiment_id": "long_horizon_research.backtest.v1",
+      "hypothesis": "La TRM y el dólar global podrían compartir equilibrio de largo plazo.",
+      "change_summary": "Tests de cointegración y serie de desalineamiento.",
+      "code_paths": [
+        "src/forecast_longterm/cointegration.py"
+      ],
+      "config_paths": [
+        "configs/products/long_horizon_research.toml",
+        "research/manifests/long_horizon_research.json"
+      ],
+      "input_sources": [
+        "data/catalog/sources.json"
+      ],
+      "parameters": {
+        "information_set": "exploratory"
+      },
+      "metrics": [],
+      "decision": {
+        "outcome": "research",
+        "rationale": "El resultado se conserva como evidencia de descarte, no como forecast."
+      },
+      "evidence": [
+        "results/pronostico/cointegracion_tests.csv",
+        "results/pronostico/cointegracion_trm_dolar.csv"
+      ],
+      "tags": [
+        "research",
+        "long_horizon",
+        "cointegration"
+      ],
+      "notes": []
+    },
+    {
+      "schema_version": 1,
+      "experiment_id": "long_horizon_research.carry_factor.v1",
+      "product_id": "long_horizon_research",
+      "model_id": "carry_factor",
+      "title": "Factor carry y volatilidad realizada",
+      "status": "completed",
+      "change_type": "feature",
+      "created_at_utc": "2026-08-23T00:00:00Z",
+      "parent_experiment_id": "long_horizon_research.backtest.v1",
+      "hypothesis": "Carry y volatilidad realizada pueden aportar señales complementarias.",
+      "change_summary": "Construcción y evaluación OOS de carry, riesgo y volatilidad realizada.",
+      "code_paths": [
+        "src/forecast_longterm/carry_factor.py"
+      ],
+      "config_paths": [
+        "configs/products/long_horizon_research.toml",
+        "research/manifests/long_horizon_research.json"
+      ],
+      "input_sources": [
+        "data/catalog/sources.json"
+      ],
+      "parameters": {
+        "information_set": "exploratory"
+      },
+      "metrics": [],
+      "decision": {
+        "outcome": "research",
+        "rationale": "Se conserva como señal exploratoria y no como recomendación de inversión."
+      },
+      "evidence": [
+        "results/pronostico/carry_factor_evaluacion.csv",
+        "results/pronostico/carry_factor_series.csv"
+      ],
+      "tags": [
+        "research",
+        "long_horizon",
+        "carry",
+        "risk"
+      ],
+      "notes": []
+    },
+    {
+      "schema_version": 1,
+      "experiment_id": "long_horizon_research.beveridge_nelson.v1",
+      "product_id": "long_horizon_research",
+      "model_id": "beveridge_nelson",
+      "title": "Descomposición Beveridge–Nelson",
+      "status": "completed",
+      "change_type": "model",
+      "created_at_utc": "2026-08-23T00:00:00Z",
+      "parent_experiment_id": "long_horizon_research.backtest.v1",
+      "hypothesis": "Separar componentes permanente y transitorio organiza señales de largo plazo.",
+      "change_summary": "Descomposición BN y comparación contra filtro CF.",
+      "code_paths": [
+        "src/forecast_longterm/beveridge_nelson.py"
+      ],
+      "config_paths": [
+        "configs/products/long_horizon_research.toml",
+        "research/manifests/long_horizon_research.json"
+      ],
+      "input_sources": [
+        "data/catalog/sources.json"
+      ],
+      "parameters": {
+        "information_set": "exploratory"
+      },
+      "metrics": [],
+      "decision": {
+        "outcome": "research",
+        "rationale": "Se conserva para investigación de componentes, no como producto primario."
+      },
+      "evidence": [
+        "results/pronostico/beveridge_nelson_descomposicion.csv",
+        "results/pronostico/beveridge_nelson_vs_cf.csv"
+      ],
+      "tags": [
+        "research",
+        "long_horizon",
+        "beveridge_nelson"
+      ],
+      "notes": []
+    },
+    {
+      "schema_version": 1,
+      "experiment_id": "long_horizon_research.cf_markov_strategy.v1",
+      "product_id": "long_horizon_research",
+      "model_id": "cf_markov_strategy",
+      "title": "Filtro CF y regímenes Markov",
+      "status": "completed",
+      "change_type": "model",
+      "created_at_utc": "2026-08-23T00:00:00Z",
+      "parent_experiment_id": "long_horizon_research.backtest.v1",
+      "hypothesis": "Combinar desviación de tendencia y régimen de volatilidad distingue episodios de estrés.",
+      "change_summary": "Estrategia exploratoria CF×Markov y series de régimen.",
+      "code_paths": [
+        "src/forecast_longterm/cf_markov_strategy.py"
+      ],
+      "config_paths": [
+        "configs/products/long_horizon_research.toml",
+        "research/manifests/long_horizon_research.json"
+      ],
+      "input_sources": [
+        "data/catalog/sources.json"
+      ],
+      "parameters": {
+        "information_set": "exploratory"
+      },
+      "metrics": [],
+      "decision": {
+        "outcome": "research",
+        "rationale": "Requiere reconstrucción estricta por ventana antes de promoción."
+      },
+      "evidence": [
+        "results/pronostico/cf_markov_estrategia.csv",
+        "results/pronostico/cf_markov_senales.csv"
+      ],
+      "tags": [
+        "research",
+        "long_horizon",
+        "markov",
+        "trend"
+      ],
+      "notes": []
+    },
+    {
+      "schema_version": 1,
+      "experiment_id": "long_horizon_research.compare_filters.v1",
+      "product_id": "long_horizon_research",
+      "model_id": "compare_filters",
+      "title": "Comparación de filtros de tendencia",
+      "status": "completed",
+      "change_type": "model",
+      "created_at_utc": "2026-08-23T00:00:00Z",
+      "parent_experiment_id": "long_horizon_research.backtest.v1",
+      "hypothesis": "Los filtros de tendencia difieren en estabilidad y sensibilidad a endpoint bias.",
+      "change_summary": "Comparación OOS de filtros CF, HP, media móvil y alternativas.",
+      "code_paths": [
+        "src/forecast_longterm/compare_filters.py"
+      ],
+      "config_paths": [
+        "configs/products/long_horizon_research.toml",
+        "research/manifests/long_horizon_research.json"
+      ],
+      "input_sources": [
+        "data/catalog/sources.json"
+      ],
+      "parameters": {
+        "information_set": "exploratory"
+      },
+      "metrics": [],
+      "decision": {
+        "outcome": "research",
+        "rationale": "Se conserva para comparar sesgos; no se promueve por una cifra aislada."
+      },
+      "evidence": [
+        "results/pronostico/comparacion_filtros_tendencia.csv",
+        "results/pronostico/series_filtros_tendencia.csv"
+      ],
+      "tags": [
+        "research",
+        "long_horizon",
+        "filters"
+      ],
+      "notes": []
+    },
+    {
+      "schema_version": 1,
+      "experiment_id": "long_horizon_research.extended_signals.v1",
+      "product_id": "long_horizon_research",
+      "model_id": "extended_signals",
+      "title": "Señales extendidas de largo plazo",
+      "status": "completed",
+      "change_type": "feature",
+      "created_at_utc": "2026-08-23T00:00:00Z",
+      "parent_experiment_id": "long_horizon_research.backtest.v1",
+      "hypothesis": "Momentum macro, medias móviles y señales extendidas complementan las señales base.",
+      "change_summary": "Evaluación de señales extendidas y series alternativas.",
+      "code_paths": [
+        "src/forecast_longterm/extended_signals.py"
+      ],
+      "config_paths": [
+        "configs/products/long_horizon_research.toml",
+        "research/manifests/long_horizon_research.json"
+      ],
+      "input_sources": [
+        "data/catalog/sources.json"
+      ],
+      "parameters": {
+        "information_set": "exploratory"
+      },
+      "metrics": [],
+      "decision": {
+        "outcome": "research",
+        "rationale": "Se conserva como exploración separada; las señales no se mezclan automáticamente."
+      },
+      "evidence": [
+        "results/pronostico/senales_extendidas_largo_plazo.csv",
+        "results/pronostico/series_tendencias_alternativas.csv"
+      ],
+      "tags": [
+        "research",
+        "long_horizon",
+        "signals"
+      ],
+      "notes": []
+    },
+    {
+      "schema_version": 1,
+      "experiment_id": "long_horizon_research.signals.v1",
+      "product_id": "long_horizon_research",
+      "model_id": "signals",
+      "title": "Señales base de largo plazo",
+      "status": "completed",
+      "change_type": "baseline",
+      "created_at_utc": "2026-08-23T00:00:00Z",
+      "parent_experiment_id": "long_horizon_research.backtest.v1",
+      "hypothesis": "Las señales base de tendencia, ciclo y volatilidad ordenan hipótesis de largo plazo.",
+      "change_summary": "Construcción y evaluación in-sample/OOS de señales base.",
+      "code_paths": [
+        "src/forecast_longterm/signals.py"
+      ],
+      "config_paths": [
+        "configs/products/long_horizon_research.toml",
+        "research/manifests/long_horizon_research.json"
+      ],
+      "input_sources": [
+        "data/catalog/sources.json"
+      ],
+      "parameters": {
+        "information_set": "exploratory"
+      },
+      "metrics": [],
+      "decision": {
+        "outcome": "research",
+        "rationale": "Punto de partida de investigación; no es forecast operativo."
+      },
+      "evidence": [
+        "results/pronostico/senales_largo_plazo.csv",
+        "results/pronostico/senales_largo_plazo_series.csv"
+      ],
+      "tags": [
+        "research",
+        "long_horizon",
+        "signals"
+      ],
+      "notes": []
+    }
+  ]
+}

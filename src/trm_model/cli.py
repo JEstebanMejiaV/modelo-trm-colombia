@@ -8,6 +8,13 @@ import sys
 from datetime import datetime, timezone
 
 from .data.registry import load_source_registry
+from .experiments.registry import (
+    MONTHLY_EXPERIMENT_IDS,
+    experiment_details,
+    list_experiments,
+    register_experiment_file,
+    validate_experiment_registry,
+)
 from .output_contract import (
     MONTHLY_GENERATED_PRODUCT_IDS,
     monthly_generated_output_ownership,
@@ -116,6 +123,7 @@ def _run_monthly() -> int:
         run_id=run_id,
         started_at=started,
         finished_at=started,
+        experiment_ids=MONTHLY_EXPERIMENT_IDS,
     )
     running["products"] = _empty_product_records()
     write_run_manifest(running, paths=paths)
@@ -135,6 +143,7 @@ def _run_monthly() -> int:
             run_id=run_id,
             started_at=started,
             finished_at=datetime.now(timezone.utc),
+            experiment_ids=MONTHLY_EXPERIMENT_IDS,
         )
         completed["products"] = product_records
         validate_run_output_ownership(
@@ -156,16 +165,97 @@ def _run_monthly() -> int:
             started_at=started,
             finished_at=datetime.now(timezone.utc),
             error=f"{type(error).__name__}: {error}",
+            experiment_ids=MONTHLY_EXPERIMENT_IDS,
         )
         failed["products"] = _empty_product_records()
         write_run_manifest(failed, paths=paths)
         raise
 
 
+def _experiment_validate() -> int:
+    registry = validate_experiment_registry(paths=project_paths())
+    records = registry["experiments"]
+    print(
+        json.dumps(
+            {
+                "status": "ok",
+                "experiment_count": len(records),
+                "experiment_ids": [record["experiment_id"] for record in records],
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+    return 0
+
+
+def _experiment_list(
+    *, product_id: str | None, status: str | None, as_json: bool
+) -> int:
+    records = list_experiments(
+        product_id=product_id,
+        status=status,
+        paths=project_paths(),
+    )
+    if as_json:
+        print(json.dumps(records, ensure_ascii=False, indent=2))
+    else:
+        for record in records:
+            print(
+                f"{record['experiment_id']}\t{record['product_id']}\t"
+                f"{record['status']}\t{record['title']}"
+            )
+        print(f"Total: {len(records)}")
+    return 0
+
+
+def _experiment_show(experiment_id: str) -> int:
+    record = experiment_details(experiment_id, paths=project_paths())
+    print(json.dumps(record, ensure_ascii=False, indent=2))
+    return 0
+
+
+def _experiment_register(record_file: str) -> int:
+    record = register_experiment_file(record_file, paths=project_paths())
+    print(
+        json.dumps(
+            {"status": "registered", "experiment": record},
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+    return 0
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="trm-model")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("validate", help="Valida contratos, fuentes y leakage mensual")
+    subparsers.add_parser(
+        "experiment-validate",
+        help="Valida el registro versionado de experimentos",
+    )
+    experiment_list = subparsers.add_parser(
+        "experiment-list",
+        help="Lista experimentos registrados con filtros opcionales",
+    )
+    experiment_list.add_argument("--product", dest="product_id")
+    experiment_list.add_argument("--status")
+    experiment_list.add_argument(
+        "--json",
+        action="store_true",
+        help="Imprime la lista como JSON",
+    )
+    experiment_show = subparsers.add_parser(
+        "experiment-show",
+        help="Muestra un experimento y sus corridas observadas",
+    )
+    experiment_show.add_argument("experiment_id")
+    experiment_register = subparsers.add_parser(
+        "experiment-register",
+        help="Agrega un registro de experimento nuevo",
+    )
+    experiment_register.add_argument("--file", required=True)
     subparsers.add_parser("run-monthly", help="Ejecuta el bundle mensual target con manifest")
     subparsers.add_parser(
         "run-daily-direction",
@@ -189,6 +279,18 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    if args.command == "experiment-validate":
+        return _experiment_validate()
+    if args.command == "experiment-list":
+        return _experiment_list(
+            product_id=args.product_id,
+            status=args.status,
+            as_json=args.json,
+        )
+    if args.command == "experiment-show":
+        return _experiment_show(args.experiment_id)
+    if args.command == "experiment-register":
+        return _experiment_register(args.file)
     if args.command == "validate":
         return _validate_repository()
     if args.command == "run-monthly":

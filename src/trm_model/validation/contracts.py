@@ -110,9 +110,14 @@ def validate_product_manifest(document: Any, *, paths: ProjectPaths | None = Non
 def validate_run_manifest(document: Any, *, paths: ProjectPaths | None = None) -> None:
     project = paths or project_paths()
     validate_document(document, project.schema("run_manifest.json"))
+    from ..experiments.registry import (
+        experiment_ids_from_manifest,
+        validate_experiment_references,
+    )
     from ..provenance.hashes import file_records_hash
     from ..provenance.manifest import contract_files
 
+    validate_experiment_references(experiment_ids_from_manifest(document), paths=project)
     expected_hash = file_records_hash(contract_files(project.root), root=project.root)
     if document["contract_tree_sha256"] != expected_hash:
         raise ContractError(

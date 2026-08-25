@@ -79,6 +79,7 @@ def contract_files(root: Path) -> list[Path]:
     explicit_files = (
         root / "data" / "catalog" / "sources.json",
         root / "results" / "output_catalog.json",
+        root / "experiments" / "registry.json",
     )
     candidates.extend(path for path in explicit_files if path.is_file())
     for directory in (
@@ -120,6 +121,8 @@ def build_run_manifest(
     error: str | None = None,
     warnings: Iterable[str] = (),
     run_context: dict[str, Any] | None = None,
+    experiment_id: str | None = None,
+    experiment_ids: Iterable[str] = (),
 ) -> dict[str, Any]:
     project = paths or project_paths()
     selected_config_paths = {path.resolve() for path in config_files}
@@ -128,6 +131,13 @@ def build_run_manifest(
     start = started_at or utc_now()
     finish = finished_at or utc_now()
     commit, dirty, status_lines = git_state(project.root)
+    from ..experiments.registry import _ids_from_values, validate_experiment_references
+
+    referenced_experiment_ids = _ids_from_values(
+        experiment_id=experiment_id,
+        experiment_ids=experiment_ids,
+    )
+    validate_experiment_references(referenced_experiment_ids, paths=project)
     manifest_warnings = list(warnings)
     if commit == "unknown":
         manifest_warnings.append(
@@ -158,6 +168,8 @@ def build_run_manifest(
         "run_context": dict(run_context or {}),
         "error": error,
         "warnings": manifest_warnings,
+        **({"experiment_id": referenced_experiment_ids[0]} if len(referenced_experiment_ids) == 1 else {}),
+        **({"experiment_ids": referenced_experiment_ids} if len(referenced_experiment_ids) > 1 else {}),
     }
 
 
