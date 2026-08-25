@@ -61,3 +61,6 @@ data/raw/pendiente_curva_eeuu_fred.csv
 # ALFRED API cache (JSON responses per origin per series)
 # El CSV consolidado sí se versiona; el caché granular no.
 data/vintages/historical/alfred_cache/
+
+# Kiro IDE configuration (local, no versionar)
+.kiro/
