@@ -7,8 +7,19 @@ results/
 ├── explicacion/   ← Modelos que explican con información contemporánea
 ├── pronostico/    ← Modelo que pronostica solo con información rezagada
 ├── robustez/      ← Pruebas de estacionariedad, ECM y robustez BEI
-└── metadata.json  ← Controles de conciliación y SHA-256
+├── metadata.json  ← Controles de conciliación y SHA-256
+└── output_catalog.json ← Ownership de cada output y estatus del producto
 ```
+
+`results/` es un exportador de compatibilidad heredado: conserva las rutas que
+usan los checks, gráficos y workbook existentes. El hecho de que un archivo
+esté bajo `results/pronostico/` no significa que pertenezca al pronóstico
+mensual. `output_catalog.json` es el inventario ejecutable de ownership: separa
+`monthly_forecast`, `daily_direction`, `daily_volatility` y
+`long_horizon_research` sin mover los CSV versionados. Los manifests de producto
+en `pipelines/manifests/` y `research/manifests/` declaran el contrato futuro;
+los wrappers de `pipelines/` permiten ejecutar los entry points legacy de forma
+explícita.
 
 Todas las estimaciones describen asociaciones estadísticas; no identifican efectos causales.
 

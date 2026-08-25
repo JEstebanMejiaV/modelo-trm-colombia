@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "description": "Catálogo de ownership de outputs heredados y productos nuevos. results/ se conserva como exportador de compatibilidad.",
+  "compatibility_root": "results",
+  "groups": [
+    {
+      "product_id": "monthly_explanation",
+      "status": "primary",
+      "kind": "versioned",
+      "paths": [
+        "results/explicacion/ajuste_historico_controles_externos.csv",
+        "results/explicacion/ajuste_historico_marco_macro_integral.csv",
+        "results/explicacion/coeficientes_controles_externos.csv",
+        "results/explicacion/coeficientes_marco_macro_integral.csv",
+        "results/explicacion/comparacion_especificaciones.csv",
+        "results/explicacion/comparacion_factor_regional.csv",
+        "results/explicacion/contribuciones_controles_externos.csv",
+        "results/explicacion/contribuciones_marco_macro_integral.csv",
+        "results/explicacion/diagnosticos_controles_externos.csv",
+        "results/explicacion/diagnosticos_marco_macro_integral.csv",
+        "results/explicacion/estabilidad_submuestras_marco_macro_integral.csv",
+        "results/explicacion/estabilidad_submuestras_resumen.csv",
+        "results/explicacion/intervalos_bootstrap_pesos_shapley.csv",
+        "results/explicacion/pesos_explicativos_marco_macro_integral.csv",
+        "results/explicacion/pruebas_integracion.csv",
+        "results/explicacion/seleccion_rezagos_adl_diferencias.csv",
+        "results/explicacion/seleccion_rezagos_marco_macro_integral.csv",
+        "results/explicacion/validacion_metricas_controles_externos.csv",
+        "results/explicacion/validacion_metricas_marco_macro_integral.csv",
+        "results/explicacion/validacion_predicciones_controles_externos.csv",
+        "results/explicacion/validacion_predicciones_marco_macro_integral.csv",
+        "results/metadata.json"
+      ]
+    },
+    {
+      "product_id": "monthly_forecast",
+      "status": "primary",
+      "kind": "versioned",
+      "paths": [
+        "results/pronostico/backtest_genuino_parcial.csv",
+        "results/pronostico/calendario_disponibilidad_pronostico.csv",
+        "results/pronostico/cobertura_vintages_pronostico.csv",
+        "results/pronostico/coeficientes_modelo_pronostico.csv",
+        "results/pronostico/coeficientes_pronostico_parsimonioso.csv",
+        "results/pronostico/comparacion_forecast_combination.csv",
+        "results/pronostico/comparacion_parsimoniosos_pronostico.csv",
+        "results/pronostico/diagnosticos_modelo_pronostico.csv",
+        "results/pronostico/diagnosticos_pronostico_parsimonioso.csv",
+        "results/pronostico/diebold_mariano_pronostico.csv",
+        "results/pronostico/pronostico_multihorizonte.csv",
+        "results/pronostico/seleccion_rezagos_modelo_pronostico.csv",
+        "results/pronostico/validacion_metricas_parsimonioso.csv",
+        "results/pronostico/validacion_metricas_pronostico.csv",
+        "results/pronostico/validacion_predicciones_parsimonioso.csv",
+        "results/pronostico/validacion_predicciones_pronostico.csv"
+      ]
+    },
+    {
+      "product_id": "robustness",
+      "status": "supporting",
+      "kind": "versioned",
+      "paths": [
+        "results/robustez/bounds_criticos.csv",
+        "results/robustez/bounds_resumen.csv",
+        "results/robustez/coeficientes_corto_plazo_ecm.csv",
+        "results/robustez/coeficientes_largo_plazo_ecm.csv",
+        "results/robustez/coeficientes_robustos_vs_ols.csv",
+        "results/robustez/comparacion_agregacion_bei_5y.csv",
+        "results/robustez/comparacion_especificaciones_bei_5y.csv",
+        "results/robustez/comparacion_estimadores_robustos.csv",
+        "results/robustez/comparacion_mejoras_explicacion.csv",
+        "results/robustez/diagnosticos_ecm.csv",
+        "results/robustez/evaluacion_variables_candidatas.csv",
+        "results/robustez/garch_residuos_marco_macro_integral.csv",
+        "results/robustez/outliers_huber_identificados.csv",
+        "results/robustez/pruebas_estacionariedad_bei_5y.csv",
+        "results/robustez/rolling_window_coeficientes.csv",
+        "results/robustez/rolling_window_estabilidad.csv",
+        "results/robustez/seleccion_rezagos_ecm.csv",
+        "results/robustez/tendencias_quiebres_bei_5y.csv",
+        "results/robustez/threshold_regression.csv"
+      ]
+    },
+    {
+      "product_id": "daily_direction",
+      "status": "supporting",
+      "kind": "versioned",
+      "paths": [
+        "results/pronostico/coeficientes_pronostico_corto_plazo.csv",
+        "results/pronostico/comparacion_modelos_diarios.csv",
+        "results/pronostico/feature_importance_ml_diario.csv",
+        "results/pronostico/lightgbm_grid_search_top20.csv",
+        "results/pronostico/lightgbm_mejores_parametros.json",
+        "results/pronostico/lightgbm_optimizado_feature_importance.csv",
+        "results/pronostico/lightgbm_optimizado_vs_default.csv",
+        "results/pronostico/pronostico_corto_plazo_diario.csv",
+        "results/pronostico/pronostico_corto_plazo_semanal.csv",
+        "results/pronostico/xgboost_grid_search_top20.csv",
+        "results/pronostico/xgboost_mejores_parametros.json",
+        "results/pronostico/xgboost_optimizado_feature_importance.csv",
+        "results/pronostico/xgboost_optimizado_vs_default.csv"
+      ]
+    },
+    {
+      "product_id": "daily_volatility",
+      "status": "supporting",
+      "kind": "versioned",
+      "paths": [
+        "results/pronostico/volatilidad_modelos_garch.csv",
+        "results/pronostico/volatilidad_serie_condicional.csv",
+        "results/pronostico/volatilidad_var_backtest.csv"
+      ]
+    },
+    {
+      "product_id": "long_horizon_research",
+      "status": "research",
+      "kind": "versioned",
+      "paths": [
+        "results/pronostico/backtest_largo_plazo_6m.csv",
+        "results/pronostico/backtest_largo_plazo_12m.csv",
+        "results/pronostico/backtest_largo_plazo_18m.csv",
+        "results/pronostico/backtest_largo_plazo_24m.csv",
+        "results/pronostico/backtest_largo_plazo_resumen.csv",
+        "results/pronostico/beveridge_nelson_descomposicion.csv",
+        "results/pronostico/beveridge_nelson_vs_cf.csv",
+        "results/pronostico/carry_factor_evaluacion.csv",
+        "results/pronostico/carry_factor_series.csv",
+        "results/pronostico/cf_markov_estrategia.csv",
+        "results/pronostico/cf_markov_senales.csv",
+        "results/pronostico/cointegracion_serie_desalineamiento.csv",
+        "results/pronostico/cointegracion_tests.csv",
+        "results/pronostico/cointegracion_trm_dolar.csv",
+        "results/pronostico/comparacion_filtros_tendencia.csv",
+        "results/pronostico/markov_parametros_largo_plazo.csv",
+        "results/pronostico/markov_regimes_largo_plazo.csv",
+        "results/pronostico/panel_em_datos.csv",
+        "results/pronostico/panel_em_desviaciones_cf.csv",
+        "results/pronostico/panel_em_estimaciones.csv",
+        "results/pronostico/senales_extendidas_largo_plazo.csv",
+        "results/pronostico/senales_largo_plazo.csv",
+        "results/pronostico/senales_largo_plazo_series.csv",
+        "results/pronostico/series_filtros_tendencia.csv",
+        "results/pronostico/series_momentum_macro.csv",
+        "results/pronostico/series_tendencias_alternativas.csv",
+        "results/pronostico/wavelets_comparacion_bandas.csv",
+        "results/pronostico/wavelets_componentes.csv",
+        "results/pronostico/variables_globales_evaluacion.csv",
+        "results/pronostico/variables_globales_series.csv"
+      ]
+    }
+  ],
+  "unclassified_paths_must_be_empty": true
+}

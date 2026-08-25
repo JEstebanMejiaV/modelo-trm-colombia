@@ -1,0 +1,173 @@
+{
+  "schema_version": 1,
+  "product_id": "long_horizon_research",
+  "label": "Investigación de señales de largo plazo",
+  "frequency": "monthly",
+  "horizon_months": 6,
+  "information_set": "exploratory",
+  "vintage_policy": "latest_available",
+  "status": "research",
+  "benchmark": "random_walk",
+  "source_of_truth": "artifacts/runs",
+  "factor_specs": [
+    "src/forecast_longterm",
+    "research/"
+  ],
+  "outputs": [
+    {
+      "path": "results/pronostico/backtest_largo_plazo_6m.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/backtest_largo_plazo_12m.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/backtest_largo_plazo_18m.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/backtest_largo_plazo_24m.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/backtest_largo_plazo_resumen.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/beveridge_nelson_descomposicion.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/beveridge_nelson_vs_cf.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/carry_factor_evaluacion.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/carry_factor_series.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/cf_markov_estrategia.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/cf_markov_senales.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/cointegracion_serie_desalineamiento.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/cointegracion_tests.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/cointegracion_trm_dolar.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/comparacion_filtros_tendencia.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/markov_parametros_largo_plazo.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/markov_regimes_largo_plazo.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/panel_em_datos.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/panel_em_desviaciones_cf.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/panel_em_estimaciones.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/senales_extendidas_largo_plazo.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/senales_largo_plazo.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/senales_largo_plazo_series.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/series_filtros_tendencia.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/series_momentum_macro.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/series_tendencias_alternativas.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/wavelets_comparacion_bandas.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/wavelets_componentes.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/variables_globales_evaluacion.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/variables_globales_series.csv",
+      "kind": "research",
+      "status": "versioned"
+    }
+  ],
+  "caveats": [
+    "No se publica como producto de pronóstico mensual de corto plazo.",
+    "Los filtros, probabilidades suavizadas y wavelets existentes pueden usar la muestra completa.",
+    "Los resultados deben considerarse señales exploratorias hasta reconstruir cada señal dentro de cada ventana OOS."
+  ]
+}

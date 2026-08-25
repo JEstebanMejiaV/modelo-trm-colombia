@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "product_id": "daily_volatility",
+  "label": "Volatilidad diaria y VaR",
+  "frequency": "daily",
+  "horizon_days": 1,
+  "information_set": "pseudo_real_time",
+  "vintage_policy": "latest_available",
+  "status": "supporting",
+  "benchmark": "conditional_volatility",
+  "source_of_truth": "artifacts/runs",
+  "factor_specs": [
+    "src/volatility_model.py"
+  ],
+  "outputs": [
+    {
+      "path": "results/pronostico/volatilidad_modelos_garch.csv",
+      "kind": "primary",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/volatilidad_var_backtest.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/volatilidad_serie_condicional.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    }
+  ],
+  "caveats": [
+    "Mide riesgo de mercado y no constituye recomendación de inversión.",
+    "Las dependencias arch y las rutas diarias son opcionales."
+  ]
+}

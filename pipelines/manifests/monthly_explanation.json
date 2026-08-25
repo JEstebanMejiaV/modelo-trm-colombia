@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "product_id": "monthly_explanation",
+  "label": "Explicación histórica mensual",
+  "frequency": "monthly",
+  "horizon_months": 0,
+  "information_set": "ex_post",
+  "vintage_policy": "latest_available",
+  "status": "primary",
+  "benchmark": "random_walk",
+  "source_of_truth": "artifacts/runs",
+  "factor_specs": [
+    "model.config.REFERENCE_FACTOR_SPECS",
+    "model.config.INTEGRATED_FACTOR_SPECS_4"
+  ],
+  "outputs": [
+    {
+      "path": "results/explicacion/ajuste_historico_controles_externos.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/ajuste_historico_marco_macro_integral.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/coeficientes_controles_externos.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/coeficientes_marco_macro_integral.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/comparacion_especificaciones.csv",
+      "kind": "primary",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/comparacion_factor_regional.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/contribuciones_controles_externos.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/contribuciones_marco_macro_integral.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/diagnosticos_controles_externos.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/diagnosticos_marco_macro_integral.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/estabilidad_submuestras_marco_macro_integral.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/estabilidad_submuestras_resumen.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/intervalos_bootstrap_pesos_shapley.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/pesos_explicativos_marco_macro_integral.csv",
+      "kind": "primary",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/pruebas_integracion.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/seleccion_rezagos_adl_diferencias.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/seleccion_rezagos_marco_macro_integral.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/validacion_metricas_controles_externos.csv",
+      "kind": "primary",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/validacion_metricas_marco_macro_integral.csv",
+      "kind": "primary",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/validacion_predicciones_controles_externos.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/validacion_predicciones_marco_macro_integral.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/metadata.json",
+      "kind": "compatibility",
+      "status": "versioned"
+    }
+  ],
+  "caveats": [
+    "La información contemporánea describe ex post/nowcast y no identifica efectos causales.",
+    "La ruta sigue usando la econometría mensual validada en src/model.",
+    "El ownership del manifest cubre todos los outputs históricos clasificados en el catálogo; la corrida actual registra por separado sus 24 outputs generados."
+  ]
+}
