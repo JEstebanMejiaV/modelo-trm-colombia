@@ -31,6 +31,7 @@ from scipy import stats
 ROOT = Path(__file__).resolve().parents[2]
 
 from estimate_model import build_dataset, SAMPLE_START
+from forecast_longterm.oos import matured_training_frame
 
 RESULTS = ROOT / "results" / "pronostico"
 
@@ -98,8 +99,10 @@ def evaluate_oos(signal: pd.Series, ln_trm: pd.Series, horizon: int, min_train: 
         return {}
 
     fc_list, act_list = [], []
-    for i in range(min_train, len(dataset)):
-        train = dataset.iloc[:i]
+    for i in range(min_train + horizon, len(dataset)):
+        train = matured_training_frame(dataset, i, horizon, min_train=min_train)
+        if train.empty:
+            continue
         try:
             model = sm.OLS(train["r"], sm.add_constant(train["s"])).fit()
             fc_list.append(float(model.params.iloc[0] + model.params.iloc[1] * dataset["s"].iloc[i]))

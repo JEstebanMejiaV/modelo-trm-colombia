@@ -24,6 +24,7 @@ from scipy import stats
 ROOT = Path(__file__).resolve().parents[2]
 
 from estimate_model import build_dataset, SAMPLE_START, SAMPLE_END
+from forecast_longterm.oos import matured_training_frame
 
 RESULTS = ROOT / "results" / "pronostico"
 
@@ -119,8 +120,10 @@ def backtest_signal(
         return {"error": "insuficiente"}
 
     forecasts, actuals = [], []
-    for i in range(min_train, len(dataset)):
-        train = dataset.iloc[:i]
+    for i in range(min_train + horizon, len(dataset)):
+        train = matured_training_frame(dataset, i, horizon, min_train=min_train)
+        if train.empty:
+            continue
         X = sm.add_constant(train["signal"])
         y = train["r_fwd"]
         try:

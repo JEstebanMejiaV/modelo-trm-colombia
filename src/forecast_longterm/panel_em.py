@@ -138,19 +138,28 @@ def estimate_panel(panel: pd.DataFrame) -> dict:
     return results
 
 
-def panel_oos_backtest(panel: pd.DataFrame, min_train_months: int = 60) -> dict:
-    """Backtest OOS: estima β pooled con datos pasados, pronostica adelante."""
-    # Ordenar por fecha
+def panel_oos_backtest(
+    panel: pd.DataFrame,
+    horizon: int = 12,
+    min_train_months: int = 60,
+) -> dict:
+    """Backtest OOS con etiquetas maduras antes del origen mensual."""
+    if horizon < 1:
+        raise ValueError("horizon debe ser positivo")
+
+    # Ordenar por fecha. Las etiquetas forward de cada fecha solo entran
+    # cuando su horizonte terminó estrictamente antes del origen actual.
     dates = sorted(panel["fecha"].unique())
     n_dates = len(dates)
-    start_idx = min_train_months
+    start_idx = min_train_months + horizon
 
     forecasts, actuals, monedas_list = [], [], []
 
     for i in range(start_idx, n_dates):
-        current_date = dates[i]
-        train = panel[panel["fecha"] < current_date]
-        test = panel[panel["fecha"] == current_date]
+        current_date = pd.Timestamp(dates[i])
+        maturity_cutoff = current_date - pd.DateOffset(months=horizon)
+        train = panel[panel["fecha"] < maturity_cutoff]
+        test = panel[panel["fecha"] == dates[i]]
 
         if len(train) < 60 or test.empty:
             continue
@@ -251,7 +260,7 @@ def main():
         print(f"    {moneda}: β = {info['beta']:.4f} (t = {info['t_stat']:.2f}, p = {info['p_valor']:.4f}) R²={info['r2']*100:.1f}%{sig}")
 
     print("\n[4/4] Backtest OOS del panel...")
-    oos = panel_oos_backtest(panel, min_train_months=60)
+    oos = panel_oos_backtest(panel, horizon=12, min_train_months=60)
     if "error" not in oos:
         sig = "**" if oos["dm_p_valor"] < 0.05 else "*" if oos["dm_p_valor"] < 0.10 else ""
         print(f"  Panel OOS: R²={oos['r2_oos_pct']:.2f}%  corr={oos['correlacion']:.3f}  dir={oos['direccion_pct']:.1f}%  DM p={oos['dm_p_valor']:.4f}{sig}")

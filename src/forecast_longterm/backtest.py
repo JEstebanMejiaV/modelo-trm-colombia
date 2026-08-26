@@ -23,6 +23,7 @@ from scipy import stats
 ROOT = Path(__file__).resolve().parents[2]
 
 from estimate_model import build_dataset, SAMPLE_START, SAMPLE_END
+from forecast_longterm.oos import matured_training_frame
 
 RESULTS = ROOT / "results" / "pronostico"
 
@@ -79,20 +80,21 @@ def rolling_backtest(
         "r_forward": r_forward,
     }).dropna()
 
-    # Backtest: desde el mes min_history + estimation_window hasta el final
-    start_idx = min_history + (estimation_window or 60)
+    # El origen solo puede usar etiquetas cuyo horizonte ya maduró antes de t.
+    start_idx = min_history + (estimation_window or 60) + horizon_months
     if start_idx >= len(dataset):
         return pd.DataFrame()
 
     rows = []
     for i in range(start_idx, len(dataset)):
-        # Datos para estimar β: todos los meses anteriores con retorno forward disponible
-        if estimation_window:
-            train_start = max(0, i - estimation_window)
-        else:
-            train_start = 0
-
-        train = dataset.iloc[train_start:i]
+        # Excluir las últimas etiquetas forward: todavía no se conocen en t.
+        train = matured_training_frame(
+            dataset,
+            i,
+            horizon_months,
+            min_train=30,
+            estimation_window=estimation_window,
+        )
         train_valid = train.dropna()
 
         if len(train_valid) < 30:

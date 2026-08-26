@@ -21,6 +21,7 @@ from trm_model.data.curated import build_monthly_dataset
 from trm_model.data.fred import download_fred_series as _download_fred_series
 from trm_model.paths import project_paths
 from model.config import SAMPLE_START
+from forecast_longterm.oos import matured_training_frame
 
 PATHS = project_paths()
 ROOT = PATHS.root
@@ -112,8 +113,10 @@ def evaluate_oos(signal: pd.Series, ln_trm: pd.Series, horizon: int, min_train: 
         return {}
 
     fc_list, act_list = [], []
-    for i in range(min_train, len(dataset)):
-        train = dataset.iloc[:i]
+    for i in range(min_train + horizon, len(dataset)):
+        train = matured_training_frame(dataset, i, horizon, min_train=min_train)
+        if train.empty:
+            continue
         try:
             model = sm.OLS(train["r"], sm.add_constant(train["s"])).fit()
             fc_list.append(float(model.params.iloc[0] + model.params.iloc[1] * dataset["s"].iloc[i]))
@@ -164,8 +167,10 @@ def evaluate_incremental(
 
     # Referencia de señales: solo CF
     fc_base, fc_combined, act_list = [], [], []
-    for i in range(min_train, len(dataset)):
-        train = dataset.iloc[:i]
+    for i in range(min_train + horizon, len(dataset)):
+        train = matured_training_frame(dataset, i, horizon, min_train=min_train)
+        if train.empty:
+            continue
         try:
             m_base = sm.OLS(train["r"], sm.add_constant(train["cf"])).fit()
             m_comb = sm.OLS(train["r"], sm.add_constant(train[["cf", "new"]])).fit()
