@@ -32,7 +32,6 @@ from .specifications.products import (
 from .validation.contracts import validate_product_manifest
 from .validation.leakage import validate_forecast_specs
 
-
 MONTHLY_BUNDLE_PRODUCTS = MONTHLY_GENERATED_PRODUCT_IDS
 
 
@@ -274,6 +273,39 @@ def _parser() -> argparse.ArgumentParser:
         help="Ejecuta un módulo de investigación de largo plazo con manifest",
     )
     research.add_argument("--module", required=True)
+    research.add_argument(
+        "--data-cutoff",
+        dest="data_cutoff",
+        help="Data_Cutoff ISO explícito requerido por wavelet_optimization",
+    )
+    research.add_argument(
+        "--origin-date",
+        "--forecast-origin",
+        dest="origin_dates",
+        action="append",
+        help="Forecast_Origin ISO explícito; repetir para cada origen wavelet",
+    )
+    research.add_argument(
+        "--label-panel",
+        "--outcome-panel",
+        dest="label_panel",
+        help=(
+            "Panel TRM externo para outcomes; solo wavelet_optimization, "
+            "dentro del proyecto y limitado al Data_Cutoff"
+        ),
+    )
+    research.add_argument(
+        "--config",
+        "--config-path",
+        dest="config_path",
+        help="Configuración TOML específica de la variante wavelet",
+    )
+    research.add_argument(
+        "--schema",
+        "--schema-path",
+        dest="schema_path",
+        help="Schema JSON específico de la variante wavelet",
+    )
     return parser
 
 
@@ -313,7 +345,26 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "run-research":
         from pipelines.long_horizon import run
 
-        run(args.module)
+        if args.module == "wavelet_optimization":
+            research_kwargs = {
+                "data_cutoff": args.data_cutoff,
+                "origin_dates": args.origin_dates,
+                "config_path": args.config_path,
+                "schema_path": args.schema_path,
+            }
+            if args.label_panel is not None:
+                from forecast_longterm.wavelet_optimization.ingestion import load_outcome_panel
+
+                research_kwargs["label_series"] = load_outcome_panel(
+                    args.label_panel,
+                    data_cutoff=args.data_cutoff,
+                )
+                research_kwargs["input_files"] = (args.label_panel,)
+            run(args.module, **research_kwargs)
+        else:
+            # El dispatch legacy conserva exactamente su contrato anterior:
+            # ProductRun envuelve los módulos históricos y sus outputs propios.
+            run(args.module)
         return 0
     raise AssertionError(f"Comando no implementado: {args.command}")
 

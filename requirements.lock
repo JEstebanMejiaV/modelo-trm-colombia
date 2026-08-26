@@ -19,3 +19,5 @@ fonttools==4.63.0
 kiwisolver==1.4.9
 pyparsing==3.2.5
 pytest==9.0.3
+# Property-based tests for the research specification.
+hypothesis==6.131.9

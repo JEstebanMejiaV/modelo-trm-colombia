@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "product_id": "long_horizon_research",
+  "label": "Investigación wavelet causal point-in-time de largo plazo",
+  "frequency": "monthly",
+  "horizon_months": 6,
+  "information_set": "vintage_backtest",
+  "vintage_policy": "vintage_backtest",
+  "status": "research",
+  "benchmark": "random_walk",
+  "source_of_truth": "artifacts/runs",
+  "factor_specs": [
+    "src/forecast_longterm/wavelet_optimization",
+    "research/configs/long_horizon_wavelet_optimization.toml"
+  ],
+  "outputs": [
+    {
+      "path": "results/pronostico/wavelet_optimization/cobertura_point_in_time.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/wavelet_optimization/evaluacion_por_candidato.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/wavelet_optimization/hipotesis_decision.json",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/wavelet_optimization/predicciones_por_origen.csv",
+      "kind": "research",
+      "status": "versioned"
+    }
+  ],
+  "caveats": [
+    "Esta es una variante exploratoria point-in-time; permanece separada del producto mensual primario.",
+    "La evaluación cubre únicamente TRM mensual, horizontes de 6 y 12 meses y los splits preinscritos.",
+    "Una asociación predictiva no identifica un efecto causal y los resultados no constituyen instrucciones financieras ni de política económica.",
+    "Las rutas históricas wavelets permanecen bajo el ownership compartido de long_horizon_research y no son inputs de esta variante."
+  ]
+}
