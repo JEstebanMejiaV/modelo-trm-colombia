@@ -6,7 +6,9 @@
 
 ## Hallazgo central
 
-La señal de largo plazo más consistente sigue siendo la reversión multianual capturada por wavelets: D3+D4+D5 explica el **45,9% de la variación futura a 12 meses** out-of-sample, con dirección de 74,4% y DM p < 0,001. La nueva base global añade una señal independiente: `delta_actividad_us_12m` alcanza **12,8% de R² OOS** a 12 meses (DM p = 0,006). Estos resultados describen horizontes distintos y no convierten el pronóstico mensual en una estrategia de corto plazo.
+La evidencia versionada anterior mostraba una señal fuerte en algunas combinaciones —por ejemplo, wavelets D3+D4+D5 y filtros CF—, pero esas cifras se calcularon antes de imponer un embargo explícito para las etiquetas forward y algunas señales se estimaron con la muestra completa. No deben interpretarse como evidencia ex ante ni como un forecast operativo.
+
+La variante `long_horizon_research.backtest_embargo.v1` corrige primero la disponibilidad temporal de las etiquetas: para pronosticar en t con horizonte h, el entrenamiento solo usa retornos que terminaron estrictamente antes de t. Esta optimización prioriza validez y reproducibilidad sobre una mejora aparente de R²; los filtros CF, wavelet y Markov todavía requieren reconstrucción point-in-time por origen.
 
 El análisis diario recalculado con mercados, condiciones financieras, commodities y logística también exige cautela: el mejor HAR obtiene R² OOS de 13,41%, pero dirección de 41,2% y Sharpe anualizado −3,91. El poder explicativo estadístico no equivale a rentabilidad ni a capacidad direccional.
 
@@ -25,7 +27,9 @@ Este contraste entre frecuencias es el resultado central del proyecto:
 
 ---
 
-## Ranking de señales (12 meses, out-of-sample)
+## Ranking histórico previo al embargo (12 meses, exploratorio)
+
+La siguiente tabla conserva el ranking de los outputs versionados anteriores. Sirve como diagnóstico histórico, no como criterio de promoción: mezcla señales con distintos grados de reconstrucción point-in-time y fue producida antes de la variante `backtest_embargo.v1`.
 
 | # | Señal | R² OOS | Correlación | Dirección | DM p |
 |---|---|---|---|---|---|
@@ -39,6 +43,19 @@ Este contraste entre frecuencias es el resultado central del proyecto:
 | 8 | MA 60 meses (z-score) | -0,8% | 0,510 | 66,0% | 0,95 |
 | 9 | Cointegración TRM-dólar | -15,4% | -0,040 | 54,3% | 0,09 |
 | 10 | HP expanding | -17,8% | -0,021 | 57,8% | 0,13 |
+
+## Evaluación con etiquetas forward maduras
+
+La primera evaluación estricta de `backtest_embargo.v1`, aplicada al backtest agregado con HP expanding y sin sobrescribir los CSV históricos, produce:
+
+| Horizonte | R² OOS corregido | Dirección | DM p |
+|---|---:|---:|---:|
+| 6 meses | -22,8% | 41,1% | 0,023 |
+| 12 meses | -63,1% | 38,6% | <0,001 |
+| 18 meses | -177,0% | 34,4% | <0,001 |
+| 24 meses | -459,7% | 0,0% | <0,001 |
+
+La corrección reduce, en lugar de aumentar, el desempeño aparente. Por tanto, no se promociona ninguna señal: aún hay que reconstruir los filtros estimados con muestra completa dentro de cada origen temporal.
 
 ### Señales globales: condiciones financieras, actividad y logística
 
@@ -160,6 +177,7 @@ La señal no ofrece timing preciso; en particular, un R² OOS positivo puede coe
 ```
 src/forecast_longterm/
 ├── README.md                  Este informe
+├── oos.py                     Corte temporal común para etiquetas forward maduras
 ├── signals.py                 5 señales base + evaluación in-sample
 ├── backtest.py                Backtest OOS con HP expanding
 ├── extended_signals.py        MA 60m, Markov switching, momentum macro
