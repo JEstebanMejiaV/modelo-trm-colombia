@@ -22,6 +22,7 @@ FORBIDDEN_LITERALS = (
 )
 TEXT_SUFFIXES = {".py", ".toml", ".json", ".md", ".yml", ".yaml", ".txt"}
 SKIP_PARTS = {".git", ".venv", "venv", "__pycache__", ".egg-info"}
+DEFERRED_OUTPUT_PREFIXES = ("results/pronostico/wavelet_optimization/",)
 
 
 def _scan_forbidden_text(root: Path) -> list[str]:
@@ -56,7 +57,7 @@ def _actual_result_paths(paths) -> set[str]:
     actual = {
         paths.relative(path)
         for folder in (paths.results / "explicacion", paths.results / "pronostico", paths.results / "robustez")
-        for path in folder.iterdir()
+        for path in folder.rglob("*")
         if path.is_file() and path.suffix.lower() in {".csv", ".json"}
     }
     actual.add(paths.relative(paths.results / "metadata.json"))
@@ -91,9 +92,18 @@ def main() -> int:
 
     catalog_paths = _catalog_paths(paths.root)
     actual_paths = _actual_result_paths(paths)
-    if catalog_paths != actual_paths:
-        missing = sorted(actual_paths - catalog_paths)
-        extra = sorted(catalog_paths - actual_paths)
+    required_catalog_paths = {
+        path for path in catalog_paths if not path.startswith(DEFERRED_OUTPUT_PREFIXES)
+    }
+    actual_required_paths = {
+        path for path in actual_paths if not path.startswith(DEFERRED_OUTPUT_PREFIXES)
+    }
+    # La investigación wavelet publica sus cuatro outputs solo cuando se
+    # ejecuta explícitamente. Si alguno ya está materializado, sigue sujeto al
+    # catálogo; la validación mensual no debe exigir que exista de antemano.
+    missing = sorted(actual_paths - catalog_paths)
+    extra = sorted(required_catalog_paths - actual_required_paths)
+    if missing or extra:
         raise AssertionError(f"Ownership de outputs inconsistente; missing={missing}, extra={extra}")
 
     print(

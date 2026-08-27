@@ -46,7 +46,7 @@ if _SUBMODULE_DIRECTORY.is_dir():
 if __package__ in (None, ""):  # pragma: no cover - only direct-file execution
     _SRC_DIRECTORY = Path(__file__).resolve().parents[1]
     if str(_SRC_DIRECTORY) not in sys.path:
-        sys.path.insert(0, str(_SRC_DIRECTORY))
+        sys.path[:0] = [str(_SRC_DIRECTORY)]
 
 # Ruff treats these imports as late because the namespace shim above must run
 # first so ``forecast_longterm.wavelet_optimization`` can expose its submodules.
