@@ -22,6 +22,8 @@ from typing import Any, Literal
 import numpy as np
 import pandas as pd
 
+from forecast_longterm.oos import label_end_is_strictly_before
+
 from .config import (
     MINIMUM_MATURE_TRAINING,
     REQUIRED_HORIZONS,
@@ -431,7 +433,7 @@ class MatureLabel:
         return pd.Period(self.label_end_period, freq="M") == _origin_period(forecast_origin)
 
     def ends_before(self, forecast_origin: Any) -> bool:
-        return pd.Period(self.label_end_period, freq="M") < _origin_period(forecast_origin)
+        return label_end_is_strictly_before(self.label_end_date, _origin_period(forecast_origin))
 
     def mature_for(self, forecast_origin: Any) -> bool:
         """Indica si la etiqueta es válida, observable y estrictamente madura."""

@@ -21,9 +21,14 @@ from typing import Any, Protocol
 import numpy as np
 import pandas as pd
 
+from forecast_longterm.oos import assign_evaluation_splits
+
 from .config import (
     BENCHMARK_RETURN_PREDICTION,
     MINIMUM_MATURE_TRAINING,
+    PHASE_FULL,
+    PHASE_HOLDOUT,
+    PHASE_SELECTION,
     REQUIRED_HORIZONS,
     REQUIRED_SPLITS,
     CandidateSpecification,
@@ -67,13 +72,6 @@ EXCLUDED_NUMERIC_FAILURE = "excluded_numeric_failure"
 # El nombre largo facilita la lectura en serializadores y mantiene el contrato
 # de estados estable para consumers que importan el evaluador directamente.
 NOT_SCOREABLE_TRAINING_ORIGIN_MISSING = "not_scoreable_training_origin_missing"
-
-_SPLIT_WINDOWS: dict[str, tuple[pd.Period | None, pd.Period | None]] = {
-    "full": (None, None),
-    "2008_2019": (pd.Period("2008-01", freq="M"), pd.Period("2019-12", freq="M")),
-    "2020_2022": (pd.Period("2020-01", freq="M"), pd.Period("2022-12", freq="M")),
-    "2023_2026": (pd.Period("2023-01", freq="M"), pd.Period("2026-12", freq="M")),
-}
 
 
 class EvaluationError(ValueError):
@@ -288,6 +286,7 @@ class OriginPrediction:
     snapshot_manifest: str | None = None
     source_vintage: str | None = None
     split: str = "full"
+    phase: str | None = None
     prefix_last_date: pd.Timestamp | None = None
     prefix_length: int | None = None
     prefix_sha256: str | None = None
@@ -344,6 +343,18 @@ class OriginPrediction:
         object.__setattr__(self, "split", str(self.split).strip())
         if not self.split:
             raise EvaluationError("split no puede estar vacío")
+        phase = self.phase
+        if phase is None or not str(phase).strip():
+            phase = {
+                "full": PHASE_FULL,
+                "2008_2019": PHASE_SELECTION,
+                "2020_2022": PHASE_SELECTION,
+                "2023_2026": PHASE_HOLDOUT,
+            }.get(self.split, PHASE_FULL)
+        phase = str(phase).strip().lower()
+        if phase not in {PHASE_FULL, PHASE_SELECTION, PHASE_HOLDOUT}:
+            raise EvaluationError(f"phase no soportada: {phase!r}")
+        object.__setattr__(self, "phase", phase)
         if not isinstance(self.causal_reconstruction, (bool, np.bool_)):
             raise EvaluationError("causal_reconstruction debe ser bool")
         object.__setattr__(self, "causal_reconstruction", bool(self.causal_reconstruction))
@@ -413,8 +424,10 @@ class OriginPrediction:
             "source_vintage": self.source_vintage,
         }
 
-    def with_split(self, split: str) -> "OriginPrediction":
-        return replace(self, split=split)
+    def with_split(self, split: str, *, phase: str | None = None) -> "OriginPrediction":
+        """Proyecta la fila lógica a un split sin reestimar el modelo."""
+
+        return replace(self, split=split, phase=phase)
 
     def as_dict(self) -> dict[str, object]:
         """Serializa una fila sin introducir columnas dependientes de métricas."""
@@ -555,45 +568,8 @@ benchmark_return_zero = random_walk_benchmark
 # ---------------------------------------------------------------------------
 
 
-def assign_evaluation_splits(
-    origin_date: Any,
-    *,
-    data_cutoff: Any | None = None,
-    splits: Iterable[str] = REQUIRED_SPLITS,
-) -> tuple[str, ...]:
-    """Asigna un origen a ``full`` y, como máximo, una submuestra.
-
-    Las fronteras son inclusivas a nivel de mes. ``2023_2026`` además queda
-    truncado por ``data_cutoff``; no se crean orígenes posteriores al corte.
-    """
-
-    date = _timestamp(origin_date, "origin_date")
-    period = date.to_period("M")
-    requested = tuple(str(item) for item in splits)
-    unknown = sorted(set(requested) - set(REQUIRED_SPLITS))
-    if unknown:
-        raise EvaluationError(f"splits no soportados: {unknown!r}")
-    cutoff_period = None if data_cutoff is None else _period(data_cutoff, "data_cutoff")
-    if cutoff_period is not None and period > cutoff_period:
-        return ()
-
-    assigned: list[str] = []
-    for split in requested:
-        start, end = _SPLIT_WINDOWS[split]
-        if split == "full":
-            assigned.append(split)
-            continue
-        if start is not None and period < start:
-            continue
-        if end is not None and period > end:
-            continue
-        if split == "2023_2026" and cutoff_period is not None and period > cutoff_period:
-            continue
-        assigned.append(split)
-    return tuple(assigned)
-
-
-# Common aliases used by adapters and tests.
+# ``assign_evaluation_splits`` vive en ``forecast_longterm.oos``; se importa
+# arriba para conservar este módulo como facade compatible para callers PIT.
 assign_splits = assign_evaluation_splits
 splits_for_origin = assign_evaluation_splits
 split_for_origin = assign_evaluation_splits
@@ -630,6 +606,7 @@ class EvaluationBundle:
     predictions: tuple[OriginPrediction, ...]
     coverage: tuple[dict[str, object], ...] = ()
     metrics: tuple[Any, ...] = ()
+    economic_metrics: tuple[Any, ...] = ()
     decisions: tuple[Mapping[str, object], ...] = ()
     plan: ResearchPlan | None = None
 
@@ -637,6 +614,7 @@ class EvaluationBundle:
         object.__setattr__(self, "predictions", tuple(self.predictions))
         object.__setattr__(self, "coverage", tuple(dict(row) for row in self.coverage))
         object.__setattr__(self, "metrics", tuple(self.metrics))
+        object.__setattr__(self, "economic_metrics", tuple(self.economic_metrics))
         object.__setattr__(self, "decisions", tuple(dict(row) for row in self.decisions))
 
     @property
@@ -707,6 +685,20 @@ class EvaluationBundle:
     def split_rows(self, split: str) -> tuple[OriginPrediction, ...]:
         return self.predictions_by_split.get(str(split), ())
 
+    def phase_rows(self, phase: str) -> tuple[OriginPrediction, ...]:
+        """Devuelve filas de una fase sin alterar la tabla lógica."""
+
+        value = str(phase).strip().lower()
+        return tuple(row for row in self.predictions if row.phase == value)
+
+    @property
+    def selection_predictions(self) -> tuple[OriginPrediction, ...]:
+        return self.phase_rows("selection")
+
+    @property
+    def holdout_predictions(self) -> tuple[OriginPrediction, ...]:
+        return self.phase_rows("holdout")
+
     def as_dict(self) -> dict[str, object]:
         return {
             "predictions": [row.as_dict() for row in self.predictions],
@@ -721,6 +713,10 @@ class EvaluationBundle:
                 for (candidate_id, horizon, split), values in sorted(self.counts.items())
             ],
             "metrics": [dict(item) if isinstance(item, Mapping) else item for item in self.metrics],
+            "economic_metrics": [
+                dict(item) if isinstance(item, Mapping) else item
+                for item in self.economic_metrics
+            ],
             "decisions": [dict(item) for item in self.decisions],
         }
 
@@ -1412,7 +1408,8 @@ class OOS_Evaluator:
                     )
                     logical_rows.append(base)
                     for split in assigned_splits:
-                        split_rows.append(base.with_split(split))
+                        split_phase = plan.phase_for_split(split)
+                        split_rows.append(base.with_split(split, phase=split_phase))
 
         self._merge_external_coverage()
         ordered_rows = tuple(

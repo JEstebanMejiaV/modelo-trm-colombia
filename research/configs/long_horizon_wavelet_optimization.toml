@@ -15,6 +15,10 @@ target_series = "banrep_trm_1"
 target_definition = "100 * (ln(TRM[t+h]) - ln(TRM[t]))"
 horizons_months = [6, 12]
 evaluation_splits = ["full", "2008_2019", "2020_2022", "2023_2026"]
+# La selección solo usa ventanas históricas; 2023_2026 queda reservado para
+# la evaluación final del candidato congelado.
+selection_splits = ["2008_2019", "2020_2022"]
+holdout_splits = ["2023_2026"]
 minimum_mature_training = 60
 dm_min_observations = 12
 dm_max_lag_rule = "horizon_minus_one"

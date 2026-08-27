@@ -54,9 +54,15 @@ if __package__ in (None, ""):  # pragma: no cover - only direct-file execution
 from forecast_longterm.wavelet_optimization.config import (
     DEFAULT_VARIANT_CONFIG,
     DEFAULT_VARIANT_SCHEMA,
+    PHASE_HOLDOUT,
+    PHASE_SELECTION,
     PreRegistrationGuard,
     ResearchPlan,
     load_research_plan,
+)
+from forecast_longterm.wavelet_optimization.economic_metrics import (
+    EconomicMetrics,
+    calculate_economic_metrics,
 )
 from forecast_longterm.wavelet_optimization.evaluation import (
     EvaluationBundle,
@@ -67,6 +73,7 @@ from forecast_longterm.wavelet_optimization.labels import ForwardLabelBuilder
 from forecast_longterm.wavelet_optimization.metrics import (
     EvaluationMetrics,
     MetricsCalculator,
+    aggregate_phase_metrics,
     rank_metrics,
 )
 from forecast_longterm.wavelet_optimization.promotion import PromotionGate
@@ -114,6 +121,11 @@ class WaveletOptimizationResult:
     manifest: Mapping[str, object]
     manifest_path: Path
     published_outputs: tuple[str, ...]
+    selection_metrics: tuple[EvaluationMetrics, ...] = ()
+    selection_ranking: tuple[EvaluationMetrics, ...] = ()
+    selected_candidates: tuple[tuple[int, str], ...] = ()
+    holdout_metrics: tuple[EvaluationMetrics, ...] = ()
+    economic_metrics: tuple[EconomicMetrics, ...] = ()
 
     @property
     def gate_decision(self) -> Mapping[str, object]:
@@ -126,6 +138,24 @@ class WaveletOptimizationResult:
         """Alias del conjunto exacto de cuatro outputs publicados."""
 
         return self.published_outputs
+
+    @property
+    def selected_candidate_ids(self) -> tuple[str, ...]:
+        """IDs seleccionados, deduplicados en orden de horizonte."""
+
+        return tuple(dict.fromkeys(candidate for _horizon, candidate in self.selected_candidates))
+
+    @property
+    def selection(self) -> tuple[EvaluationMetrics, ...]:
+        """Alias de la evidencia agregada usada para seleccionar."""
+
+        return self.selection_metrics
+
+    @property
+    def holdout(self) -> tuple[EvaluationMetrics, ...]:
+        """Alias de la evaluación final del candidato congelado."""
+
+        return self.holdout_metrics
 
 
 # Nombres alternativos para callers que prefieren un resultado genérico.
@@ -406,12 +436,14 @@ class WaveletOptimizationRunner:
         *,
         plan: ResearchPlan,
         metrics: Iterable[EvaluationMetrics] = (),
+        economic_metrics: Iterable[EconomicMetrics] = (),
         decisions: Iterable[Mapping[str, object]] = (),
     ) -> EvaluationBundle:
         if isinstance(bundle, EvaluationBundle):
             return replace(
                 bundle,
                 metrics=tuple(metrics),
+                economic_metrics=tuple(economic_metrics),
                 decisions=tuple(dict(item) for item in decisions),
                 plan=plan,
             )
@@ -425,6 +457,7 @@ class WaveletOptimizationRunner:
             predictions=tuple(predictions),
             coverage=tuple(coverage),
             metrics=tuple(metrics),
+            economic_metrics=tuple(economic_metrics),
             decisions=tuple(dict(item) for item in decisions),
             plan=plan,
         )
@@ -520,7 +553,11 @@ class WaveletOptimizationRunner:
         manifest: Mapping[str, object],
         *,
         ranking: tuple[EvaluationMetrics, ...],
-        gate: Mapping[str, object] | None,
+        selection_metrics: tuple[EvaluationMetrics, ...] = (),
+        selected_candidates: tuple[tuple[int, str], ...] = (),
+        holdout_metrics: tuple[EvaluationMetrics, ...] = (),
+        economic_metrics: tuple[EconomicMetrics, ...] = (),
+        gate: Mapping[str, object] | None = None,
     ) -> dict[str, object]:
         """Añade ranking/gate al contexto sin cambiar contratos base."""
 
@@ -528,6 +565,19 @@ class WaveletOptimizationRunner:
         context = dict(document.get("run_context") or {})
         variant = dict(context.get("wavelet_optimization") or {})
         variant["ranking"] = [_json_safe(item.as_dict()) for item in ranking]
+        variant["selection_metrics"] = [
+            _json_safe(item.as_dict()) for item in selection_metrics
+        ]
+        variant["selected_candidates"] = [
+            {"horizon_months": horizon, "candidate_id": candidate}
+            for horizon, candidate in selected_candidates
+        ]
+        variant["holdout_metrics"] = [
+            _json_safe(item.as_dict()) for item in holdout_metrics
+        ]
+        variant["economic_metrics"] = [
+            _json_safe(item.as_dict()) for item in economic_metrics
+        ]
         if gate is not None:
             variant["promotion_gate_result"] = _json_safe(gate)
         variant["status"] = "research"
@@ -561,6 +611,62 @@ class WaveletOptimizationRunner:
             finished_at=finished_at,
         )
 
+    @staticmethod
+    def _selection_contract(
+        plan: ResearchPlan,
+        metrics: tuple[EvaluationMetrics, ...],
+    ) -> tuple[
+        tuple[EvaluationMetrics, ...],
+        tuple[EvaluationMetrics, ...],
+        tuple[tuple[int, str], ...],
+        tuple[EvaluationMetrics, ...],
+    ]:
+        """Congela un ganador por horizonte usando solo la fase selection."""
+
+        selection_metrics = tuple(
+            aggregate_phase_metrics(metrics, phase=PHASE_SELECTION)
+        )
+        ranking = tuple(rank_metrics(metrics, phase=PHASE_SELECTION, split=None))
+        selected: list[tuple[int, str]] = []
+        for horizon in plan.horizons:
+            winner = next(
+                (
+                    metric
+                    for metric in ranking
+                    if metric.horizon_months == int(horizon)
+                    and metric.n_oos > 0
+                    and metric.r2_oos is not None
+                ),
+                None,
+            )
+            if winner is not None:
+                selected.append((int(horizon), winner.candidate_id))
+        selected_pairs = set(selected)
+        holdout = tuple(
+            metric
+            for metric in metrics
+            if metric.phase == PHASE_HOLDOUT
+            and (metric.horizon_months, metric.candidate_id) in selected_pairs
+        )
+        return selection_metrics, ranking, tuple(selected), holdout
+
+    @staticmethod
+    def _economic_contract(
+        bundle: EvaluationBundle,
+        plan: ResearchPlan,
+    ) -> tuple[EconomicMetrics, ...]:
+        """Calcula utilidad descriptiva sin incorporarla al gate."""
+
+        return tuple(
+            calculate_economic_metrics(
+                bundle,
+                plan=plan,
+                candidate_ids=tuple(item.candidate_id for item in plan.candidates),
+                horizons=plan.horizons,
+                splits=plan.splits,
+            )
+        )
+
     def _build_manifest(
         self,
         recorder: Any,
@@ -574,8 +680,12 @@ class WaveletOptimizationRunner:
         started_at: datetime,
         finished_at: datetime,
         ranking: tuple[EvaluationMetrics, ...],
-        gate: Mapping[str, object] | None,
-        complete: bool,
+        selection_metrics: tuple[EvaluationMetrics, ...] = (),
+        selected_candidates: tuple[tuple[int, str], ...] = (),
+        holdout_metrics: tuple[EvaluationMetrics, ...] = (),
+        economic_metrics: tuple[EconomicMetrics, ...] = (),
+        gate: Mapping[str, object] | None = None,
+        complete: bool = False,
         error: str | None = None,
     ) -> dict[str, object]:
         method = getattr(recorder, "build_manifest", None)
@@ -596,7 +706,15 @@ class WaveletOptimizationRunner:
         )
         if not isinstance(manifest, Mapping):
             raise RunnerContractError("build_manifest debe devolver un mapping")
-        return self._decorate_manifest(manifest, ranking=ranking, gate=gate)
+        return self._decorate_manifest(
+            manifest,
+            ranking=ranking,
+            selection_metrics=selection_metrics,
+            selected_candidates=selected_candidates,
+            holdout_metrics=holdout_metrics,
+            economic_metrics=economic_metrics,
+            gate=gate,
+        )
 
     def _write_failure_manifest(
         self,
@@ -611,6 +729,10 @@ class WaveletOptimizationRunner:
         started_at: datetime,
         error: BaseException,
         ranking: tuple[EvaluationMetrics, ...] = (),
+        selection_metrics: tuple[EvaluationMetrics, ...] = (),
+        selected_candidates: tuple[tuple[int, str], ...] = (),
+        holdout_metrics: tuple[EvaluationMetrics, ...] = (),
+        economic_metrics: tuple[EconomicMetrics, ...] = (),
         gate: Mapping[str, object] | None = None,
     ) -> Path | None:
         """Persiste un manifest fallido sin declarar éxito ni publicar parcial."""
@@ -638,6 +760,10 @@ class WaveletOptimizationRunner:
                 started_at=started_at,
                 finished_at=_utc_datetime(None),
                 ranking=ranking,
+                selection_metrics=selection_metrics,
+                selected_candidates=selected_candidates,
+                holdout_metrics=holdout_metrics,
+                economic_metrics=economic_metrics,
                 gate=gate,
                 complete=False,
                 error=f"{type(error).__name__}: {error}",
@@ -695,7 +821,11 @@ class WaveletOptimizationRunner:
         recorder: Any | None = None
         bundle: EvaluationBundle | None = None
         metrics: tuple[EvaluationMetrics, ...] = ()
+        selection_metrics: tuple[EvaluationMetrics, ...] = ()
         ranking: tuple[EvaluationMetrics, ...] = ()
+        selected_candidates: tuple[tuple[int, str], ...] = ()
+        holdout_metrics: tuple[EvaluationMetrics, ...] = ()
+        economic_metrics: tuple[EconomicMetrics, ...] = ()
         gate_result: Mapping[str, object] | None = None
         snapshots: tuple[Any, ...] = ()
 
@@ -758,11 +888,18 @@ class WaveletOptimizationRunner:
             )
             if any(not isinstance(item, EvaluationMetrics) for item in metrics):
                 raise RunnerContractError("metrics_calculator debe devolver EvaluationMetrics")
-            ranking = tuple(rank_metrics(metrics, split="full"))
+            selection_metrics, ranking, selected_candidates, holdout_metrics = (
+                self._selection_contract(loaded_plan, metrics)
+            )
+            economic_metrics = self._economic_contract(
+                bundle_without_metrics,
+                loaded_plan,
+            )
             bundle = self._bundle_with_contract(
                 bundle_without_metrics,
                 plan=loaded_plan,
                 metrics=metrics,
+                economic_metrics=economic_metrics,
             )
 
             recorder = self._make_recorder(
@@ -783,6 +920,10 @@ class WaveletOptimizationRunner:
                 started_at=started,
                 finished_at=_utc_datetime(None),
                 ranking=ranking,
+                selection_metrics=selection_metrics,
+                selected_candidates=selected_candidates,
+                holdout_metrics=holdout_metrics,
+                economic_metrics=economic_metrics,
                 gate=None,
                 complete=False,
             )
@@ -804,6 +945,7 @@ class WaveletOptimizationRunner:
                 bundle,
                 plan=loaded_plan,
                 metrics=metrics,
+                economic_metrics=economic_metrics,
                 decisions=decisions if isinstance(decisions, Sequence) else (),
             )
 
@@ -818,6 +960,10 @@ class WaveletOptimizationRunner:
                 started_at=started,
                 finished_at=_utc_datetime(None),
                 ranking=ranking,
+                selection_metrics=selection_metrics,
+                selected_candidates=selected_candidates,
+                holdout_metrics=holdout_metrics,
+                economic_metrics=economic_metrics,
                 gate=gate_result,
                 complete=False,
             )
@@ -833,6 +979,11 @@ class WaveletOptimizationRunner:
                     manifest_before_outputs,
                     gate_decision=gate_result,
                     metrics=metrics,
+                    selection_metrics=selection_metrics,
+                    selection_ranking=ranking,
+                    selected_candidates=selected_candidates,
+                    holdout_metrics=holdout_metrics,
+                    economic_metrics=economic_metrics,
                     run_id=effective_run_id,
                     experiment_id=loaded_plan.experiment_id,
                 )
@@ -855,6 +1006,10 @@ class WaveletOptimizationRunner:
                 started_at=started,
                 finished_at=finished,
                 ranking=ranking,
+                selection_metrics=selection_metrics,
+                selected_candidates=selected_candidates,
+                holdout_metrics=holdout_metrics,
+                economic_metrics=economic_metrics,
                 gate=gate_result,
                 complete=True,
             )
@@ -875,6 +1030,11 @@ class WaveletOptimizationRunner:
                 manifest=complete_manifest,
                 manifest_path=manifest_path,
                 published_outputs=published,
+                selection_metrics=selection_metrics,
+                selection_ranking=ranking,
+                selected_candidates=selected_candidates,
+                holdout_metrics=holdout_metrics,
+                economic_metrics=economic_metrics,
             )
         except Exception as error:
             # No se intenta un fallback de datos ni se publica una tabla
@@ -895,6 +1055,10 @@ class WaveletOptimizationRunner:
                 started_at=started,
                 error=error,
                 ranking=ranking,
+                selection_metrics=selection_metrics,
+                selected_candidates=selected_candidates,
+                holdout_metrics=holdout_metrics,
+                economic_metrics=economic_metrics,
                 gate=gate_result,
             )
             raise

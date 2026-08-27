@@ -47,6 +47,12 @@ VINTAGE_POLICY = "vintage_backtest"
 TARGET_SERIES = "banrep_trm_1"
 REQUIRED_HORIZONS = (6, 12)
 REQUIRED_SPLITS = ("full", "2008_2019", "2020_2022", "2023_2026")
+PHASE_FULL = "full"
+PHASE_SELECTION = "selection"
+PHASE_HOLDOUT = "holdout"
+REQUIRED_PHASES = (PHASE_FULL, PHASE_SELECTION, PHASE_HOLDOUT)
+SELECTION_SPLITS = ("2008_2019", "2020_2022")
+HOLDOUT_SPLITS = ("2023_2026",)
 MINIMUM_MATURE_TRAINING = 60
 DM_MIN_OBSERVATIONS = 12
 DM_MAX_LAG_RULE = "horizon_minus_one"
@@ -368,6 +374,8 @@ class ResearchPlan:
     tie_break_rule: str
     seed: str
     hypotheses: tuple[dict[str, str], ...]
+    selection_splits: tuple[str, ...] = SELECTION_SPLITS
+    holdout_splits: tuple[str, ...] = HOLDOUT_SPLITS
     plan_hash: str = ""
 
     # Estos valores son parte del contrato y no deben derivarse de inputs.
@@ -377,6 +385,16 @@ class ResearchPlan:
     def __post_init__(self) -> None:
         object.__setattr__(self, "horizons", tuple(self.horizons))
         object.__setattr__(self, "splits", tuple(str(split) for split in self.splits))
+        object.__setattr__(
+            self,
+            "selection_splits",
+            tuple(str(split) for split in self.selection_splits),
+        )
+        object.__setattr__(
+            self,
+            "holdout_splits",
+            tuple(str(split) for split in self.holdout_splits),
+        )
 
         candidates: list[CandidateSpecification] = []
         for candidate in self.candidates:
@@ -478,6 +496,16 @@ class ResearchPlan:
             errors.append(f"horizons debe ser exactamente {REQUIRED_HORIZONS!r}")
         if tuple(self.splits) != REQUIRED_SPLITS:
             errors.append(f"splits debe ser exactamente {REQUIRED_SPLITS!r}")
+        if tuple(self.selection_splits) != SELECTION_SPLITS:
+            errors.append(
+                f"selection_splits debe ser exactamente {SELECTION_SPLITS!r}"
+            )
+        if tuple(self.holdout_splits) != HOLDOUT_SPLITS:
+            errors.append(f"holdout_splits debe ser exactamente {HOLDOUT_SPLITS!r}")
+        if set(self.selection_splits) & set(self.holdout_splits):
+            errors.append("selection_splits y holdout_splits no pueden solaparse")
+        if set(self.selection_splits) | set(self.holdout_splits) != set(REQUIRED_SPLITS) - {PHASE_FULL}:
+            errors.append("selection_splits y holdout_splits deben cubrir todos los splits no-full")
 
         if self.minimum_mature_training != MINIMUM_MATURE_TRAINING:
             errors.append(
@@ -585,6 +613,40 @@ class ResearchPlan:
         if errors:
             raise PlanValidationError("ResearchPlan inválido:\n- " + "\n- ".join(errors))
 
+    def phase_for_split(self, split: str) -> str:
+        """Devuelve la fase canónica de un split preinscrito."""
+
+        value = str(split).strip()
+        if value == PHASE_FULL:
+            return PHASE_FULL
+        if value in self.selection_splits:
+            return PHASE_SELECTION
+        if value in self.holdout_splits:
+            return PHASE_HOLDOUT
+        raise PlanValidationError(f"split no pertenece a una fase preinscrita: {split!r}")
+
+    def splits_for_phase(self, phase: str, *, include_full: bool = False) -> tuple[str, ...]:
+        """Devuelve los splits autorizados para una fase de evaluación."""
+
+        value = str(phase).strip().lower()
+        if value == PHASE_FULL:
+            return (PHASE_FULL,)
+        if value == PHASE_SELECTION:
+            result = self.selection_splits
+        elif value == PHASE_HOLDOUT:
+            result = self.holdout_splits
+        else:
+            raise PlanValidationError(f"phase no soportada: {phase!r}")
+        if include_full:
+            return (PHASE_FULL, *result)
+        return tuple(result)
+
+    @property
+    def phases(self) -> tuple[str, ...]:
+        """Fases de la variante en orden de ejecución/reporting."""
+
+        return REQUIRED_PHASES
+
     def to_dict(self, *, include_plan_hash: bool = True) -> dict[str, Any]:
         """Devuelve el plan en una forma apta para JSON/TOML provenance."""
 
@@ -597,6 +659,13 @@ class ResearchPlan:
             "target_series": self.target_series,
             "horizons": list(self.horizons),
             "splits": list(self.splits),
+            "selection_splits": list(self.selection_splits),
+            "holdout_splits": list(self.holdout_splits),
+            "phases": {
+                PHASE_FULL: [PHASE_FULL],
+                PHASE_SELECTION: list(self.selection_splits),
+                PHASE_HOLDOUT: list(self.holdout_splits),
+            },
             "candidates": [candidate.to_dict() for candidate in self.candidates],
             "minimum_mature_training": self.minimum_mature_training,
             "dm_min_observations": self.dm_min_observations,
@@ -826,6 +895,8 @@ def _require_variant_semantics(document: Mapping[str, Any]) -> None:
         "target_definition": TARGET_DEFINITION,
         "horizons_months": list(REQUIRED_HORIZONS),
         "evaluation_splits": list(REQUIRED_SPLITS),
+        "selection_splits": list(SELECTION_SPLITS),
+        "holdout_splits": list(HOLDOUT_SPLITS),
         "minimum_mature_training": MINIMUM_MATURE_TRAINING,
         "dm_min_observations": DM_MIN_OBSERVATIONS,
         "dm_max_lag_rule": DM_MAX_LAG_RULE,
@@ -950,6 +1021,8 @@ def _research_plan_from_document(
         tie_break_rule=str(document["tie_break_rule"]),
         seed=str(document["seed"]),
         hypotheses=tuple(dict(item) for item in document["hypotheses"]),
+        selection_splits=tuple(document.get("selection_splits", SELECTION_SPLITS)),
+        holdout_splits=tuple(document.get("holdout_splits", HOLDOUT_SPLITS)),
     )
     return plan.freeze()
 
