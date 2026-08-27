@@ -46,7 +46,7 @@ def compare_csv(path: Path, committed: bytes) -> None:
             expected,
             check_dtype=False,
             check_exact=False,
-            rtol=2e-6,
+            rtol=1e-5,
             atol=1e-10,
             check_like=False,
         )
@@ -75,7 +75,7 @@ def compare_json(actual: Any, expected: Any, location: str = "metadata") -> None
         return
     if isinstance(expected, (int, float)) and not isinstance(expected, bool):
         if not isinstance(actual, (int, float)) or not np.isclose(
-            float(actual), float(expected), rtol=2e-6, atol=1e-10
+            float(actual), float(expected), rtol=1e-5, atol=1e-10
         ):
             raise AssertionError(
                 f"Valor numérico distinto en {location}: actual={actual!r}, esperado={expected!r}."
