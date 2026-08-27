@@ -234,6 +234,9 @@ def _plan_mapping(plan: Any) -> dict[str, Any]:
             "target_series",
             "horizons",
             "splits",
+            "selection_splits",
+            "holdout_splits",
+            "phases",
             "candidates",
             "minimum_mature_training",
             "dm_min_observations",
@@ -445,6 +448,27 @@ def _metrics_records(bundle: Any) -> list[dict[str, Any]]:
             str(row.get("split", "")),
         ),
     )
+
+
+def _metric_phase(record: Mapping[str, Any]) -> str:
+    phase = record.get("phase")
+    if phase is not None and str(phase).strip():
+        return str(phase).strip().lower()
+    return {
+        "full": "full",
+        "2008_2019": "selection",
+        "2020_2022": "selection",
+        "2023_2026": "holdout",
+    }.get(str(record.get("split", "full")), "full")
+
+
+def _phase_metric_records(
+    metrics: Sequence[Mapping[str, Any]],
+    *,
+    phase: str,
+) -> list[dict[str, Any]]:
+    value = str(phase).strip().lower()
+    return [dict(record) for record in metrics if _metric_phase(record) == value]
 
 
 def _decision_records(bundle: Any) -> list[dict[str, Any]]:
@@ -860,6 +884,28 @@ class ProvenanceRecorder:
             "boundary_mode": candidate.get("boundary_mode", BOUNDARY_MODE),
             "signal_scale": candidate.get("signal_scale", SIGNAL_SCALE),
         }
+        selection_splits = [
+            str(item)
+            for item in (values.get("selection_splits") or REQUIRED_SPLITS[1:3])
+        ]
+        holdout_splits = [
+            str(item)
+            for item in (values.get("holdout_splits") or (REQUIRED_SPLITS[-1],))
+        ]
+        raw_phases = values.get("phases")
+        phases = (
+            {
+                "full": ["full"],
+                "selection": selection_splits,
+                "holdout": holdout_splits,
+            }
+            if not isinstance(raw_phases, Mapping)
+            else {
+                str(key): [str(item) for item in value]
+                for key, value in raw_phases.items()
+                if isinstance(value, (list, tuple, set, frozenset))
+            }
+        )
         context = {
             "variant_id": "long_horizon_wavelet_optimization",
             "experiment_id": values.get("experiment_id", EXPERIMENT_ID),
@@ -877,6 +923,9 @@ class ProvenanceRecorder:
             "dwt_parameters": dwt,
             "horizons": [int(item) for item in (values.get("horizons") or ())],
             "splits": [str(item) for item in (values.get("splits") or ())],
+            "selection_splits": selection_splits,
+            "holdout_splits": holdout_splits,
+            "phases": phases,
             "benchmark": {
                 "id": BENCHMARK_ID,
                 "name": "Random_Walk_Benchmark",
@@ -904,6 +953,10 @@ class ProvenanceRecorder:
             warnings.append("horizons_do_not_match_preregistered_variant")
         if tuple(context["splits"]) != REQUIRED_SPLITS:
             warnings.append("splits_do_not_match_preregistered_variant")
+        if tuple(context["selection_splits"]) != REQUIRED_SPLITS[1:3]:
+            warnings.append("selection_splits_do_not_match_preregistered_variant")
+        if tuple(context["holdout_splits"]) != (REQUIRED_SPLITS[-1],):
+            warnings.append("holdout_splits_do_not_match_preregistered_variant")
         return _json_safe(context), warnings
 
     def build_manifest(
@@ -952,7 +1005,6 @@ class ProvenanceRecorder:
         )
         coverage = _coverage_records(bundle)
         predictions = _prediction_records(bundle)
-        metrics = _metrics_records(bundle)
         decisions = _decision_records(bundle)
         input_paths = self._input_paths(
             input_files,
@@ -962,6 +1014,7 @@ class ProvenanceRecorder:
         input_records = file_records(input_paths, root=self.paths.root)
 
         variant_context, plan_warnings = self._plan_context(plan)
+        phase_metrics = _metrics_records(bundle)
         variant_context.update(
             {
                 "snapshots": snapshot_records,
@@ -972,7 +1025,19 @@ class ProvenanceRecorder:
                 "coverage_records": coverage,
                 "coverage_summary": _coverage_summary(coverage),
                 "predictions": predictions,
-                "metrics": metrics,
+                "metrics": phase_metrics,
+                "selection_metrics": _phase_metric_records(
+                    phase_metrics,
+                    phase="selection",
+                ),
+                "holdout_metrics": _phase_metric_records(
+                    phase_metrics,
+                    phase="holdout",
+                ),
+                "economic_metrics": [
+                    _row_record(row)
+                    for row in _rows_from_bundle(bundle, "economic_metrics")
+                ],
                 "promotion_gate": {"decisions": decisions},
                 "output_paths": [str(item["path"]) for item in output_descriptors],
                 "outputs": output_descriptors,
@@ -1073,6 +1138,9 @@ class ProvenanceRecorder:
                     "target_definition",
                     "horizons",
                     "splits",
+                    "selection_splits",
+                    "holdout_splits",
+                    "phases",
                     "benchmark",
                     "label_maturity_rule",
                     "minimum_mature_training",

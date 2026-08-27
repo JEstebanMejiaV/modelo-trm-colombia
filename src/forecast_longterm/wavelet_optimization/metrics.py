@@ -23,6 +23,12 @@ import numpy as np
 import pandas as pd
 from scipy import stats
 
+from .config import (
+    PHASE_FULL,
+    PHASE_HOLDOUT,
+    PHASE_SELECTION,
+)
+
 # ``evaluation.py`` intentionally does not import this module yet.  Importing
 # only the string contract here keeps metrics usable with its OriginPrediction
 # objects without introducing a circular import when the runner is wired later.
@@ -147,6 +153,7 @@ class EvaluationMetrics:
     dm_stat: float | None
     dm_p_value: float | None
     dm_status: str
+    phase: str | None = None
 
     def __post_init__(self) -> None:
         candidate_id = str(self.candidate_id).strip()
@@ -221,10 +228,26 @@ class EvaluationMetrics:
         object.__setattr__(self, "dm_status", str(self.dm_status).strip())
         if not self.dm_status:
             raise MetricsError("dm_status no puede estar vacío")
+        phase = self.phase
+        if phase is None or not str(phase).strip():
+            phase = {
+                "full": PHASE_FULL,
+                "2008_2019": PHASE_SELECTION,
+                "2020_2022": PHASE_SELECTION,
+                "2023_2026": PHASE_HOLDOUT,
+            }.get(self.split, PHASE_FULL)
+        phase = str(phase).strip().lower()
+        if phase not in {PHASE_FULL, PHASE_SELECTION, PHASE_HOLDOUT}:
+            raise MetricsError(f"phase no soportada: {phase!r}")
+        object.__setattr__(self, "phase", phase)
 
     @property
     def key(self) -> tuple[str, int, str]:
         return self.candidate_id, self.horizon_months, self.split
+
+    @property
+    def phase_key(self) -> tuple[str, int, str]:
+        return self.candidate_id, self.horizon_months, str(self.phase)
 
     @property
     def n_observations(self) -> int:
@@ -566,6 +589,7 @@ class _MetricRow:
     prediction_random_walk: float | None
     observed: float | None
     logically_scoreable: bool
+    phase: str
 
 
 def _row_value(row: MetricInput, *names: str, default: Any = None) -> Any:
@@ -667,6 +691,17 @@ def _coerce_metric_row(row: MetricInput, index: int) -> _MetricRow:
         status_scoreable = status_scoreable and explicit_scoreable_bool
 
     logically_scoreable = status_scoreable and coverage_complete
+    phase = _row_value(row, "phase", "evaluation_phase", default=None)
+    if phase is None or not str(phase).strip():
+        phase = {
+            "full": PHASE_FULL,
+            "2008_2019": PHASE_SELECTION,
+            "2020_2022": PHASE_SELECTION,
+            "2023_2026": PHASE_HOLDOUT,
+        }.get(split_value, PHASE_FULL)
+    phase = str(phase).strip().lower()
+    if phase not in {PHASE_FULL, PHASE_SELECTION, PHASE_HOLDOUT}:
+        raise MetricsError(f"La fila {index} tiene phase inválida: {phase!r}")
     return _MetricRow(
         candidate_id=str(candidate).strip(),
         horizon_months=horizon_value,
@@ -676,6 +711,7 @@ def _coerce_metric_row(row: MetricInput, index: int) -> _MetricRow:
         prediction_random_walk=random_walk,
         observed=observed,
         logically_scoreable=logically_scoreable,
+        phase=phase,
     )
 
 
@@ -731,6 +767,7 @@ def _metric_from_group(
     candidate_id: str,
     horizon_months: int,
     split: str,
+    phase: str,
     dm_min_observations: int,
     dm_max_lag_rule: str,
     requested_origins: int | None = None,
@@ -781,6 +818,7 @@ def _metric_from_group(
             dm_stat=None,
             dm_p_value=None,
             dm_status=DM_INSUFFICIENT_OBSERVATIONS,
+            phase=phase,
         )
 
     model = np.asarray([row.prediction_model for row in common_rows], dtype=float)
@@ -827,6 +865,7 @@ def _metric_from_group(
         dm_stat=dm.dm_stat,
         dm_p_value=dm.p_value,
         dm_status=dm.status,
+        phase=phase,
     )
 
 
@@ -945,12 +984,21 @@ class MetricsCalculator:
             for horizon_value in sorted(selected_horizons):
                 for split_value in sorted(selected_splits):
                     group = groups.get((candidate_id, horizon_value, split_value), ())
+                    phase = (
+                        getattr(selected_plan, "phase_for_split", lambda value: {
+                            "full": PHASE_FULL,
+                            "2008_2019": PHASE_SELECTION,
+                            "2020_2022": PHASE_SELECTION,
+                            "2023_2026": PHASE_HOLDOUT,
+                        }.get(str(value), PHASE_FULL))(split_value)
+                    )
                     result.append(
                         _metric_from_group(
                             group,
                             candidate_id=candidate_id,
                             horizon_months=horizon_value,
                             split=split_value,
+                            phase=phase,
                             dm_min_observations=minimum,
                             dm_max_lag_rule=rule,
                         )
@@ -1004,9 +1052,10 @@ def _coerce_evaluation_metric(value: Any) -> EvaluationMetrics:
         payload = dict(value)
         allowed = {field.name for field in fields(EvaluationMetrics)}
         payload = {key: payload[key] for key in allowed if key in payload}
-        missing = allowed - set(payload)
+        missing = allowed - set(payload) - {"phase"}
         if missing:
             raise MetricsError(f"Fila de métricas incompleta: faltan {sorted(missing)!r}")
+        payload.setdefault("phase", None)
         for key, item in tuple(payload.items()):
             if item is None or item is pd.NA or (
                 isinstance(item, (float, np.floating)) and np.isnan(item)
@@ -1030,18 +1079,134 @@ def _rank_sort_key(metric: EvaluationMetrics) -> tuple[int, float, int, float, s
     )
 
 
+def aggregate_phase_metrics(
+    metrics: Iterable[EvaluationMetrics | Mapping[str, Any]] | pd.DataFrame,
+    *,
+    phase: str,
+) -> tuple[EvaluationMetrics, ...]:
+    """Agrupa splits de una fase en una muestra común por candidato/horizonte.
+
+    La selección se basa en la suma de errores de los splits preinscritos, no
+    en un promedio de R² por ventana. El holdout nunca se mezcla con esta
+    operación; el caller debe pedir explícitamente ``phase='holdout'``.
+    """
+
+    if isinstance(metrics, pd.DataFrame):
+        values: Iterable[Any] = metrics.to_dict(orient="records")
+    else:
+        values = metrics
+    phase_value = str(phase).strip().lower()
+    if phase_value not in {PHASE_FULL, PHASE_SELECTION, PHASE_HOLDOUT}:
+        raise MetricsError(f"phase no soportada: {phase!r}")
+    rows = tuple(_coerce_evaluation_metric(value) for value in values)
+    rows = tuple(item for item in rows if item.phase == phase_value)
+    grouped: dict[tuple[str, int], list[EvaluationMetrics]] = {}
+    for row in rows:
+        grouped.setdefault((row.candidate_id, row.horizon_months), []).append(row)
+
+    def _weighted(
+        block: Sequence[EvaluationMetrics], field_name: str, *, denominator: int
+    ) -> float | None:
+        numerator = 0.0
+        weight = 0
+        for item in block:
+            value = getattr(item, field_name)
+            if value is None or item.n_oos <= 0:
+                continue
+            numerator += float(value) * item.n_oos
+            weight += item.n_oos
+        if denominator <= 0 or weight <= 0:
+            return None
+        return float(numerator / weight)
+
+    result: list[EvaluationMetrics] = []
+    for (candidate_id, horizon), block in sorted(grouped.items()):
+        n_requested = sum(item.n_requested_origins for item in block)
+        n_scoreable = sum(item.n_scoreable_origins for item in block)
+        n_excluded = sum(item.n_excluded_origins for item in block)
+        n_oos = sum(item.n_oos for item in block)
+        sse_model_values = [item.sse_model for item in block if item.sse_model is not None]
+        sse_benchmark_values = [
+            item.sse_random_walk for item in block if item.sse_random_walk is not None
+        ]
+        sse_model = float(sum(sse_model_values)) if len(sse_model_values) == len(block) else None
+        sse_benchmark = (
+            float(sum(sse_benchmark_values))
+            if len(sse_benchmark_values) == len(block)
+            else None
+        )
+        r2 = calculate_r2_oos(sse_model, sse_benchmark)
+        rmse_model = None
+        rmse_benchmark = None
+        if n_oos > 0:
+            model_sse = [
+                float(item.rmse_model) ** 2 * item.n_oos
+                for item in block
+                if item.rmse_model is not None
+            ]
+            benchmark_sse = [
+                float(item.rmse_random_walk) ** 2 * item.n_oos
+                for item in block
+                if item.rmse_random_walk is not None
+            ]
+            if len(model_sse) == len(block):
+                rmse_model = float(np.sqrt(sum(model_sse) / n_oos))
+            if len(benchmark_sse) == len(block):
+                rmse_benchmark = float(np.sqrt(sum(benchmark_sse) / n_oos))
+        dm = block[0] if len(block) == 1 else None
+        result.append(
+            EvaluationMetrics(
+                candidate_id=candidate_id,
+                horizon_months=horizon,
+                split=phase_value,
+                phase=phase_value,
+                n_requested_origins=n_requested,
+                n_scoreable_origins=n_scoreable,
+                n_excluded_origins=n_excluded,
+                n_oos=n_oos,
+                sse_model=sse_model,
+                sse_random_walk=sse_benchmark,
+                r2_oos=r2,
+                mae_model=_weighted(block, "mae_model", denominator=n_oos),
+                mae_random_walk=_weighted(block, "mae_random_walk", denominator=n_oos),
+                rmse_model=rmse_model,
+                rmse_random_walk=rmse_benchmark,
+                direction_accuracy_model=_weighted(
+                    block, "direction_accuracy_model", denominator=n_oos
+                ),
+                direction_accuracy_random_walk=_weighted(
+                    block, "direction_accuracy_random_walk", denominator=n_oos
+                ),
+                dm_stat=None if dm is None else dm.dm_stat,
+                dm_p_value=None if dm is None else dm.dm_p_value,
+                dm_status=(
+                    "aggregated"
+                    if dm is None and n_oos > 0
+                    else DM_INSUFFICIENT_OBSERVATIONS
+                    if dm is None
+                    else dm.dm_status
+                ),
+            )
+        )
+    return tuple(result)
+
+
+aggregate_metrics_by_phase = aggregate_phase_metrics
+
+
 def rank_metrics(
     metrics: Iterable[EvaluationMetrics | Mapping[str, Any]] | pd.DataFrame,
     *,
     horizon_months: int | None = None,
     horizon: int | None = None,
     split: str | None = "full",
+    phase: str | None = None,
 ) -> tuple[EvaluationMetrics, ...]:
-    """Ordena métricas por R2 ``full``, MAE y ``candidate_id``.
+    """Ordena métricas por R², MAE y ``candidate_id``.
 
-    Si no se especifica horizonte, devuelve bloques independientes ordenados
-    por horizonte ascendente. No elimina filas ni candidatos; los valores
-    ``None`` quedan al final del bloque correspondiente.
+    Sin ``phase`` conserva el contrato histórico y filtra ``split='full'``.
+    Con una fase explícita agrupa sus splits preinscritos antes de ordenar, de
+    modo que ningún ranking de selección pueda consumir el holdout por error.
     """
 
     if isinstance(metrics, pd.DataFrame):
@@ -1060,7 +1225,14 @@ def rank_metrics(
         )
     if split is not None:
         split_value = str(split)
-        materialized = tuple(item for item in materialized if item.split == split_value)
+        if phase is None:
+            materialized = tuple(item for item in materialized if item.split == split_value)
+
+    if phase is not None:
+        phase_value = str(phase).strip().lower()
+        materialized = aggregate_phase_metrics(materialized, phase=phase_value)
+        if split not in (None, "full", phase_value):
+            materialized = tuple(item for item in materialized if item.split == str(split))
 
     result: list[EvaluationMetrics] = []
     horizon_values = sorted({item.horizon_months for item in materialized})
@@ -1081,6 +1253,7 @@ def ranked_candidate_ids(
     horizon_months: int | None = None,
     horizon: int | None = None,
     split: str | None = "full",
+    phase: str | None = None,
 ) -> tuple[str, ...]:
     return tuple(
         metric.candidate_id
@@ -1089,6 +1262,7 @@ def ranked_candidate_ids(
             horizon_months=horizon_months,
             horizon=horizon,
             split=split,
+            phase=phase,
         )
     )
 
@@ -1118,6 +1292,8 @@ __all__ = [
     "EvaluationMetrics",
     "MetricsCalculator",
     "MetricsError",
+    "aggregate_metrics_by_phase",
+    "aggregate_phase_metrics",
     "build_common_sample",
     "calculate_common_sse",
     "calculate_direction_accuracy",

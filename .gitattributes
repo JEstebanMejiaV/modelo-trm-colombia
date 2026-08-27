@@ -1,5 +1,7 @@
 * text=auto
 *.csv text eol=lf
+# Preserve the byte-level representation of the immutable global baseline.
+data/base_global_mensual.csv -text whitespace=cr-at-eol
 *.json text eol=lf
 *.md text eol=lf
 *.py text eol=lf

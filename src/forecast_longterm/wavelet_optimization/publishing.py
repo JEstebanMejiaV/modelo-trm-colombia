@@ -39,6 +39,9 @@ from .config import (
     H1_TEXT,
     H2,
     H2_TEXT,
+    PHASE_FULL,
+    PHASE_HOLDOUT,
+    PHASE_SELECTION,
     PRODUCT_ID,
     REQUIRED_HORIZONS,
     REQUIRED_SPLITS,
@@ -1172,6 +1175,151 @@ def _metric_records_for_decision(source: Any, plan: Any) -> tuple[Mapping[str, A
     return tuple(_mapping(value, field_name="evaluation metric") for value in values)
 
 
+def _records_for_decision(source: Any, *, field_name: str) -> tuple[Mapping[str, Any], ...]:
+    if source is None:
+        return ()
+    if isinstance(source, Mapping) or hasattr(source, "as_dict") or hasattr(source, "to_dict"):
+        values: Iterable[Any] = (source,)
+    elif isinstance(source, (str, bytes, bytearray)):
+        raise OutputSchemaError(f"{field_name} debe ser una colección de records")
+    else:
+        try:
+            values = tuple(source)
+        except TypeError:
+            values = (source,)
+    return tuple(_mapping(value, field_name=field_name) for value in values)
+
+
+def _metric_phase_for_decision(row: Mapping[str, Any], plan: Any) -> str:
+    value = row.get("phase", row.get("evaluation_phase"))
+    if value is not None and str(value).strip():
+        return str(value).strip().lower()
+    split = str(row.get("split", PHASE_FULL)).strip()
+    phase_method = getattr(plan, "phase_for_split", None)
+    if callable(phase_method):
+        try:
+            return str(phase_method(split)).strip().lower()
+        except (TypeError, ValueError):
+            pass
+    return {
+        "full": PHASE_FULL,
+        "2008_2019": PHASE_SELECTION,
+        "2020_2022": PHASE_SELECTION,
+        "2023_2026": PHASE_HOLDOUT,
+    }.get(split, PHASE_FULL)
+
+
+def _phase_metric_records_for_decision(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    plan: Any,
+    phase: str,
+) -> tuple[Mapping[str, Any], ...]:
+    value = str(phase).strip().lower()
+    return tuple(row for row in rows if _metric_phase_for_decision(row, plan) == value)
+
+
+def _text_list(value: Any, *, field_name: str, default: Sequence[str]) -> list[str]:
+    if value is None:
+        values: Iterable[Any] = default
+    elif isinstance(value, str):
+        values = (value,)
+    else:
+        try:
+            values = tuple(value)
+        except TypeError as error:
+            raise OutputSchemaError(f"{field_name} debe ser una colección") from error
+    result = [str(item).strip() for item in values if str(item).strip()]
+    return list(dict.fromkeys(result))
+
+
+def _selected_candidate_records(value: Any) -> list[dict[str, Any]]:
+    if value is None:
+        return []
+    if isinstance(value, Mapping):
+        values: Iterable[Any] = (
+            {"horizon_months": key, "candidate_id": item}
+            for key, item in value.items()
+        )
+    elif isinstance(value, (str, bytes, bytearray)):
+        raise OutputSchemaError("selected_candidates debe ser una colección")
+    else:
+        try:
+            values = tuple(value)
+        except TypeError:
+            values = (value,)
+    records: list[dict[str, Any]] = []
+    for item in values:
+        if isinstance(item, Mapping):
+            horizon = _integer(
+                _get(item, "horizon_months", "horizon", default=None),
+                field_name="selected_candidates.horizon_months",
+                allow_none=False,
+            )
+            candidate = _text(
+                _get(item, "candidate_id", "id", default=None),
+                field_name="selected_candidates.candidate_id",
+                allow_none=False,
+            )
+        else:
+            try:
+                horizon, candidate = item
+            except (TypeError, ValueError) as error:
+                raise OutputSchemaError(
+                    "selected_candidates requiere pares (horizon_months, candidate_id)"
+                ) from error
+            horizon = _integer(
+                horizon,
+                field_name="selected_candidates.horizon_months",
+                allow_none=False,
+            )
+            candidate = _text(
+                candidate,
+                field_name="selected_candidates.candidate_id",
+                allow_none=False,
+            )
+        records.append({"horizon_months": horizon, "candidate_id": candidate})
+    return sorted(records, key=lambda row: (int(row["horizon_months"]), str(row["candidate_id"])))
+
+
+def _phase_policy_for_decision(plan: Any) -> tuple[list[str], list[str], dict[str, list[str]]]:
+    selection = _text_list(
+        _plan_get(plan, "selection_splits", default=None),
+        field_name="selection_splits",
+        default=REQUIRED_SPLITS[1:3],
+    )
+    holdout = _text_list(
+        _plan_get(plan, "holdout_splits", default=None),
+        field_name="holdout_splits",
+        default=(REQUIRED_SPLITS[-1],),
+    )
+    raw_phases = _plan_get(plan, "phases", default=None)
+    if isinstance(raw_phases, Mapping):
+        phases = {
+            str(key): _text_list(value, field_name=f"phases.{key}", default=())
+            for key, value in raw_phases.items()
+        }
+    else:
+        phases = {
+            PHASE_FULL: [PHASE_FULL],
+            PHASE_SELECTION: selection,
+            PHASE_HOLDOUT: holdout,
+        }
+    phases.setdefault(PHASE_FULL, [PHASE_FULL])
+    phases.setdefault(PHASE_SELECTION, selection)
+    phases.setdefault(PHASE_HOLDOUT, holdout)
+    return selection, holdout, phases
+
+
+def _provenance_variant_for_decision(provenance: Mapping[str, Any] | None) -> Mapping[str, Any]:
+    if not isinstance(provenance, Mapping):
+        return {}
+    context = provenance.get("run_context")
+    if isinstance(context, Mapping) and isinstance(context.get("wavelet_optimization"), Mapping):
+        return context["wavelet_optimization"]
+    return provenance
+
+
 def _hypothesis_result(
     metrics: Sequence[Mapping[str, Any]],
     *,
@@ -1220,6 +1368,11 @@ def serialize_decision(
     metrics: Any = (),
     gate_decision: Any = None,
     provenance: Mapping[str, Any] | None = None,
+    selection_metrics: Any | None = None,
+    selection_ranking: Any | None = None,
+    selected_candidates: Any = (),
+    holdout_metrics: Any | None = None,
+    economic_metrics: Any | None = None,
 ) -> dict[str, Any]:
     """Construye ``hipotesis_decision.json`` sin crear provenance faltante.
 
@@ -1231,8 +1384,67 @@ def serialize_decision(
     resolved_experiment, _product = _plan_identity(plan, experiment_id=experiment_id)
     resolved_run = _text(run_id, field_name="run_id", allow_none=False)
     metric_rows = _metric_records_for_decision(metrics, plan) if metrics is not None else ()
+    provenance_variant = _provenance_variant_for_decision(provenance)
+    selection_splits, holdout_splits, phases = _phase_policy_for_decision(plan)
+
+    if selection_metrics is None:
+        selection_metrics = provenance_variant.get("selection_metrics")
+    selection_rows = (
+        _records_for_decision(selection_metrics, field_name="selection metric")
+        if selection_metrics is not None
+        else _phase_metric_records_for_decision(
+            metric_rows,
+            plan=plan,
+            phase=PHASE_SELECTION,
+        )
+    )
+    if not selection_rows:
+        # Legacy direct callers supplied only ``full`` metrics. Preserve their
+        # hypothesis contract while the runner uses selection exclusively.
+        selection_rows = _phase_metric_records_for_decision(
+            metric_rows,
+            plan=plan,
+            phase=PHASE_FULL,
+        )
+
+    if selection_ranking is None:
+        selection_ranking = provenance_variant.get(
+            "selection_ranking",
+            provenance_variant.get("ranking"),
+        )
+    selection_ranking_rows = (
+        _records_for_decision(selection_ranking, field_name="selection ranking")
+        if selection_ranking is not None
+        else tuple(selection_rows)
+    )
+
+    if holdout_metrics is None:
+        holdout_metrics = provenance_variant.get("holdout_metrics")
+    holdout_rows = (
+        _records_for_decision(holdout_metrics, field_name="holdout metric")
+        if holdout_metrics is not None
+        else _phase_metric_records_for_decision(
+            metric_rows,
+            plan=plan,
+            phase=PHASE_HOLDOUT,
+        )
+    )
+
+    if selected_candidates in (None, ()):
+        selected_candidates = provenance_variant.get("selected_candidates", ())
+    selected_candidate_rows = _selected_candidate_records(selected_candidates)
+
+    if economic_metrics is None:
+        economic_metrics = getattr(metrics, "economic_metrics", None)
+    if economic_metrics is None:
+        economic_metrics = provenance_variant.get("economic_metrics", ())
+    economic_rows = _records_for_decision(
+        economic_metrics,
+        field_name="economic metric",
+    )
+
     hypotheses = _hypothesis_mapping(plan)
-    h1_result, h1_evidence = _hypothesis_result(metric_rows)
+    h1_result, h1_evidence = _hypothesis_result(selection_rows)
     frequency_candidates: set[str] = set()
     for candidate in _plan_get(plan, "candidates", default=()):
         candidate_id = _candidate_id_value(candidate)
@@ -1240,7 +1452,7 @@ def serialize_decision(
         if components in (("D5",), ("D3", "D4", "D5")):
             frequency_candidates.add(candidate_id)
     h2_result, h2_evidence = _hypothesis_result(
-        metric_rows, candidate_ids=frequency_candidates
+        selection_rows, candidate_ids=frequency_candidates
     )
 
     plan_hash = _text(
@@ -1298,6 +1510,20 @@ def serialize_decision(
         "data_cutoff": data_cutoff,
         "horizons_months": [int(value) for value in _plan_get(plan, "horizons", default=REQUIRED_HORIZONS)],
         "evaluation_splits": [str(value) for value in _plan_get(plan, "splits", default=REQUIRED_SPLITS)],
+        "selection_splits": selection_splits,
+        "holdout_splits": holdout_splits,
+        "phases": phases,
+        "selection": {
+            "splits": selection_splits,
+            "metrics": [_json_value(row) for row in selection_rows],
+            "ranking": [_json_value(row) for row in selection_ranking_rows],
+            "selected_candidates": selected_candidate_rows,
+        },
+        "holdout": {
+            "splits": holdout_splits,
+            "metrics": [_json_value(row) for row in holdout_rows],
+        },
+        "economic_metrics": [_json_value(row) for row in economic_rows],
         "benchmark": {
             "id": BENCHMARK_ID,
             "return_prediction": float(BENCHMARK_RETURN_PREDICTION),
@@ -1532,6 +1758,11 @@ class OutputPublisher:
         promotion_gate: Any = None,
         gate: Any = None,
         metrics: Any = None,
+        selection_metrics: Any | None = None,
+        selection_ranking: Any | None = None,
+        selected_candidates: Any = (),
+        holdout_metrics: Any | None = None,
+        economic_metrics: Any | None = None,
         run_id: str | None = None,
         experiment_id: str | None = None,
     ) -> PublicationDocuments:
@@ -1642,6 +1873,11 @@ class OutputPublisher:
             metrics=evaluation_source,
             gate_decision=selected_gate_mapping,
             provenance=manifest_mapping,
+            selection_metrics=selection_metrics,
+            selection_ranking=selection_ranking,
+            selected_candidates=selected_candidates,
+            holdout_metrics=holdout_metrics,
+            economic_metrics=economic_metrics,
         )
         # The decision JSON must preserve an explicit gate result if one was
         # supplied. ``serialize_decision`` has no hidden fallback decision.
@@ -1665,6 +1901,11 @@ class OutputPublisher:
         promotion_gate: Any = None,
         gate: Any = None,
         metrics: Any = None,
+        selection_metrics: Any | None = None,
+        selection_ranking: Any | None = None,
+        selected_candidates: Any = (),
+        holdout_metrics: Any | None = None,
+        economic_metrics: Any | None = None,
         run_id: str | None = None,
         experiment_id: str | None = None,
     ) -> tuple[str, ...]:
@@ -1679,6 +1920,11 @@ class OutputPublisher:
             promotion_gate=promotion_gate,
             gate=gate,
             metrics=metrics,
+            selection_metrics=selection_metrics,
+            selection_ranking=selection_ranking,
+            selected_candidates=selected_candidates,
+            holdout_metrics=holdout_metrics,
+            economic_metrics=economic_metrics,
             run_id=run_id,
             experiment_id=experiment_id,
         )
