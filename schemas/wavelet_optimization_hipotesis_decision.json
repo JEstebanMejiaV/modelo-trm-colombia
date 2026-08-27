@@ -18,44 +18,243 @@
     "warnings"
   ],
   "properties": {
-    "schema_version": {"type": "integer", "minimum": 1},
-    "run_id": {"type": "string", "minLength": 1},
-    "experiment_id": {"type": "string", "minLength": 1},
-    "product_id": {"type": "string", "enum": ["long_horizon_research"]},
-    "status": {"type": "string", "enum": ["research"]},
-    "exploratory": {"type": "boolean", "enum": [true]},
-    "research_label": {"type": "string", "minLength": 1},
-    "kind": {"type": "string", "enum": ["research"]},
-    "output_status": {"type": "string", "enum": ["versioned"]},
+    "schema_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "experiment_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "product_id": {
+      "type": "string",
+      "enum": [
+        "long_horizon_research"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "research"
+      ]
+    },
+    "exploratory": {
+      "type": "boolean",
+      "enum": [
+        true
+      ]
+    },
+    "research_label": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "research"
+      ]
+    },
+    "output_status": {
+      "type": "string",
+      "enum": [
+        "versioned"
+      ]
+    },
     "hypotheses": {
       "type": "object",
-      "required": ["H1", "H2"],
+      "required": [
+        "H1",
+        "H2"
+      ],
       "properties": {
-        "H1": {"type": "object"},
-        "H2": {"type": "object"}
+        "H1": {
+          "type": "object"
+        },
+        "H2": {
+          "type": "object"
+        }
       },
       "additionalProperties": false
     },
-    "plan_hash": {"type": "string", "minLength": 1},
-    "selection_rule": {"type": "string", "minLength": 1},
-    "primary_metric": {"type": "string", "minLength": 1},
-    "target_series": {"type": "string", "minLength": 1},
-    "target_definition": {"type": "string", "minLength": 1},
-    "data_cutoff": {"type": "string", "minLength": 1},
-    "horizons_months": {"type": "array", "items": {"type": "integer"}},
-    "evaluation_splits": {"type": "array", "items": {"type": "string"}},
-    "benchmark": {"type": "object"},
-    "label_maturity_rule": {"type": "string", "minLength": 1},
-    "minimum_mature_training": {"type": "integer", "minimum": 1},
-    "promotion_gate": {"type": ["object", "null"]},
-    "candidate_decisions": {"type": "array"},
-    "eligibility_scope": {"type": "string", "minLength": 1},
-    "warnings": {"type": "array", "items": {"type": "string"}},
-    "warning_no_causality": {"type": "string", "minLength": 1},
-    "warning_no_financial_use": {"type": "string", "minLength": 1},
-    "monthly_forecast_connected": {"type": "boolean"},
-    "limitations": {"type": "object"},
-    "provenance_reference": {"type": "object"}
+    "plan_hash": {
+      "type": "string",
+      "minLength": 1
+    },
+    "selection_rule": {
+      "type": "string",
+      "minLength": 1
+    },
+    "primary_metric": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_series": {
+      "type": "string",
+      "minLength": 1
+    },
+    "target_definition": {
+      "type": "string",
+      "minLength": 1
+    },
+    "data_cutoff": {
+      "type": "string",
+      "minLength": 1
+    },
+    "horizons_months": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      }
+    },
+    "evaluation_splits": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "selection_splits": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "holdout_splits": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "phases": {
+      "type": "object",
+      "properties": {
+        "full": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "selection": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "holdout": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "selection": {
+      "type": "object",
+      "properties": {
+        "splits": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "ranking": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "selected_candidates": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "holdout": {
+      "type": "object",
+      "properties": {
+        "splits": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "economic_metrics": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "benchmark": {
+      "type": "object"
+    },
+    "label_maturity_rule": {
+      "type": "string",
+      "minLength": 1
+    },
+    "minimum_mature_training": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "promotion_gate": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "candidate_decisions": {
+      "type": "array"
+    },
+    "eligibility_scope": {
+      "type": "string",
+      "minLength": 1
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "warning_no_causality": {
+      "type": "string",
+      "minLength": 1
+    },
+    "warning_no_financial_use": {
+      "type": "string",
+      "minLength": 1
+    },
+    "monthly_forecast_connected": {
+      "type": "boolean"
+    },
+    "limitations": {
+      "type": "object"
+    },
+    "provenance_reference": {
+      "type": "object"
+    }
   },
   "additionalProperties": true
 }

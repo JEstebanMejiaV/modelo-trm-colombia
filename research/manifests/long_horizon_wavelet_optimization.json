@@ -8,7 +8,27 @@
   "vintage_policy": "vintage_backtest",
   "status": "research",
   "benchmark": "random_walk",
-  "source_of_truth": "artifacts/runs",
+  "source_of_truth": "artifacts/runs/<Run_ID>/manifest.json",
+  "canonical_metadata": "run_context.wavelet_optimization",
+  "phases": {
+    "full": [
+      "full"
+    ],
+    "selection": [
+      "2008_2019",
+      "2020_2022"
+    ],
+    "holdout": [
+      "2023_2026"
+    ]
+  },
+  "selection_splits": [
+    "2008_2019",
+    "2020_2022"
+  ],
+  "holdout_splits": [
+    "2023_2026"
+  ],
   "factor_specs": [
     "src/forecast_longterm/wavelet_optimization",
     "research/configs/long_horizon_wavelet_optimization.toml"
