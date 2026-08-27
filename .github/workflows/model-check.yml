@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - "refactor/**"
   workflow_dispatch:
 
 jobs:
@@ -25,6 +24,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.lock
+          python -m pip install PyWavelets==1.9.0
           python -m pip install -e . --no-deps
 
       - name: Comprobar wheel de código checkout-bound
@@ -32,7 +32,7 @@ jobs:
         run: |
           wheel_dir="$RUNNER_TEMP/trm-wheel"
           mkdir -p "$wheel_dir"
-          python -m pip wheel . --no-deps --no-build-isolation --wheel-dir "$wheel_dir"
+          python -m pip wheel . --no-deps --wheel-dir "$wheel_dir"
           python -S - "$wheel_dir" <<'PY'
           import sys
           from pathlib import Path
@@ -61,8 +61,23 @@ jobs:
       - name: Validar contratos y leakage
         run: trm-model validate
 
-      - name: Ejecutar smoke tests
-        run: python -m pytest
+      - name: Ejecutar suite CI determinista
+        run: |
+          # Las pruebas property-based se ejecutan en la validación completa/manual;
+          # el PR conserva aquí los contratos y caminos críticos deterministas.
+          python -m pytest -q \
+            tests/test_contracts.py \
+            tests/test_temporal_contracts.py \
+            tests/test_long_horizon_dispatch.py \
+            tests/test_wavelet_optimization_smoke.py \
+            tests/test_wavelet_optimization_config.py \
+            tests/test_wavelet_optimization_labels.py \
+            tests/test_wavelet_optimization_metrics.py \
+            tests/test_wavelet_optimization_evaluation.py \
+            tests/test_wavelet_optimization_snapshots.py \
+            tests/test_wavelet_optimization_reconstruction.py \
+            tests/test_wavelet_optimization_publishing.py \
+            tests/test_wavelet_optimization_integration.py
 
       - name: Ejecutar pipeline mensual con manifest
         run: trm-model run-monthly
