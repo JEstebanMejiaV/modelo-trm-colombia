@@ -10,6 +10,8 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
+# Cross-platform BLAS/linear-algebra differences affect derived statistics.
+NUMERIC_RTOL = 2e-5
 
 
 def git_output(*args: str) -> bytes:
@@ -46,7 +48,7 @@ def compare_csv(path: Path, committed: bytes) -> None:
             expected,
             check_dtype=False,
             check_exact=False,
-            rtol=1e-5,
+            rtol=NUMERIC_RTOL,
             atol=1e-10,
             check_like=False,
         )
@@ -75,7 +77,7 @@ def compare_json(actual: Any, expected: Any, location: str = "metadata") -> None
         return
     if isinstance(expected, (int, float)) and not isinstance(expected, bool):
         if not isinstance(actual, (int, float)) or not np.isclose(
-            float(actual), float(expected), rtol=1e-5, atol=1e-10
+            float(actual), float(expected), rtol=NUMERIC_RTOL, atol=1e-10
         ):
             raise AssertionError(
                 f"Valor numérico distinto en {location}: actual={actual!r}, esperado={expected!r}."
