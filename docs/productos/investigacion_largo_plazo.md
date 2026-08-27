@@ -22,6 +22,8 @@ La documentación actual reporta señales fuertes en algunas combinaciones de ho
 
 El manifest advierte que algunos filtros, probabilidades suavizadas y wavelets existentes pueden usar información de toda la muestra. Hasta reconstruir cada señal dentro de cada ventana OOS, los resultados son exploratorios y no son evidencia operativa ex ante.
 
+La variante `long_horizon_research.backtest_embargo.v1` corrigió la disponibilidad temporal de las etiquetas forward en los evaluadores rolling: el entrenamiento de un origen t excluye las observaciones cuyo horizonte aún no terminó. En el backtest agregado HP expanding, el R² OOS corregido fue −22,8% a 6 meses, −63,1% a 12 meses, −177,0% a 18 meses y −459,7% a 24 meses. La corrección revela que las cifras históricas estaban sobreestimadas; no se promociona ninguna señal y los filtros CF, wavelet y Markov aún requieren reconstrucción point-in-time por origen.
+
 ## Ejecución
 
 ```powershell

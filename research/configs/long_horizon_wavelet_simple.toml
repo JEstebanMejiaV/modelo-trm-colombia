@@ -1,0 +1,31 @@
+# Variante exploratoria separada del backtest PIT estricto.
+variant_id = "wavelet_simple_v1"
+status = "exploratory"
+information_set = "current_series_pseudo_time_real"
+source_id = "banrep_trm_1"
+horizon_months = 6
+minimum_mature_training = 60
+minimum_training_start = "2006-01-01"
+
+[dwt]
+wavelet = "db4"
+levels = 5
+boundary_mode = "symmetric"
+signal_scale = 100.0
+
+[candidate]
+id = "db4_l5_sym_D3_D4_D5"
+components = ["D3", "D4", "D5"]
+estimator = "ols_intercept_signal"
+estimation_window = "expanding"
+
+[benchmark]
+id = "random_walk"
+return_prediction = 0.0
+
+[policy]
+input_must_be_explicit = true
+reject_data_raw = true
+pit_eligible = false
+not_for_promotion = true
+no_imputation = true

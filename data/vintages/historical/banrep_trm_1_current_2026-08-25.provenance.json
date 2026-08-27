@@ -1,0 +1,20 @@
+{
+  "artifact": "banrep_trm_1_current_2026-08-25.json",
+  "source_id": "banrep_trm_1",
+  "provider": "Banco de la República",
+  "series_id": "1",
+  "source_url": "https://suameca.banrep.gov.co/graficador-series/rest/graficadorService/consultaSerieParaGraficar?idSerie=1",
+  "retrieved_utc": "2026-08-26T00:45:42.6975680Z",
+  "method": "HTTP GET to the public BanRep series endpoint",
+  "bytes": 712414,
+  "sha256": "92b4c8043e42036ee82c6022106e73a291fb92cf0395a039a085f514fbb14269",
+  "data_start": "1991-11-27",
+  "data_end": "2026-08-26",
+  "metadata_last_load": "25 de agosto de 2026",
+  "as_of_date": null,
+  "revision_history": false,
+  "pit_eligible": false,
+  "status": "current_series_not_pit",
+  "not_for_import_pit": true,
+  "notes": "La respuesta contiene la serie vigente completa y no ofrece evidencia as-of, vintage ni historial de revisiones. Se conserva como descarga actual de auditoría; no reemplaza data/raw ni el baseline y no debe materializarse como snapshot PIT."
+}

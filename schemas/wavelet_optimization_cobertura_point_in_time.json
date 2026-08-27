@@ -1,0 +1,35 @@
+{
+  "title": "Wavelet optimization point-in-time coverage",
+  "type": "object",
+  "required": [
+    "origin_date",
+    "horizon_months",
+    "source_id",
+    "snapshot_manifest",
+    "source_vintage",
+    "available_through",
+    "sha256",
+    "n_observations_available",
+    "n_missing",
+    "coverage_status",
+    "required_for_candidate",
+    "excluded_origins",
+    "reason"
+  ],
+  "properties": {
+    "origin_date": {"type": "string", "minLength": 1},
+    "horizon_months": {"type": "integer", "enum": [6, 12]},
+    "source_id": {"type": "string", "minLength": 1},
+    "snapshot_manifest": {"type": ["string", "null"]},
+    "source_vintage": {"type": ["string", "null"]},
+    "available_through": {"type": ["string", "null"]},
+    "sha256": {"type": ["string", "null"]},
+    "n_observations_available": {"type": "integer", "minimum": 0},
+    "n_missing": {"type": "integer", "minimum": 0},
+    "coverage_status": {"type": "string", "enum": ["complete", "incomplete", "missing", "invalid"]},
+    "required_for_candidate": {"type": ["boolean", "string"]},
+    "excluded_origins": {"type": "string"},
+    "reason": {"type": ["string", "null"]}
+  },
+  "additionalProperties": false
+}

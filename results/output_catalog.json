@@ -145,7 +145,11 @@
         "results/pronostico/wavelets_comparacion_bandas.csv",
         "results/pronostico/wavelets_componentes.csv",
         "results/pronostico/variables_globales_evaluacion.csv",
-        "results/pronostico/variables_globales_series.csv"
+        "results/pronostico/variables_globales_series.csv",
+        "results/pronostico/wavelet_optimization/cobertura_point_in_time.csv",
+        "results/pronostico/wavelet_optimization/evaluacion_por_candidato.csv",
+        "results/pronostico/wavelet_optimization/hipotesis_decision.json",
+        "results/pronostico/wavelet_optimization/predicciones_por_origen.csv"
       ]
     }
   ],

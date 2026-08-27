@@ -90,6 +90,24 @@ Modelo que solo usa información disponible al inicio del mes objetivo. Ningún 
 
 La validación es **pseudo-tiempo-real**: respeta el calendario de publicación pero usa el último vintage disponible de cada serie. El test Diebold-Mariano no rechaza igualdad de capacidad predictiva al 5%.
 
+## `exploration/wavelet_simple_v1/` — Variante wavelet exploratoria mínima
+
+Esta variante está separada del backtest PIT y del pronóstico mensual. Usa una
+respuesta actual explícita de BanRep, mensualiza sin imputar y calcula una sola
+señal causal `db4`, nivel 5, `D3+D4+D5`. Ajusta OLS expanding a seis meses y
+compara contra el retorno cero de la caminata aleatoria. Cada corrida se guarda
+en `results/exploration/wavelet_simple_v1/<run_id>/` con `predicciones.csv`,
+`metricas.json` y `provenance.json`.
+
+La corrida de referencia actual (`20260826T120005Z`) produjo 123
+observaciones OOS exploratorias, `R2_OOS=-0.2797` y un pronóstico provisional de
+`1.0290%` para el origen cerrado `2026-07-01` a seis meses. Ese resultado no es
+evidencia PIT: el provenance declara `pit_eligible=false`,
+`not_for_promotion=true` y `uses_current_revised_series=true`. Para convertir
+esta variante en evidencia predictiva se necesitan snapshots oficiales
+`as-of` por origen; esta salida no se conecta automáticamente al forecast
+mensual ni reemplaza `results/pronostico/wavelet_optimization`.
+
 ## `robustez/` — Pruebas de robustez y contraste ECM
 
 Análisis complementarios que informan decisiones de especificación pero no producen el resultado de referencia.

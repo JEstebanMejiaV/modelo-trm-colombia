@@ -145,6 +145,26 @@
       "status": "versioned"
     },
     {
+      "path": "results/pronostico/wavelet_optimization/cobertura_point_in_time.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/wavelet_optimization/evaluacion_por_candidato.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/wavelet_optimization/hipotesis_decision.json",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
+      "path": "results/pronostico/wavelet_optimization/predicciones_por_origen.csv",
+      "kind": "research",
+      "status": "versioned"
+    },
+    {
       "path": "results/pronostico/wavelets_comparacion_bandas.csv",
       "kind": "research",
       "status": "versioned"

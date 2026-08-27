@@ -89,20 +89,28 @@ def test_output_catalog_covers_legacy_results_without_unclassified_files() -> No
         if path.is_file() and path.suffix.lower() in {".csv", ".json"}
     }
     actual.add(paths.relative(paths.results / "metadata.json"))
-    assert listed == actual
+    variant_manifest = json.loads(
+        (
+            paths.root / "research" / "manifests" / "long_horizon_wavelet_optimization.json"
+        ).read_text(encoding="utf-8")
+    )
+    planned_variant_paths = {
+        output["path"] for output in variant_manifest["outputs"]
+    }
+    assert actual <= listed
+    assert listed - actual <= planned_variant_paths
+    assert planned_variant_paths <= listed
     assert len(listed) == len({path for path in listed})
 
 
 def test_compatibility_wrappers_and_legacy_packages_are_importable() -> None:
+    import forecast_daily.run  # noqa: F401
+    import forecast_longterm.global_variables  # noqa: F401
+    import volatility_model  # noqa: F401
     from pipelines.daily_direction import run as run_daily_direction
     from pipelines.daily_volatility import run as run_daily_volatility
     from pipelines.long_horizon import run as run_long_horizon
     from pipelines.monthly import run_monthly
-
-    import forecast_daily.run  # noqa: F401
-    import forecast_longterm.global_variables  # noqa: F401
-    import volatility_model  # noqa: F401
-
     assert callable(run_daily_direction)
     assert callable(run_daily_volatility)
     assert callable(run_long_horizon)

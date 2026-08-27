@@ -4,10 +4,9 @@ import argparse
 import hashlib
 import io
 import json
+import time
 import urllib.request
 import zipfile
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import time
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -15,7 +14,6 @@ import pandas as pd
 
 from trm_model.data.fred import redact_fred_api_key, require_fred_api_key
 from trm_model.paths import project_paths
-
 
 ROOT = project_paths().root
 VINTAGES = ROOT / "data" / "vintages"
@@ -431,6 +429,35 @@ def fiscal_history(force: bool) -> None:
     )
 
 
+def import_pit(
+    *,
+    origin_date: str,
+    source_file: str,
+    evidence_file: str,
+    available_through: str,
+    vintage_id: str,
+    source_id: str = "banrep_trm_1",
+) -> None:
+    """Importa un artefacto oficial PIT sin convertir raw ni sobrescribir vintages."""
+
+    from forecast_longterm.wavelet_optimization.ingestion import materialize_pit_snapshot
+
+    archive = materialize_pit_snapshot(
+        source_file=source_file,
+        evidence_file=evidence_file,
+        origin_date=origin_date,
+        available_through=available_through,
+        vintage_id=vintage_id,
+        source_id=source_id,
+        paths=ROOT,
+    )
+    print(
+        "Snapshot PIT materializado: "
+        f"{archive.manifest_path.relative_to(ROOT)} "
+        f"(sha256={archive.sha256})"
+    )
+
+
 def coverage() -> None:
     output = ROOT / "results" / "pronostico" / "cobertura_vintages_pronostico.csv"
     alfred_csv = HISTORICAL / "alfred_factores_pronostico.csv"
@@ -504,6 +531,16 @@ def parse_args() -> argparse.Namespace:
     alfred.add_argument("--force", action="store_true")
     fiscal = subparsers.add_parser("fiscal-history")
     fiscal.add_argument("--force", action="store_true")
+    pit = subparsers.add_parser(
+        "import-pit",
+        help="Materializa un archivo oficial histórico como snapshot PIT inmutable",
+    )
+    pit.add_argument("--origin-date", required=True)
+    pit.add_argument("--source-file", required=True)
+    pit.add_argument("--evidence-file", required=True)
+    pit.add_argument("--available-through", required=True)
+    pit.add_argument("--vintage-id", required=True)
+    pit.add_argument("--source-id", default="banrep_trm_1")
     subparsers.add_parser("coverage")
     return parser.parse_args()
 
@@ -518,6 +555,15 @@ def main() -> None:
         alfred_history(args.start, args.end, args.force)
     elif args.command == "fiscal-history":
         fiscal_history(args.force)
+    elif args.command == "import-pit":
+        import_pit(
+            origin_date=args.origin_date,
+            source_file=args.source_file,
+            evidence_file=args.evidence_file,
+            available_through=args.available_through,
+            vintage_id=args.vintage_id,
+            source_id=args.source_id,
+        )
     elif args.command == "coverage":
         coverage()
 

@@ -1,0 +1,143 @@
+# Preinscripción de la variante de investigación wavelet point-in-time.
+#
+# Esta configuración no contiene una fecha de evaluación inventada. El loader
+# exige que la corrida entregue data_cutoff y origin_dates explícitos antes de
+# construir el ResearchPlan. La configuración histórica de
+# configs/products/long_horizon_research.toml permanece separada.
+schema_version = 1
+variant_id = "long_horizon_wavelet_optimization"
+experiment_id = "long_horizon_research.wavelet_optimization.v1"
+product_id = "long_horizon_research"
+status = "research"
+information_set = "vintage_backtest"
+vintage_policy = "vintage_backtest"
+target_series = "banrep_trm_1"
+target_definition = "100 * (ln(TRM[t+h]) - ln(TRM[t]))"
+horizons_months = [6, 12]
+evaluation_splits = ["full", "2008_2019", "2020_2022", "2023_2026"]
+minimum_mature_training = 60
+dm_min_observations = 12
+dm_max_lag_rule = "horizon_minus_one"
+primary_metric = "r2_oos"
+selection_rule = "rank_full_r2_then_mae_then_candidate_id"
+tie_break_rule = "candidate_id_ascending"
+seed = "not_applicable"
+# No se define data_cutoff aquí: debe llegar como argumento explícito del loader.
+data_cutoff_required = true
+
+[dwt]
+wavelet = "db4"
+levels = 5
+boundary_mode = "symmetric"
+signal_scale = 100.0
+
+[benchmark]
+id = "random_walk"
+return_prediction = 0.0
+same_observations = true
+
+[label_maturity]
+rule = "i_plus_h_strictly_before_origin"
+minimum_mature_training = 60
+observable_by_cutoff = true
+
+[promotion_gate]
+full_r2_positive = true
+full_mae_below_benchmark = true
+full_rmse_below_benchmark = true
+dm_p_value_max = 0.05
+minimum_positive_splits = 3
+split_min_observations = 12
+minimum_r2 = -0.10
+require_causal_reconstruction = true
+require_label_maturity = true
+require_complete_pit_coverage = true
+require_complete_provenance = true
+
+[[hypotheses]]
+id = "H1"
+statement = "Al menos una Candidate_Specification con Causal_Reconstruction obtiene R2_OOS mayor que cero frente al Random_Walk_Benchmark en al menos uno de los horizontes de 6 o 12 meses."
+
+[[hypotheses]]
+id = "H2"
+statement = "La mejora, si existe, se concentra en D5 (32-64m) o en la combinación preinscrita D3+D4+D5 (8-64m)."
+
+[[candidates]]
+id = "db4_l5_sym_D1"
+wavelet_family = "db4"
+levels = 5
+boundary_mode = "symmetric"
+components = ["D1"]
+signal_scale = 100.0
+estimator = "ols_intercept_signal"
+estimation_window = "expanding"
+
+[[candidates]]
+id = "db4_l5_sym_D2"
+wavelet_family = "db4"
+levels = 5
+boundary_mode = "symmetric"
+components = ["D2"]
+signal_scale = 100.0
+estimator = "ols_intercept_signal"
+estimation_window = "expanding"
+
+[[candidates]]
+id = "db4_l5_sym_D3"
+wavelet_family = "db4"
+levels = 5
+boundary_mode = "symmetric"
+components = ["D3"]
+signal_scale = 100.0
+estimator = "ols_intercept_signal"
+estimation_window = "expanding"
+
+[[candidates]]
+id = "db4_l5_sym_D4"
+wavelet_family = "db4"
+levels = 5
+boundary_mode = "symmetric"
+components = ["D4"]
+signal_scale = 100.0
+estimator = "ols_intercept_signal"
+estimation_window = "expanding"
+
+[[candidates]]
+id = "db4_l5_sym_D5"
+wavelet_family = "db4"
+levels = 5
+boundary_mode = "symmetric"
+components = ["D5"]
+signal_scale = 100.0
+estimator = "ols_intercept_signal"
+estimation_window = "expanding"
+
+[[candidates]]
+id = "db4_l5_sym_A5"
+wavelet_family = "db4"
+levels = 5
+boundary_mode = "symmetric"
+components = ["A5"]
+signal_scale = 100.0
+estimator = "ols_intercept_signal"
+estimation_window = "expanding"
+
+[[candidates]]
+id = "db4_l5_sym_D3_D4"
+wavelet_family = "db4"
+levels = 5
+boundary_mode = "symmetric"
+components = ["D3", "D4"]
+signal_scale = 100.0
+estimator = "ols_intercept_signal"
+estimation_window = "expanding"
+
+[[candidates]]
+id = "db4_l5_sym_D3_D4_D5"
+wavelet_family = "db4"
+levels = 5
+boundary_mode = "symmetric"
+components = ["D3", "D4", "D5"]
+signal_scale = 100.0
+estimator = "ols_intercept_signal"
+estimation_window = "expanding"

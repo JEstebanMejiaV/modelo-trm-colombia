@@ -948,6 +948,363 @@
         "signals"
       ],
       "notes": []
+    },
+    {
+      "schema_version": 1,
+      "experiment_id": "long_horizon_research.backtest_embargo.v1",
+      "product_id": "long_horizon_research",
+      "model_id": "long_horizon_backtest",
+      "title": "Backtest de largo plazo con etiquetas forward maduras",
+      "status": "completed",
+      "change_type": "validation",
+      "created_at_utc": "2026-08-23T00:00:00Z",
+      "parent_experiment_id": "long_horizon_research.backtest.v1",
+      "hypothesis": "Excluir del entrenamiento las etiquetas forward cuyo horizonte aún no ha terminado elimina look-ahead y produce una evaluación OOS más realista.",
+      "change_summary": "Se impone un embargo de horizonte entre el origen del pronóstico y los retornos forward usados para estimar cada regresión rolling.",
+      "code_paths": [
+        "src/forecast_longterm/oos.py",
+        "src/forecast_longterm/backtest.py",
+        "src/forecast_longterm/beveridge_nelson.py",
+        "src/forecast_longterm/carry_factor.py",
+        "src/forecast_longterm/cf_markov_strategy.py",
+        "src/forecast_longterm/cointegration.py",
+        "src/forecast_longterm/compare_filters.py",
+        "src/forecast_longterm/extended_signals.py",
+        "src/forecast_longterm/global_variables.py",
+        "src/forecast_longterm/panel_em.py"
+      ],
+      "config_paths": [
+        "configs/products/long_horizon_research.toml",
+        "research/manifests/long_horizon_research.json"
+      ],
+      "input_sources": [
+        "data/catalog/sources.json"
+      ],
+      "parameters": {
+        "horizons_months": [
+          6,
+          12,
+          18,
+          24
+        ],
+        "label_maturity": "strictly_before_forecast_origin",
+        "benchmark": "random_walk",
+        "information_set": "exploratory",
+        "min_train_observations": 60
+      },
+      "metrics": [
+        {
+          "name": "r2_oos_6m",
+          "value": -22.7732,
+          "unit": "percent",
+          "benchmark": "random_walk",
+          "split": "strict_mature_label_walk_forward_hp_expanding"
+        },
+        {
+          "name": "r2_oos_12m",
+          "value": -63.1412,
+          "unit": "percent",
+          "benchmark": "random_walk",
+          "split": "strict_mature_label_walk_forward_hp_expanding"
+        },
+        {
+          "name": "r2_oos_18m",
+          "value": -176.9742,
+          "unit": "percent",
+          "benchmark": "random_walk",
+          "split": "strict_mature_label_walk_forward_hp_expanding"
+        },
+        {
+          "name": "r2_oos_24m",
+          "value": -459.6608,
+          "unit": "percent",
+          "benchmark": "random_walk",
+          "split": "strict_mature_label_walk_forward_hp_expanding"
+        },
+        {
+          "name": "observations_oos_12m",
+          "value": 44,
+          "unit": "count",
+          "split": "strict_mature_label_walk_forward_hp_expanding"
+        },
+        {
+          "name": "dm_p_value_12m",
+          "value": 0.000248,
+          "unit": "p_value",
+          "benchmark": "random_walk",
+          "split": "strict_mature_label_walk_forward_hp_expanding"
+        }
+      ],
+      "decision": {
+        "outcome": "research",
+        "rationale": "La corrección temporal reduce el desempeño aparente y no supera la caminata aleatoria; se conserva como diagnóstico anti-leakage y no como forecast promocionado.",
+        "promotion_criteria": [
+          "Ninguna etiqueta forward usada antes de su fecha de maduración",
+          "Comparación contra caminata aleatoria con el mismo split temporal",
+          "No promocionar sin reconstrucción point-in-time de los filtros de señal"
+        ]
+      },
+      "evidence": [
+        "src/forecast_longterm/oos.py",
+        "src/forecast_longterm/backtest.py",
+        "src/forecast_longterm/panel_em.py",
+        "src/forecast_longterm/README.md",
+        "docs/productos/investigacion_largo_plazo.md"
+      ],
+      "tags": [
+        "research",
+        "long_horizon",
+        "backtest",
+        "anti_leakage",
+        "walk_forward"
+      ],
+      "notes": [
+        "La evaluación estricta se ejecutó en memoria y no sobrescribió los CSV históricos.",
+        "La corrección reduce el desempeño aparente; no es evidencia de una mejora operativa.",
+        "Los filtros CF, wavelet y Markov siguen requiriendo reconstrucción por origen."
+      ]
+    },
+    {
+      "schema_version": 1,
+      "experiment_id": "long_horizon_research.wavelet_optimization.v1",
+      "product_id": "long_horizon_research",
+      "model_id": "wavelet_optimization_causal_ols",
+      "title": "Optimización wavelet causal point-in-time a 6 y 12 meses",
+      "status": "planned",
+      "change_type": "model",
+      "created_at_utc": "2026-08-23T00:00:00Z",
+      "parent_experiment_id": "long_horizon_research.wavelets.v1",
+      "hypothesis": "H1: Al menos una Candidate_Specification con Causal_Reconstruction obtiene R2_OOS mayor que cero frente al Random_Walk_Benchmark en al menos uno de los horizontes de 6 o 12 meses. H2: La mejora, si existe, se concentra en D5 (32-64m) o en la combinación preinscrita D3+D4+D5 (8-64m).",
+      "change_summary": "Preinscripción de una variante de investigación que reconstruirá una DWT db4 de cinco niveles por origen, estimará una señal escalar con OLS expansivo sobre etiquetas forward estrictamente maduras y comparará todos los candidatos contra una caminata aleatoria usando snapshots point-in-time. La variante permanece separada de los outputs históricos wavelet y no alimenta productos primarios.",
+      "code_paths": [
+        "src/forecast_longterm/wavelet_optimization.py",
+        "src/forecast_longterm/wavelet_optimization/config.py",
+        "src/forecast_longterm/wavelet_optimization/"
+      ],
+      "config_paths": [
+        "research/configs/long_horizon_wavelet_optimization.toml",
+        "schemas/long_horizon_wavelet_optimization.json",
+        "schemas/experiment_record.json"
+      ],
+      "input_sources": [
+        "data/catalog/sources.json",
+        "data/vintages/<origin_date>/manifest.json",
+        "data/vintages/<origin_date>/files/ (source_id=banrep_trm_1)"
+      ],
+      "parameters": {
+        "variant_id": "long_horizon_wavelet_optimization",
+        "variant_status": "research",
+        "information_set": "vintage_backtest",
+        "vintage_policy": "vintage_backtest",
+        "target_series": "banrep_trm_1",
+        "target_definition": "100 * (ln(TRM[t+h]) - ln(TRM[t]))",
+        "dwt": {
+          "wavelet": "db4",
+          "levels": 5,
+          "boundary_mode": "symmetric",
+          "signal_scale": 100.0
+        },
+        "components": [
+          "D1",
+          "D2",
+          "D3",
+          "D4",
+          "D5",
+          "A5"
+        ],
+        "candidate_grid": [
+          {
+            "candidate_id": "db4_l5_sym_D1",
+            "wavelet_family": "db4",
+            "levels": 5,
+            "boundary_mode": "symmetric",
+            "components": [
+              "D1"
+            ],
+            "signal_scale": 100.0,
+            "estimator": "ols_intercept_signal",
+            "estimation_window": "expanding"
+          },
+          {
+            "candidate_id": "db4_l5_sym_D2",
+            "wavelet_family": "db4",
+            "levels": 5,
+            "boundary_mode": "symmetric",
+            "components": [
+              "D2"
+            ],
+            "signal_scale": 100.0,
+            "estimator": "ols_intercept_signal",
+            "estimation_window": "expanding"
+          },
+          {
+            "candidate_id": "db4_l5_sym_D3",
+            "wavelet_family": "db4",
+            "levels": 5,
+            "boundary_mode": "symmetric",
+            "components": [
+              "D3"
+            ],
+            "signal_scale": 100.0,
+            "estimator": "ols_intercept_signal",
+            "estimation_window": "expanding"
+          },
+          {
+            "candidate_id": "db4_l5_sym_D4",
+            "wavelet_family": "db4",
+            "levels": 5,
+            "boundary_mode": "symmetric",
+            "components": [
+              "D4"
+            ],
+            "signal_scale": 100.0,
+            "estimator": "ols_intercept_signal",
+            "estimation_window": "expanding"
+          },
+          {
+            "candidate_id": "db4_l5_sym_D5",
+            "wavelet_family": "db4",
+            "levels": 5,
+            "boundary_mode": "symmetric",
+            "components": [
+              "D5"
+            ],
+            "signal_scale": 100.0,
+            "estimator": "ols_intercept_signal",
+            "estimation_window": "expanding"
+          },
+          {
+            "candidate_id": "db4_l5_sym_A5",
+            "wavelet_family": "db4",
+            "levels": 5,
+            "boundary_mode": "symmetric",
+            "components": [
+              "A5"
+            ],
+            "signal_scale": 100.0,
+            "estimator": "ols_intercept_signal",
+            "estimation_window": "expanding"
+          },
+          {
+            "candidate_id": "db4_l5_sym_D3_D4",
+            "wavelet_family": "db4",
+            "levels": 5,
+            "boundary_mode": "symmetric",
+            "components": [
+              "D3",
+              "D4"
+            ],
+            "signal_scale": 100.0,
+            "estimator": "ols_intercept_signal",
+            "estimation_window": "expanding"
+          },
+          {
+            "candidate_id": "db4_l5_sym_D3_D4_D5",
+            "wavelet_family": "db4",
+            "levels": 5,
+            "boundary_mode": "symmetric",
+            "components": [
+              "D3",
+              "D4",
+              "D5"
+            ],
+            "signal_scale": 100.0,
+            "estimator": "ols_intercept_signal",
+            "estimation_window": "expanding"
+          }
+        ],
+        "horizons_months": [
+          6,
+          12
+        ],
+        "evaluation_splits": [
+          "full",
+          "2008_2019",
+          "2020_2022",
+          "2023_2026"
+        ],
+        "benchmark": {
+          "id": "random_walk",
+          "return_prediction": 0.0,
+          "same_observations": true
+        },
+        "label_maturity": {
+          "rule": "i_plus_h_strictly_before_origin",
+          "formal_condition": "i+h<t",
+          "minimum_mature_training": 60,
+          "observable_by_cutoff": true
+        },
+        "minimum_mature_training": 60,
+        "data_cutoff_required": true,
+        "data_cutoff": "REQUIRED_EXPLICIT_DATE",
+        "dm_min_observations": 12,
+        "dm_max_lag_rule": "horizon_minus_one",
+        "primary_metric": "r2_oos",
+        "selection_rule": "rank_full_r2_then_mae_then_candidate_id",
+        "tie_break_rule": "candidate_id_ascending",
+        "seed": "not_applicable",
+        "promotion_gate": {
+          "full_r2_positive": true,
+          "full_mae_below_benchmark": true,
+          "full_rmse_below_benchmark": true,
+          "dm_p_value_max": 0.05,
+          "minimum_positive_splits": 3,
+          "split_min_observations": 12,
+          "minimum_r2": -0.1,
+          "require_causal_reconstruction": true,
+          "require_label_maturity": true,
+          "require_complete_pit_coverage": true,
+          "require_complete_provenance": true,
+          "independent_methodological_review": true,
+          "automatic_product_promotion": false
+        },
+        "planned_outputs": [
+          "results/pronostico/wavelet_optimization/predicciones_por_origen.csv",
+          "results/pronostico/wavelet_optimization/evaluacion_por_candidato.csv",
+          "results/pronostico/wavelet_optimization/cobertura_point_in_time.csv",
+          "results/pronostico/wavelet_optimization/hipotesis_decision.json",
+          "artifacts/runs/<run_id>/manifest.json"
+        ],
+        "historical_outputs_excluded": [
+          "results/pronostico/wavelets_comparacion_bandas.csv",
+          "results/pronostico/wavelets_componentes.csv"
+        ]
+      },
+      "metrics": [],
+      "decision": {
+        "outcome": "pending",
+        "rationale": "Registro preinscrito antes de cualquier predicción OOS. La variante conserva product_id=long_horizon_research y status=research durante toda la investigación; planned describe únicamente el estado inicial de esta ficha de registro.",
+        "promotion_criteria": [
+          "Para cada horizonte de 6 y 12 meses, el split full debe tener R2_OOS > 0, MAE y RMSE menores que la caminata aleatoria y p-valor bilateral de Diebold–Mariano <= 0.05.",
+          "Para cada horizonte, al menos tres de los cuatro splits deben tener R2_OOS > 0 con al menos 12 predicciones OOS; ningún split scoreable puede tener R2_OOS < -0.10.",
+          "Toda evidencia debe demostrar reconstrucción causal por origen, madurez estricta de etiquetas, cobertura point-in-time completa y provenance sin campos obligatorios faltantes.",
+          "Una eventual promoción requiere revisión metodológica independiente y una nueva decisión de producto; el gate no cambia automáticamente el estado ni conecta monthly_forecast."
+        ]
+      },
+      "evidence": [
+        "results/pronostico/wavelet_optimization/predicciones_por_origen.csv",
+        "results/pronostico/wavelet_optimization/evaluacion_por_candidato.csv",
+        "results/pronostico/wavelet_optimization/cobertura_point_in_time.csv",
+        "results/pronostico/wavelet_optimization/hipotesis_decision.json",
+        "artifacts/runs/<run_id>/manifest.json"
+      ],
+      "tags": [
+        "research",
+        "long_horizon",
+        "wavelet_optimization",
+        "causal_reconstruction",
+        "point_in_time",
+        "vintage_backtest",
+        "random_walk",
+        "preregistration"
+      ],
+      "notes": [
+        "La fecha created_at_utc usa el valor preinscrito del inventario (2026-08-23T00:00:00Z) y no representa una fecha de ejecución.",
+        "data_cutoff es obligatorio y debe entregarse como fecha ISO explícita al loader; no se infiere de la última fila ni se completa por extrapolación.",
+        "Las rutas de evidence y planned_outputs son evidencia esperada de una futura corrida; esta tarea no ejecuta backtest ni publica outputs.",
+        "El manifest disponible en data/vintages/2026-08-23/ es baseline, no un snapshot histórico mode=snapshot; no se usa como evidencia PIT de esta variante.",
+        "Los outputs históricos wavelets permanecen fuera de los inputs, benchmark y componentes de esta variante."
+      ]
     }
   ]
 }

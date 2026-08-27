@@ -27,7 +27,10 @@ daily = [
 rnn = ["torch>=2.2,<3"]
 longterm = ["PyWavelets>=1.6,<2"]
 risk = ["arch>=7,<9"]
-test = ["pytest>=8,<10"]
+test = [
+  "pytest>=8,<10",
+  "hypothesis==6.131.9",
+]
 all = [
   "scikit-learn>=1.5,<2",
   "xgboost>=2,<4",
@@ -36,6 +39,7 @@ all = [
   "PyWavelets>=1.6,<2",
   "arch>=7,<9",
   "pytest>=8,<10",
+  "hypothesis==6.131.9",
 ]
 
 [project.scripts]
