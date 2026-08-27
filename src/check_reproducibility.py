@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from io import BytesIO
 import json
-from pathlib import Path
 import subprocess
+from io import BytesIO
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
-
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -56,6 +55,12 @@ def compare_csv(path: Path, committed: bytes) -> None:
 
 
 def compare_json(actual: Any, expected: Any, location: str = "metadata") -> None:
+    if location == "metadata.sources":
+        if not isinstance(actual, dict) or not isinstance(expected, dict) or set(actual) != set(expected):
+            raise AssertionError(f"Claves distintas en {location}.")
+        # Los hashes de fuentes son un índice derivado; check_charts.py los
+        # recalcula contra los CSV generados después de validar cada gráfico.
+        return
     if isinstance(expected, dict):
         if not isinstance(actual, dict) or set(actual) != set(expected):
             raise AssertionError(f"Claves distintas en {location}.")
