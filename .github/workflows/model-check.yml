@@ -48,9 +48,27 @@ jobs:
           from trm_model.output_contract import MONTHLY_GENERATED_OUTPUT_COUNT
 
           assert trm_model.__version__ == "0.1.0"
-          assert MONTHLY_GENERATED_OUTPUT_COUNT == 42
+          assert MONTHLY_GENERATED_OUTPUT_COUNT == 45
           print(f"OK: {wheel.name} importa fuera del checkout de datos")
           PY
+
+      - name: Verificar ausencia de tests wavelet retirados
+        shell: bash
+        run: |
+          if find tests -type f \( -name 'test_wavelet_optimization_*.py' -o -name '*wavelet_optimization*' \) -print -quit | grep -q .; then
+            echo "Existen archivos de test wavelet optimization retirados."
+            exit 1
+          fi
+          if grep -R -n --exclude-dir='__pycache__' --include='*.py' 'wavelet_optimization' tests; then
+            echo "Existen referencias wavelet_optimization en tests."
+            exit 1
+          fi
+          if git grep -n 'wavelet_optimization' -- .github/workflows \
+              ':(exclude).github/workflows/model-check.yml' \
+              ':(exclude).github/workflows/monthly-refresh.yml'; then
+            echo "Existen referencias wavelet_optimization en otros workflows."
+            exit 1
+          fi
 
       - name: Compilar fuentes
         run: python -m compileall -q src pipelines research tests
@@ -61,23 +79,14 @@ jobs:
       - name: Validar contratos y leakage
         run: trm-model validate
 
-      - name: Ejecutar suite CI determinista
+      - name: Ejecutar suite CI determinista mínima
         run: |
-          # Las pruebas property-based se ejecutan en la validación completa/manual;
-          # el PR conserva aquí los contratos y caminos críticos deterministas.
+          # Se ejecutan sólo los contratos y tests de dispatch legacy; las
+          # properties quedan disponibles para una validación completa/manual.
           python -m pytest -q \
             tests/test_contracts.py \
             tests/test_temporal_contracts.py \
-            tests/test_long_horizon_dispatch.py \
-            tests/test_wavelet_optimization_smoke.py \
-            tests/test_wavelet_optimization_config.py \
-            tests/test_wavelet_optimization_labels.py \
-            tests/test_wavelet_optimization_metrics.py \
-            tests/test_wavelet_optimization_evaluation.py \
-            tests/test_wavelet_optimization_snapshots.py \
-            tests/test_wavelet_optimization_reconstruction.py \
-            tests/test_wavelet_optimization_publishing.py \
-            tests/test_wavelet_optimization_integration.py
+            tests/test_long_horizon_dispatch.py
 
       - name: Ejecutar pipeline mensual con manifest
         run: trm-model run-monthly
@@ -108,7 +117,7 @@ jobs:
               flatten_output_ownership(monthly_generated_output_ownership())
           )
           actual_outputs = {item["path"] for item in manifest["output_files"]}
-          assert len(actual_outputs) == 42
+          assert len(actual_outputs) == 45
           assert actual_outputs == expected_outputs
           validate_run_output_ownership(
               manifest,
