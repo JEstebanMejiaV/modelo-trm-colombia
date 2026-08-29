@@ -7,6 +7,7 @@ import pytest
 
 from trm_model.data.registry import load_source_registry
 from trm_model.output_contract import (
+    MONTHLY_GENERATED_OUTPUT_COUNT,
     flatten_output_ownership,
     monthly_generated_output_ownership,
 )
@@ -127,7 +128,7 @@ def test_run_manifest_rejects_stale_contract_tree_hash() -> None:
 def test_monthly_output_contract_is_exact_and_disjoint() -> None:
     ownership = monthly_generated_output_ownership(project_paths())
     output_paths = flatten_output_ownership(ownership)
-    assert len(output_paths) == 45
+    assert len(output_paths) == MONTHLY_GENERATED_OUTPUT_COUNT
     assert len(output_paths) == len(set(output_paths))
     contract_paths = {project_paths().relative(path) for path in contract_files(project_paths().root)}
     assert {"requirements.lock", "requirements-optional.lock"}.issubset(contract_paths)
