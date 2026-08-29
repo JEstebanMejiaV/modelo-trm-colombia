@@ -99,6 +99,7 @@ jobs:
           from pathlib import Path
 
           from trm_model.output_contract import (
+              MONTHLY_GENERATED_OUTPUT_COUNT,
               flatten_output_ownership,
               monthly_generated_output_ownership,
               validate_run_output_ownership,
@@ -117,7 +118,7 @@ jobs:
               flatten_output_ownership(monthly_generated_output_ownership())
           )
           actual_outputs = {item["path"] for item in manifest["output_files"]}
-          assert len(actual_outputs) == 45
+          assert len(actual_outputs) == MONTHLY_GENERATED_OUTPUT_COUNT
           assert actual_outputs == expected_outputs
           validate_run_output_ownership(
               manifest,
