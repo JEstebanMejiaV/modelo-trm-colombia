@@ -7,6 +7,7 @@ import pytest
 
 from trm_model.data.registry import load_source_registry
 from trm_model.output_contract import (
+    MONTHLY_GENERATED_OUTPUT_COUNT,
     flatten_output_ownership,
     monthly_generated_output_ownership,
 )
@@ -89,17 +90,7 @@ def test_output_catalog_covers_legacy_results_without_unclassified_files() -> No
         if path.is_file() and path.suffix.lower() in {".csv", ".json"}
     }
     actual.add(paths.relative(paths.results / "metadata.json"))
-    variant_manifest = json.loads(
-        (
-            paths.root / "research" / "manifests" / "long_horizon_wavelet_optimization.json"
-        ).read_text(encoding="utf-8")
-    )
-    planned_variant_paths = {
-        output["path"] for output in variant_manifest["outputs"]
-    }
     assert actual <= listed
-    assert listed - actual <= planned_variant_paths
-    assert planned_variant_paths <= listed
     assert len(listed) == len({path for path in listed})
 
 
@@ -137,7 +128,7 @@ def test_run_manifest_rejects_stale_contract_tree_hash() -> None:
 def test_monthly_output_contract_is_exact_and_disjoint() -> None:
     ownership = monthly_generated_output_ownership(project_paths())
     output_paths = flatten_output_ownership(ownership)
-    assert len(output_paths) == 42
+    assert len(output_paths) == MONTHLY_GENERATED_OUTPUT_COUNT
     assert len(output_paths) == len(set(output_paths))
     contract_paths = {project_paths().relative(path) for path in contract_files(project_paths().root)}
     assert {"requirements.lock", "requirements-optional.lock"}.issubset(contract_paths)

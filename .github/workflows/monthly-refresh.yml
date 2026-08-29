@@ -1,0 +1,120 @@
+name: Actualizar bundle mensual
+
+on:
+  schedule:
+    - cron: "0 6 2 * *"
+  workflow_dispatch:
+
+concurrency:
+  group: monthly-refresh
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Preparar rama de publicación
+        env:
+          REFRESH_BRANCH: automation/monthly-refresh
+        shell: bash
+        run: |
+          git fetch origin "$REFRESH_BRANCH" || true
+          git switch -C "$REFRESH_BRANCH"
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar runtime y QA fijados
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.lock
+          python -m pip install PyWavelets==1.9.0
+          python -m pip install -e . --no-deps
+
+      - name: Verificar ausencia de tests wavelet retirados
+        shell: bash
+        run: |
+          if find tests -type f \( -name 'test_wavelet_optimization_*.py' -o -name '*wavelet_optimization*' \) -print -quit | grep -q .; then
+            echo "Existen archivos de test wavelet optimization retirados."
+            exit 1
+          fi
+          if grep -R -n --exclude-dir='__pycache__' --include='*.py' 'wavelet_optimization' tests; then
+            echo "Existen referencias wavelet_optimization en tests."
+            exit 1
+          fi
+          if git grep -n 'wavelet_optimization' -- .github/workflows \
+              ':(exclude).github/workflows/model-check.yml' \
+              ':(exclude).github/workflows/monthly-refresh.yml'; then
+            echo "Existen referencias wavelet_optimization en otros workflows."
+            exit 1
+          fi
+
+      - name: Validar arquitectura y contratos
+        run: |
+          python src/check_architecture.py
+          trm-model validate
+
+      - name: Regenerar bundle mensual
+        run: trm-model run-monthly
+
+      - name: Regenerar gráficos y workbook
+        run: |
+          python src/build_charts.py
+          python src/sync_workbook_openpyxl.py
+
+      - name: Validar outputs regenerados
+        run: |
+          python src/check_charts.py
+          python src/check_outputs.py
+          python -m pytest -q \
+            tests/test_contracts.py \
+            tests/test_temporal_contracts.py \
+            tests/test_long_horizon_dispatch.py
+          git diff --check
+
+      # No ejecutamos check_reproducibility.py aquí: este workflow está creando
+      # precisamente el nuevo baseline que será revisado en el Pull Request.
+      - name: Publicar cambios en rama y Pull Request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
+          REFRESH_BRANCH: automation/monthly-refresh
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No hay outputs nuevos para publicar."
+            exit 0
+          fi
+          git commit -m "chore: refresh monthly model outputs"
+          git push --force-with-lease origin "$REFRESH_BRANCH"
+
+          open_pr_count=$(gh pr list \
+            --repo "$GITHUB_REPOSITORY" \
+            --head "$REFRESH_BRANCH" \
+            --base "$BASE_BRANCH" \
+            --state open \
+            --json number \
+            --jq 'length')
+          if [ "$open_pr_count" = "0" ]; then
+            gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --base "$BASE_BRANCH" \
+              --head "$REFRESH_BRANCH" \
+              --title "chore: actualizar bundle mensual de la TRM" \
+              --body "Actualización automática del bundle mensual. Incluye resultados, gráficos, workbook y metadatos regenerados; los checks de outputs y la suite CI mínima pasaron. Revisar antes de hacer merge."
+          else
+            echo "El Pull Request mensual ya está abierto; se actualizó su rama."
+          fi
