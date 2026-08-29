@@ -8,14 +8,14 @@
 
 ## Bundle mensual generado
 
-El contrato estático actual exige 42 outputs:
+El contrato estático actual exige 45 outputs:
 
 | Ownership | Cantidad | Función |
 |---|---:|---|
-| `monthly_explanation` | 24 | datos derivados, coeficientes, ajuste, contribuciones, Shapley y validación histórica |
+| `monthly_explanation` | 27 | datos derivados, ficha por factor, contabilidad mensual, coeficientes, ajuste, Shapley y validación histórica |
 | `monthly_forecast` | 8 | calendario, selección, coeficientes, diagnósticos y validación del forecast |
 | `robustness` | 10 | BEI, ECM, bounds y diagnósticos de robustez |
-| **Total** | **42** | bundle mensual |
+| **Total** | **45** | bundle mensual |
 
 Los manifests declarativos y el catálogo de compatibilidad pueden incluir más outputs históricos, de investigación o diagnósticos que no se escriben en cada ejecución de `run-monthly`. Esa diferencia es intencional durante la migración, pero debe mantenerse visible y reconciliada.
 

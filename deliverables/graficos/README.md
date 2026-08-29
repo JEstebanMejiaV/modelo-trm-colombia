@@ -2,7 +2,7 @@
 
 > Índice del área: [`docs/operacion/salidas.md`](../../docs/operacion/salidas.md) · [`docs/README.md`](../../docs/README.md).
 >
-> Esta carpeta presenta cinco lecturas visuales del modelo fuera del archivo Excel. Cada imagen se reconstruye con `python src/build_charts.py` a partir de los CSV versionados en `results/`; no contiene cifras digitadas manualmente. `metadata.json` registra las huellas de las fuentes y del generador, y `python src/check_charts.py` verifica que los PNG estén sincronizados. Los CSV se normalizan a seis cifras significativas antes de calcular la huella: es una precisión mayor que la visible en las imágenes y tolera diferencias numéricas irrelevantes entre plataformas sin ocultar cambios materiales.
+> Esta carpeta presenta seis lecturas visuales del modelo fuera del archivo Excel. Cada imagen se reconstruye con `python src/build_charts.py` a partir de los CSV versionados en `results/`; no contiene cifras digitadas manualmente. `metadata.json` registra las huellas de las fuentes y del generador, y `python src/check_charts.py` verifica que los PNG estén sincronizados. Los CSV se normalizan a seis cifras significativas antes de calcular la huella: es una precisión mayor que la visible en las imágenes y tolera diferencias numéricas irrelevantes entre plataformas sin ocultar cambios materiales.
 
 ## 1. Peso explicativo de los factores
 
@@ -22,15 +22,22 @@ Separa el desempeño de la explicación histórica y el pronóstico con rezagos 
 
 Muestra la TRM observada, las estimaciones condicionales de `Controles externos y financieros` y del `Marco macroeconómico integral`, el pronóstico con información rezagada y la caminata aleatoria durante los 48 meses de validación. Las dos primeras explican con realizaciones contemporáneas; la tercera respeta el calendario de publicación, aunque usa el último *vintage* disponible.
 
-## 4. Dirección y magnitud típica
+## 4. Asociaciones parciales estandarizadas
 
-![Efectos típicos estandarizados](04_efectos_tipicos.png)
+![Asociaciones parciales estandarizadas](04_asociaciones_estandarizadas.png)
 
-Estandariza cada regresor a un movimiento de una desviación estándar para comparar variables con unidades diferentes. Un punto a la derecha se asocia con depreciación del COP y uno a la izquierda, con apreciación. Las líneas son intervalos HAC del 95%; un punto vacío indica que el intervalo cruza cero.
+Estandariza cada regresor a un movimiento de una desviación estándar para comparar variables con unidades diferentes. El eje muestra la asociación parcial con `Δln(TRM)` bajo la especificación HAC; un punto vacío indica que el intervalo cruza cero. Los bloques compuestos no se representan como un coeficiente único: se leen en el gráfico de contribuciones mensuales.
 
-Este gráfico responde una pregunta distinta al peso Shapley. El efecto estandarizado muestra dirección, magnitud parcial e incertidumbre del coeficiente completo; Shapley distribuye la capacidad explicativa, incluida la señal compartida. Por eso un factor puede tener peso visible y un coeficiente impreciso.
+Este gráfico responde una pregunta distinta al peso Shapley. La asociación estandarizada muestra dirección, magnitud parcial e incertidumbre del coeficiente de términos simples; Shapley distribuye la capacidad explicativa, incluida la señal compartida. Por eso un factor puede tener peso visible y una asociación imprecisa. Ninguna lectura es causal.
 
-## 5. ECM: corto plazo, largo plazo y ajuste
+## 5. Contribuciones mensuales por factor
+
+![Contribuciones mensuales por factor](06_contribuciones_mensuales.png)
+
+El waterfall muestra cómo los factores, `otros_componentes` y el ajuste total suman la variación mensual ajustada del último mes disponible. El panel inferior muestra la contabilidad firmada de los últimos 24 meses y agrupa el resto de términos para facilitar la lectura. El `cierre_contable` debe ser cero. Es una descomposición algebraica del ajuste histórico, no un escenario contrafactual ni un efecto causal.
+
+
+## 6. ECM: corto plazo, largo plazo y ajuste
 
 ![Elasticidades y corrección de errores](05_ecm_elasticidades.png)
 
@@ -41,13 +48,13 @@ Separa tres conceptos que no deben mezclarse:
 - El diferencial de tasas y el déficit se muestran como semielasticidades: en corto plazo corresponden a un cambio mensual de 1 punto porcentual y en largo plazo a una diferencia de 1 punto porcentual en el nivel de equilibrio.
 - La curva inferior muestra qué proporción de un desequilibrio inicial permanecería después de cada mes. La anotación calcula la velocidad de ajuste y la semivida a partir del coeficiente de corrección vigente; la banda transforma su intervalo del 95%.
 
-El bosque de elasticidades incluye términos de intercambio tanto en corto como en largo plazo. El riesgo soberano EMBIG Colombia y el diferencial de compensación inflacionaria a cinco años pertenecen al marco macroeconómico integral, pero no al vector ECM; por eso aparecen en los gráficos de pesos y efectos típicos, no en este bosque.
+El bosque de elasticidades incluye términos de intercambio tanto en corto como en largo plazo. El riesgo soberano EMBIG Colombia y el diferencial de compensación inflacionaria a cinco años pertenecen al marco macroeconómico integral, pero no al vector ECM; por eso aparecen en los gráficos de pesos y asociaciones estandarizadas, no en este bosque.
 
 El CSV de largo plazo contiene el vector cointegrante normalizado con coeficiente 1 para `ln_trm`. Para expresar la respuesta de equilibrio de la TRM, el gráfico invierte el signo de los términos explicativos y también invierte los extremos de sus intervalos. El subtítulo interpreta la prueba bounds con ambos límites al 5%; salvo que se rechace el límite superior I(1), los valores de largo plazo deben leerse como exploratorios y no como evidencia confirmada de equilibrio.
 
 ## Cautelas comunes
 
-- Los cinco gráficos describen asociaciones estadísticas, no causalidad.
+- Los seis gráficos describen asociaciones estadísticas, contabilidad del ajuste o validación predictiva; ninguno demuestra causalidad.
 - El factor histórico incluye `D.ln_ise_total_dane.L0` y `D.ln_ipc_colombia.L0` como actividad y precios domésticos; el pronóstico los usa con `.L2`. Ambas series cubren 244/244 meses y no se imputan. GEIH, IPI e IPP quedan fuera por cobertura incompleta.
 - Términos de intercambio, dólar amplio, VIX, EMBIG Colombia y monedas regionales usan información contemporánea realizada.
 - El factor histórico usa BRL, CLP, MXN y PEN; el pronóstico usa BRL, CLP y MXN porque obtiene menor BIC. PEN mejora el ajuste histórico, no el desempeño ex ante.

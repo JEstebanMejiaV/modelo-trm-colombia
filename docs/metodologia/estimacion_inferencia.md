@@ -28,6 +28,8 @@ Los CSV de coeficientes reportan estimaciones y p-valores HAC. Los diagnósticos
 
 Los coeficientes de variables contemporáneas deben interpretarse como asociaciones condicionales. En particular, dólar, VIX, EMBIG, monedas regionales, balanza, capitales, reservas, remesas y política monetaria pueden reaccionar al mismo shock o a la propia TRM.
 
+La ficha mensual separa tres objetos: (i) asociación parcial del coeficiente HAC, con dirección e IC 95% cuando el factor tiene un término único; (ii) contribución mensual firmada, que suma coeficiente por regresor y reconcilia el ajuste; y (iii) participación Shapley en el R² incremental. Un bloque compuesto no recibe un coeficiente único: sus términos se describen por separado y su suma se interpreta solo como contabilidad. Ninguno de estos objetos identifica un efecto causal o un contrafactual.
+
 ## ECM y largo plazo
 
 El contraste ARDL–ECM, sus bounds y los vectores de largo plazo viven en `results/robustez/`. La prueba bounds actual no confirma cointegración al 5%; por ello los coeficientes de largo plazo son exploratorios y no reemplazan la especificación mensual en diferencias.

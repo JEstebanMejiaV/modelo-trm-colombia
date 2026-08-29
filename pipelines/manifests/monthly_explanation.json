@@ -50,6 +50,16 @@
       "status": "versioned"
     },
     {
+      "path": "results/explicacion/contribuciones_factores_controles_externos.csv",
+      "kind": "primary",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/contribuciones_factores_marco_macro_integral.csv",
+      "kind": "primary",
+      "status": "versioned"
+    },
+    {
       "path": "results/explicacion/contribuciones_marco_macro_integral.csv",
       "kind": "diagnostic",
       "status": "versioned"
@@ -77,6 +87,11 @@
     {
       "path": "results/explicacion/intervalos_bootstrap_pesos_shapley.csv",
       "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/interpretacion_factores_marco_macro_integral.csv",
+      "kind": "primary",
       "status": "versioned"
     },
     {
@@ -128,6 +143,7 @@
   "caveats": [
     "La información contemporánea describe ex post/nowcast y no identifica efectos causales.",
     "La ruta sigue usando la econometría mensual validada en src/model.",
-    "El ownership del manifest cubre todos los outputs históricos clasificados en el catálogo; la corrida actual registra por separado sus 24 outputs generados."
+    "La ficha por factor separa asociación HAC, contabilidad mensual firmada y participación Shapley; los factores compuestos no tienen coeficiente único.",
+    "El ownership del manifest cubre todos los outputs históricos clasificados en el catálogo; la corrida actual registra por separado sus 27 outputs generados."
   ]
 }

@@ -20,7 +20,7 @@ Para `monthly_bundle`, la reconciliación comprueba:
 
 - producto de corrida `monthly_bundle`;
 - productos propietarios `monthly_explanation`, `monthly_forecast` y `robustness`;
-- 42 outputs top-level;
+- 45 outputs top-level;
 - igualdad entre outputs top-level y outputs por producto;
 - ausencia de ownership doble.
 

@@ -32,7 +32,7 @@ def run_monthly(*, runner: Callable[[], None] | None = None) -> None:
 
 
 def declared_outputs(*, paths: ProjectPaths | None = None) -> list[Path]:
-    """Devuelve los 42 outputs mensuales conocidos, sin crear ni mover archivos."""
+    """Devuelve los 45 outputs mensuales conocidos, sin crear ni mover archivos."""
     project = paths or project_paths()
     return resolve_output_ownership(
         monthly_generated_output_ownership(project),

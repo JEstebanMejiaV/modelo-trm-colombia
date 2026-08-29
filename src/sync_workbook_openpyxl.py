@@ -260,8 +260,9 @@ def update_summary(wb, metadata: dict[str, object]) -> None:
     reference = csv("explicacion/coeficientes_controles_externos.csv").set_index("termino")
 
     ws["A3"] = (
-        "Se separan dos usos: explicación histórica con información contemporánea y "
-        "pronóstico de un mes con rezagos de publicación. Muestra común: enero de 2006 a abril de 2026."
+        "Se separan tres lecturas: asociación histórica parcial, contabilidad mensual firmada y pronóstico ex ante. "
+        "La explicación usa información contemporánea y el pronóstico usa rezagos de publicación. "
+        "Ninguna tabla identifica efectos causales. Muestra común: enero de 2006 a abril de 2026."
     )
     ws["A6"] = int(metadata["marco_macro_integral_observaciones"])
     ws["C6"] = pct(float(metadata["adl_r_cuadrado_ajustado"]))
@@ -318,7 +319,7 @@ def update_summary(wb, metadata: dict[str, object]) -> None:
         "D.deficit_fiscal_12m_pct_pib.L1": ("Déficit fiscal 12m/PIB (t−1)", "+1 pp", None, "Prima fiscal; revise el intervalo antes de concluir"),
         "dummy_pandemia_2020": ("Pandemia, mar–may 2020", "Dummy = 1", None, "Control de episodio extraordinario"),
     }
-    output_rows = [["Variable", "Movimiento ilustrativo", "Efecto aproximado en TRM", "Signo", "p-valor", "Lectura"]]
+    output_rows = [["Variable", "Movimiento ilustrativo", "Asociación parcial ilustrativa", "Dirección asociada", "p-valor", "Lectura"]]
     for term, (label, movement, proportional, reading) in labels.items():
         record = reference.loc[term]
         coefficient = float(record["coeficiente"])
@@ -326,7 +327,7 @@ def update_summary(wb, metadata: dict[str, object]) -> None:
             label,
             movement,
             effect_text(coefficient, proportional),
-            "Deprecia el COP" if coefficient >= 0 else "Aprecia el COP",
+            "Se asocia con una TRM mayor" if coefficient >= 0 else "Se asocia con una TRM menor",
             float(record["p_valor"]),
             reading,
         ])
@@ -334,6 +335,42 @@ def update_summary(wb, metadata: dict[str, object]) -> None:
     for row_number, row_values in enumerate(output_rows, start=19):
         for column, item in enumerate(row_values, start=1):
             ws.cell(row_number, column).value = value(item)
+
+    interpretation = csv("explicacion/interpretacion_factores_marco_macro_integral.csv")
+    ws["A50"] = "Ficha integrada por factor: asociación, contabilidad y Shapley"
+    ws["A51"] = (
+        "Advertencia: la asociación parcial HAC y la contribución mensual describen la ecuación histórica; "
+        "no son efectos causales ni escenarios contrafactuales. Los bloques compuestos no tienen coeficiente único."
+    )
+    factor_rows = []
+    for row in interpretation.itertuples(index=False):
+        is_composite = bool(row.es_compuesto)
+        coefficient_text = (
+            "Sin coeficiente único" if is_composite else f"{float(row.coeficiente):.5f}"
+        )
+        interval_text = (
+            "No aplica"
+            if is_composite
+            else f"[{float(row.ic_95_inferior):.5f}; {float(row.ic_95_superior):.5f}]"
+        )
+        factor_rows.append([
+            row.factor,
+            row.grupo,
+            "Bloque compuesto" if is_composite else "Coeficiente único",
+            coefficient_text,
+            interval_text,
+            None if pd.isna(row.participacion_shapley_r2_pct) else float(row.participacion_shapley_r2_pct) / 100,
+            None if pd.isna(row.contribucion_media_mensual_pct) else float(row.contribucion_media_mensual_pct) / 100,
+            row.lectura_dinamica,
+        ])
+    write_table(
+        ws,
+        "FichaFactoresResumenTable",
+        53,
+        1,
+        ["Factor", "Grupo", "Tipo de lectura", "Coeficiente / signo", "IC 95% HAC", "Participación R² incremental", "Contribución media Δln TRM", "Lectura dinámica"],
+        factor_rows,
+    )
 
 
 def update_weights_and_robustness(wb) -> None:
@@ -677,9 +714,10 @@ def update_models(wb) -> None:
     write_table(ws, "AjusteMarcoMacroIntegralTable", fit_header, 1, headers, fit_rows)
     ws["A1"] = "Marco macroeconómico integral: condiciones externas, internas y regionales"
     ws["A2"] = (
-        "Explicación histórica ex post. Integra 14 factores, incluido un bloque de 17 términos globales agrupados: "
+        "Explicación histórica ex post y contabilidad mensual, no pronóstico. Integra 14 factores, incluido un bloque de 17 términos globales agrupados: "
         "expectativas y rendimientos de EE. UU., condiciones financieras, commodities, desempleo, empleo industrial y fletes. "
-        "Las series candidatas incompletas se documentan, pero no se imputan ni entran al modelo balanceado."
+        "Las series candidatas incompletas se documentan, pero no se imputan ni entran al modelo balanceado. "
+        "Advertencia: las asociaciones parciales y contribuciones firmadas no son efectos causales."
     )
     # El gráfico anterior apuntaba a la tabla vieja. Se sustituye por un gráfico pequeño con la tabla vigente.
     ws._charts = []
@@ -695,6 +733,24 @@ def update_models(wb) -> None:
         chart.height = 7
         chart.width = 13
         ws.add_chart(chart, "O5")
+
+    factor_contributions = csv("explicacion/contribuciones_factores_marco_macro_integral.csv")
+    factor_columns = [column for column in factor_contributions.columns if column != "fecha"]
+    factor_contributions["fecha"] = pd.to_datetime(factor_contributions["fecha"]).dt.strftime("%Y-%m")
+    factor_rows = factor_contributions[["fecha", *factor_columns]].values.tolist()
+    ws["A283"] = "Contabilidad mensual agregada por factor"
+    ws["A284"] = (
+        "Contribuciones firmadas (coeficiente × regresor) agregadas por factor. "
+        "La columna de cierre debe ser cero; esto es una contabilidad histórica, no causalidad."
+    )
+    write_table(
+        ws,
+        "ContribucionesFactoresMarcoMacroIntegralTable",
+        286,
+        1,
+        ["Mes", *factor_columns],
+        factor_rows,
+    )
 
     controles_externos_diagnostics = csv("explicacion/diagnosticos_controles_externos.csv")
     diagnostic_ws = wb["Diagnosticos"]

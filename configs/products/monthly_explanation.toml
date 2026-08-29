@@ -15,6 +15,11 @@ integrated_model_id = "marco_macro_integral"
 estimator = "ols_hac"
 hac_maxlags = 6
 factor_count = 14
+factor_interpretation_output = "results/explicacion/interpretacion_factores_marco_macro_integral.csv"
+factor_contribution_outputs = [
+  "results/explicacion/contribuciones_factores_controles_externos.csv",
+  "results/explicacion/contribuciones_factores_marco_macro_integral.csv",
+]
 
 [validation]
 holdout_months = 48

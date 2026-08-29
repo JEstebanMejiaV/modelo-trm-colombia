@@ -40,7 +40,10 @@ Modelos que usan realizaciones contemporáneas de algunos factores. Sirven para 
 | `ajuste_historico_controles_externos.csv` | Ajuste de un paso, residuos mensuales |
 | `ajuste_historico_marco_macro_integral.csv` | Igual para el marco macroeconómico integral |
 | `contribuciones_controles_externos.csv` | Descomposición mensual: coeficiente × regresor |
+| `contribuciones_factores_controles_externos.csv` | Descomposición mensual agregada por factor, con cierre contable |
 | `contribuciones_marco_macro_integral.csv` | Igual para el marco macroeconómico integral |
+| `contribuciones_factores_marco_macro_integral.csv` | Contabilidad mensual agregada por factor, otros componentes, ajuste total y cierre |
+| `interpretacion_factores_marco_macro_integral.csv` | Ficha económica y estadística por factor, narrativa dinámica y advertencia no causal |
 | `validacion_metricas_controles_externos.csv` | MAPE, acierto y MAE en validación expansiva de 48 meses |
 | `validacion_metricas_marco_macro_integral.csv` | Igual para el marco macroeconómico integral |
 | `validacion_predicciones_controles_externos.csv` | Predicciones mensuales de la validación |
