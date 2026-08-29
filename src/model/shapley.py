@@ -247,7 +247,13 @@ def subsample_stability(
     point_shapley: pd.DataFrame,
     full_coefficients: pd.DataFrame,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Reestima coeficientes y Shapley en cortes temporales predefinidos."""
+    """Reestima coeficientes y Shapley en cortes temporales predefinidos.
+
+    La comparación de signos se hace para todos los términos de cada factor.
+    Para un factor compuesto no se publica el primer coeficiente como si fuera
+    el coeficiente del factor: se conservan los detalles por término y el
+    indicador de coincidencia del factor exige que coincidan todos sus términos.
+    """
     from .estimation import tidy_robust_ols
 
     midpoint = len(selected.y) // 2
@@ -286,13 +292,27 @@ def subsample_stability(
         ranks_sub = weights_sub.rank(ascending=False, method="min")
         differences = weights_sub - full_weights
         coefficient_lookup = coefficients_sub.set_index("termino")
-        sign_matches = []
-        for factor in factor_specs:
-            term = factor_columns[factor][0]
-            coefficient = float(coefficient_lookup.loc[term, "coeficiente"])
-            p_value = float(coefficient_lookup.loc[term, "p_valor"])
-            sign_match = bool(np.sign(coefficient) == full_signs[term])
-            sign_matches.append(sign_match)
+        factor_sign_matches: list[bool] = []
+        term_matches_total = 0
+        terms_evaluated_total = 0
+        for factor, terms in factor_columns.items():
+            term_coefficients: list[float] = []
+            term_p_values: list[float] = []
+            term_sign_matches: list[bool] = []
+            for term in terms:
+                coefficient = float(coefficient_lookup.loc[term, "coeficiente"])
+                p_value = float(coefficient_lookup.loc[term, "p_valor"])
+                term_coefficients.append(coefficient)
+                term_p_values.append(p_value)
+                term_sign_matches.append(bool(np.sign(coefficient) == full_signs[term]))
+            terms_evaluated = len(terms)
+            terms_matching = int(sum(term_sign_matches))
+            factor_sign_match = terms_matching == terms_evaluated
+            factor_sign_matches.append(factor_sign_match)
+            term_matches_total += terms_matching
+            terms_evaluated_total += terms_evaluated
+            coefficient = term_coefficients[0] if terms_evaluated == 1 else np.nan
+            p_value = term_p_values[0] if terms_evaluated == 1 else np.nan
             detail_rows.append(
                 {
                     "submuestra": label,
@@ -305,10 +325,23 @@ def subsample_stability(
                     "grupo": factor_specs[factor]["grupo"],
                     "coeficiente": coefficient,
                     "p_valor_hac": p_value,
+                    "coeficientes_terminos": "; ".join(
+                        f"{term}={value:.12g}" for term, value in zip(terms, term_coefficients)
+                    ),
+                    "p_valores_terminos": "; ".join(
+                        f"{term}={value:.12g}" for term, value in zip(terms, term_p_values)
+                    ),
+                    "terminos_evaluados": terms_evaluated,
+                    "terminos_con_signo_coincidente": terms_matching,
+                    "signos_terminos": "; ".join(
+                        f"{term}={'igual' if match else 'distinto'}"
+                        for term, match in zip(terms, term_sign_matches)
+                    ),
+                    "todos_los_terminos_mismo_signo": factor_sign_match,
                     "shapley_r2": float(shapley_sub.set_index("factor").loc[factor, "shapley_r2"]),
                     "peso_entre_factores_pct": float(weights_sub[factor]),
                     "rango_peso": int(ranks_sub[factor]),
-                    "signo_coincide_muestra_completa": sign_match,
+                    "signo_coincide_muestra_completa": factor_sign_match,
                     "diferencia_peso_vs_completa_pp": float(differences[factor]),
                 }
             )
@@ -329,7 +362,9 @@ def subsample_stability(
                 "correlacion_spearman_rangos_vs_completa": rank_correlation,
                 "mediana_diferencia_abs_peso_pp": float(differences.abs().median()),
                 "max_diferencia_abs_peso_pp": float(differences.abs().max()),
-                "factores_mismo_signo_de_{}".format(len(factor_specs)): int(sum(sign_matches)),
+                "factores_mismo_signo_de_{}".format(len(factor_specs)): int(sum(factor_sign_matches)),
+                "terminos_mismo_signo": term_matches_total,
+                "terminos_evaluados": terms_evaluated_total,
             }
         )
     return pd.DataFrame(detail_rows), pd.DataFrame(summary_rows)

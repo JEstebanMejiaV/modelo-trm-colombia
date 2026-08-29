@@ -8,8 +8,15 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from openpyxl import load_workbook
+from openpyxl.utils.cell import range_boundaries
 
 from trm_model.data.registry import load_source_registry
+from trm_model.features.monthly_transforms import design_term_name
+from trm_model.monthly.explanation import NO_CAUSAL_WARNING
+from trm_model.monthly.specifications import (
+    INTEGRATED_FACTOR_SPECS_4,
+    REFERENCE_FACTOR_SPECS,
+)
 from trm_model.paths import project_paths
 
 
@@ -33,6 +40,553 @@ def assert_close(actual: object, expected: float, label: str, atol: float = 1e-8
         float(actual), expected, rtol=0.0, atol=atol
     ):
         raise AssertionError(f"{label}: Excel={actual!r}, CSV={expected!r}.")
+
+
+def _assert_array_close(
+    actual: object, expected: object, label: str, atol: float = 1e-10
+) -> None:
+    actual_values = pd.to_numeric(pd.Series(actual), errors="coerce").to_numpy(dtype=float)
+    expected_values = pd.to_numeric(pd.Series(expected), errors="coerce").to_numpy(dtype=float)
+    if (
+        actual_values.shape != expected_values.shape
+        or not np.isfinite(actual_values).all()
+        or not np.isfinite(expected_values).all()
+        or not np.allclose(actual_values, expected_values, rtol=0.0, atol=atol)
+    ):
+        maximum = np.nanmax(np.abs(actual_values - expected_values)) if actual_values.size else np.nan
+        raise AssertionError(f"{label}: diferencia máxima={maximum!r}.")
+
+
+def _assert_value_close(
+    actual: object, expected: object, label: str, atol: float = 1e-8
+) -> None:
+    if pd.isna(expected):
+        if actual is not None and not pd.isna(actual):
+            raise AssertionError(f"{label}: se esperaba una celda vacía, hay {actual!r}.")
+        return
+    assert_close(actual, float(expected), label, atol=atol)
+
+
+def _is_true(value: object) -> bool:
+    return str(value).strip().lower() == "true"
+
+
+def _factor_terms(factor_specs: dict[str, dict[str, object]]) -> dict[str, list[str]]:
+    return {
+        factor: [design_term_name(component, lag) for component, lag in spec["terminos"]]
+        for factor, spec in factor_specs.items()
+    }
+
+
+def _parse_dates(frame: pd.DataFrame, label: str) -> pd.Series:
+    if "fecha" not in frame.columns:
+        raise AssertionError(f"{label} no contiene la columna fecha.")
+    dates = pd.to_datetime(frame["fecha"], errors="coerce")
+    if dates.isna().any():
+        raise AssertionError(f"{label} contiene fechas inválidas.")
+    if len(frame) != 240:
+        raise AssertionError(f"{label} debe cubrir exactamente 240 meses; hay {len(frame)}.")
+    if not dates.is_unique or not dates.is_monotonic_increasing:
+        raise AssertionError(f"{label} debe tener fechas únicas y ordenadas.")
+    return dates.reset_index(drop=True)
+
+
+def _numeric_frame(
+    frame: pd.DataFrame, columns: list[str], label: str
+) -> pd.DataFrame:
+    numeric = frame.loc[:, columns].apply(pd.to_numeric, errors="coerce")
+    if numeric.isna().any().any() or not np.isfinite(numeric.to_numpy(dtype=float)).all():
+        raise AssertionError(f"{label} contiene valores no numéricos, faltantes o no finitos.")
+    return numeric
+
+
+def _validate_factor_contribution_csv(
+    relative_path: str,
+    source_relative_path: str,
+    factor_specs: dict[str, dict[str, object]],
+) -> pd.DataFrame:
+    path = RESULTS / relative_path
+    source_path = RESULTS / source_relative_path
+    if not path.exists():
+        raise AssertionError(f"Falta la salida explicativa {relative_path}.")
+    if not source_path.exists():
+        raise AssertionError(f"Falta la fuente de conciliación {source_relative_path}.")
+
+    frame = pd.read_csv(path)
+    source = pd.read_csv(source_path)
+    terms_by_factor = _factor_terms(factor_specs)
+    factor_columns = list(terms_by_factor)
+    expected_columns = [
+        "fecha",
+        *factor_columns,
+        "otros_componentes",
+        "suma_factores",
+        "ajuste_total",
+        "cierre_contable",
+    ]
+    if list(frame.columns) != expected_columns:
+        raise AssertionError(
+            f"{relative_path} no concilia con sus columnas esperadas: "
+            f"{list(frame.columns)}."
+        )
+
+    dates = _parse_dates(frame, relative_path)
+    source_dates = _parse_dates(source, source_relative_path)
+    if not np.array_equal(dates.to_numpy(), source_dates.to_numpy()):
+        raise AssertionError(f"Las fechas de {relative_path} no concilian con {source_relative_path}.")
+
+    source_terms = [term for terms in terms_by_factor.values() for term in terms]
+    missing_terms = sorted(set(source_terms).difference(source.columns))
+    if missing_terms:
+        raise AssertionError(
+            f"{source_relative_path} no contiene términos necesarios: {missing_terms}."
+        )
+    numeric_columns = [*factor_columns, "otros_componentes", "suma_factores", "ajuste_total", "cierre_contable"]
+    values = _numeric_frame(frame, numeric_columns, relative_path)
+    source_numeric = _numeric_frame(
+        source,
+        [*source_terms, "ajuste_total"],
+        source_relative_path,
+    )
+
+    expected_sum = values[factor_columns].sum(axis=1)
+    _assert_array_close(values["suma_factores"], expected_sum, f"{relative_path}: suma_factores")
+    other_terms = [
+        column
+        for column in source.columns
+        if column not in {"fecha", "ajuste_total", *source_terms}
+    ]
+    expected_other = (
+        source.loc[:, other_terms]
+        .apply(pd.to_numeric, errors="coerce")
+        .sum(axis=1)
+        if other_terms
+        else pd.Series(0.0, index=source.index)
+    )
+    if pd.to_numeric(expected_other, errors="coerce").isna().any():
+        raise AssertionError(f"{source_relative_path} contiene otros componentes no numéricos.")
+    _assert_array_close(values["otros_componentes"], expected_other, f"{relative_path}: otros_componentes")
+    _assert_array_close(
+        values["ajuste_total"],
+        source_numeric["ajuste_total"],
+        f"{relative_path}: ajuste_total",
+    )
+    _assert_array_close(
+        values["suma_factores"] + values["otros_componentes"],
+        values["ajuste_total"],
+        f"{relative_path}: suma de factores más otros componentes",
+    )
+    closure = values["cierre_contable"].abs()
+    if float(closure.max()) > 1e-10:
+        raise AssertionError(
+            f"{relative_path} no cierra contablemente; máximo={float(closure.max())}."
+        )
+    return frame
+
+
+_INTERPRETATION_COLUMNS = [
+    "modelo_id",
+    "modelo",
+    "factor",
+    "grupo",
+    "dominio",
+    "descripcion",
+    "pregunta_guia",
+    "canal_descriptivo",
+    "terminos",
+    "terminos_legibles",
+    "rezagos_modelo",
+    "n_terminos",
+    "es_compuesto",
+    "coeficiente",
+    "coeficientes_terminos",
+    "signos_terminos",
+    "p_valor_hac",
+    "ic_95_inferior",
+    "ic_95_superior",
+    "ic95_cruza_cero",
+    "p_valor_menor_05",
+    "estado_inferencia",
+    "contribucion_media_mensual_pct",
+    "contribucion_mediana_mensual_pct",
+    "contribucion_abs_media_mensual_pct",
+    "meses_contribucion_positiva_pct",
+    "ultima_contribucion_mensual_pct",
+    "participacion_shapley_r2_pct",
+    "aporte_shapley_r2_pp",
+    "ic95_shapley_inferior_pct",
+    "ic95_shapley_superior_pct",
+    "probabilidad_shapley_top3_pct",
+    "advertencia_interpretacion",
+    "estabilidad_signo_factor_pct_submuestras",
+    "estabilidad_signos_terminos_pct_submuestras",
+    "estabilidad_signos_terminos_pct_2020_en_adelante",
+    "peso_entre_factores_pct_2020_en_adelante",
+    "lectura_dinamica",
+]
+
+_STABILITY_DETAIL_COLUMNS = [
+    "submuestra",
+    "inicio",
+    "fin",
+    "observaciones",
+    "r2",
+    "r2_ajustado",
+    "factor",
+    "grupo",
+    "coeficiente",
+    "p_valor_hac",
+    "coeficientes_terminos",
+    "p_valores_terminos",
+    "terminos_evaluados",
+    "terminos_con_signo_coincidente",
+    "signos_terminos",
+    "todos_los_terminos_mismo_signo",
+    "shapley_r2",
+    "peso_entre_factores_pct",
+    "rango_peso",
+    "signo_coincide_muestra_completa",
+    "diferencia_peso_vs_completa_pp",
+]
+
+
+def _validate_factor_explanation_outputs(
+    weights: pd.DataFrame,
+    bootstrap: pd.DataFrame,
+    stability_detail: pd.DataFrame,
+    stability_summary: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    expected_reference_factors = {
+        "Términos de intercambio",
+        "Remesas",
+        "Diferencial de tasas",
+        "Déficit fiscal",
+        "Dólar amplio",
+        "VIX",
+    }
+    expected_integrated_factors = {
+        *expected_reference_factors,
+        "Riesgo soberano EMBIG Colombia",
+        "Reservas internacionales",
+        "Balanza comercial cambiaria",
+        "Flujos netos de capital",
+        "Diferencial de compensación inflacionaria 5 años",
+        "Actividad y precios domésticos",
+        "Monedas regionales",
+        "Condiciones financieras, commodities y actividad internacional",
+    }
+    if set(REFERENCE_FACTOR_SPECS) != expected_reference_factors:
+        raise AssertionError("La especificación de controles externos cambió sus factores esperados.")
+    if set(INTEGRATED_FACTOR_SPECS_4) != expected_integrated_factors:
+        raise AssertionError("La especificación integrada cambió sus 14 factores esperados.")
+
+    _validate_factor_contribution_csv(
+        "explicacion/contribuciones_factores_controles_externos.csv",
+        "explicacion/contribuciones_controles_externos.csv",
+        REFERENCE_FACTOR_SPECS,
+    )
+    integrated_contributions = _validate_factor_contribution_csv(
+        "explicacion/contribuciones_factores_marco_macro_integral.csv",
+        "explicacion/contribuciones_marco_macro_integral.csv",
+        INTEGRATED_FACTOR_SPECS_4,
+    )
+
+    interpretation_path = RESULTS / "explicacion/interpretacion_factores_marco_macro_integral.csv"
+    if not interpretation_path.exists():
+        raise AssertionError("Falta la ficha de interpretación por factor.")
+    interpretation = pd.read_csv(interpretation_path)
+    if list(interpretation.columns) != _INTERPRETATION_COLUMNS:
+        raise AssertionError("La ficha de interpretación no concilia con su contrato de columnas.")
+    if len(interpretation) != 14 or interpretation["factor"].duplicated().any():
+        raise AssertionError("La ficha de interpretación debe contener 14 factores únicos.")
+    if set(interpretation["factor"]) != expected_integrated_factors:
+        raise AssertionError("La ficha de interpretación no cubre los 14 factores integrados.")
+
+    terms_by_factor = _factor_terms(INTEGRATED_FACTOR_SPECS_4)
+    interpretation_by_factor = interpretation.set_index("factor")
+    weights_by_factor = weights.set_index("factor")
+    bootstrap_by_factor = bootstrap.set_index("factor")
+    if set(weights_by_factor.index) != expected_integrated_factors:
+        raise AssertionError("El CSV Shapley no concilia con los 14 factores de la ficha.")
+    if set(bootstrap_by_factor.index) != expected_integrated_factors:
+        raise AssertionError("El bootstrap Shapley no concilia con los 14 factores de la ficha.")
+
+    for factor, terms in terms_by_factor.items():
+        row = interpretation_by_factor.loc[factor]
+        weight = weights_by_factor.loc[factor]
+        bootstrap_row = bootstrap_by_factor.loc[factor]
+        is_composite = len(terms) > 1
+        if _is_true(row["es_compuesto"]) != is_composite:
+            raise AssertionError(f"La ficha no marca correctamente el carácter compuesto de {factor}.")
+        if int(row["n_terminos"]) != len(terms):
+            raise AssertionError(f"La ficha no concilia el número de términos de {factor}.")
+        if row["terminos"] != ", ".join(terms):
+            raise AssertionError(f"La ficha no concilia los términos de {factor}.")
+        if is_composite:
+            for column in ["coeficiente", "p_valor_hac", "ic_95_inferior", "ic_95_superior"]:
+                if not pd.isna(row[column]):
+                    raise AssertionError(f"El factor compuesto {factor} no debe tener {column} agregado.")
+            if "sin coeficiente único" not in str(row["estado_inferencia"]).lower():
+                raise AssertionError(f"Falta la advertencia de coeficiente único para {factor}.")
+            if "no tiene un coeficiente ni un signo único" not in str(row["lectura_dinamica"]).lower():
+                raise AssertionError(f"La lectura dinámica de {factor} no trata el bloque como compuesto.")
+        else:
+            for column in ["coeficiente", "p_valor_hac", "ic_95_inferior", "ic_95_superior"]:
+                if pd.isna(row[column]) or not np.isfinite(float(row[column])):
+                    raise AssertionError(f"El factor simple {factor} tiene {column} no finito.")
+        if row["advertencia_interpretacion"] != NO_CAUSAL_WARNING:
+            raise AssertionError(f"La ficha de {factor} no conserva la advertencia no causal.")
+        dynamic_reading = str(row["lectura_dinamica"])
+        if not dynamic_reading.strip() or NO_CAUSAL_WARNING not in dynamic_reading:
+            raise AssertionError(f"La lectura dinámica de {factor} no contiene la advertencia no causal.")
+        _assert_value_close(
+            row["participacion_shapley_r2_pct"],
+            weight["peso_entre_factores_pct"],
+            f"Participación Shapley de {factor}",
+            atol=1e-10,
+        )
+        _assert_value_close(
+            row["aporte_shapley_r2_pp"],
+            weight["aporte_r2_puntos_porcentuales"],
+            f"Aporte Shapley de {factor}",
+            atol=1e-10,
+        )
+        _assert_value_close(
+            row["ic95_shapley_inferior_pct"],
+            bootstrap_row["ic_95_inferior_pct"],
+            f"IC Shapley inferior de {factor}",
+            atol=1e-10,
+        )
+        _assert_value_close(
+            row["ic95_shapley_superior_pct"],
+            bootstrap_row["ic_95_superior_pct"],
+            f"IC Shapley superior de {factor}",
+            atol=1e-10,
+        )
+        _assert_value_close(
+            row["probabilidad_shapley_top3_pct"],
+            bootstrap_row["probabilidad_top3_pct"],
+            f"Probabilidad top 3 de {factor}",
+            atol=1e-10,
+        )
+
+    if list(stability_detail.columns) != _STABILITY_DETAIL_COLUMNS:
+        raise AssertionError("La estabilidad detallada no contiene las columnas por término esperadas.")
+    expected_subsamples = {
+        "Muestra completa",
+        "Primera mitad",
+        "Segunda mitad",
+        "Prepandemia",
+        "2020 en adelante",
+    }
+    if set(stability_detail["submuestra"]) != expected_subsamples:
+        raise AssertionError("La estabilidad detallada no cubre los cinco cortes esperados.")
+    if len(stability_detail) != 70 or not stability_detail.groupby(["submuestra", "factor"]).size().eq(1).all():
+        raise AssertionError("La estabilidad detallada debe tener una fila por factor y submuestra.")
+    if not {"terminos_mismo_signo", "terminos_evaluados", "factores_mismo_signo_de_14"}.issubset(stability_summary.columns):
+        raise AssertionError("El resumen de estabilidad no conserva los conteos por término.")
+    if not pd.to_numeric(stability_summary["terminos_evaluados"], errors="coerce").eq(31).all():
+        raise AssertionError("Cada corte de estabilidad debe evaluar 31 términos.")
+
+    for _, record in stability_detail.iterrows():
+        factor = str(record["factor"])
+        terms = terms_by_factor[factor]
+        evaluated = int(record["terminos_evaluados"])
+        matching = int(record["terminos_con_signo_coincidente"])
+        if evaluated != len(terms) or not 0 <= matching <= evaluated:
+            raise AssertionError(f"El conteo de términos de estabilidad no concilia para {factor}.")
+        if _is_true(record["todos_los_terminos_mismo_signo"]) != (matching == evaluated):
+            raise AssertionError(f"El indicador de signo por términos no concilia para {factor}.")
+        for column in ["coeficientes_terminos", "p_valores_terminos", "signos_terminos"]:
+            text = str(record[column])
+            if not text or text.lower() == "nan" or not all(f"{term}=" in text for term in terms):
+                raise AssertionError(f"{column} no enumera todos los términos de {factor}.")
+        if len(terms) > 1:
+            if not pd.isna(record["coeficiente"]) or not pd.isna(record["p_valor_hac"]):
+                raise AssertionError(f"El factor compuesto {factor} recibió un coeficiente único en estabilidad.")
+        elif pd.isna(record["coeficiente"]) or pd.isna(record["p_valor_hac"]):
+            raise AssertionError(f"El factor simple {factor} perdió su inferencia en estabilidad.")
+
+    summary_by_subsample = stability_summary.set_index("submuestra")
+    for subsample in expected_subsamples:
+        detail_rows = stability_detail.loc[stability_detail["submuestra"].eq(subsample)]
+        summary_row = summary_by_subsample.loc[subsample]
+        matching = int(detail_rows["terminos_con_signo_coincidente"].sum())
+        evaluated = int(detail_rows["terminos_evaluados"].sum())
+        factors_matching = int(detail_rows["todos_los_terminos_mismo_signo"].map(_is_true).sum())
+        if int(summary_row["terminos_mismo_signo"]) != matching:
+            raise AssertionError(f"El resumen no concilia términos coincidentes en {subsample}.")
+        if int(summary_row["terminos_evaluados"]) != evaluated:
+            raise AssertionError(f"El resumen no concilia términos evaluados en {subsample}.")
+        if int(summary_row["factores_mismo_signo_de_14"]) != factors_matching:
+            raise AssertionError(f"El resumen no concilia factores con signo coincidente en {subsample}.")
+
+    full_detail = stability_detail.loc[stability_detail["submuestra"].eq("Muestra completa")]
+    if not full_detail["signo_coincide_muestra_completa"].map(_is_true).all() or not np.allclose(
+        pd.to_numeric(full_detail["diferencia_peso_vs_completa_pp"], errors="coerce"),
+        0.0,
+        rtol=0.0,
+        atol=1e-10,
+    ):
+        raise AssertionError("La muestra completa no es la referencia coherente de estabilidad.")
+
+    for factor in terms_by_factor:
+        factor_rows = stability_detail.loc[stability_detail["factor"].eq(factor)]
+        non_full = factor_rows.loc[factor_rows["submuestra"].ne("Muestra completa")]
+        recent = factor_rows.loc[factor_rows["submuestra"].eq("2020 en adelante")]
+        expected_factor_share = 100.0 * non_full["signo_coincide_muestra_completa"].map(_is_true).mean()
+        expected_term_share = 100.0 * (
+            pd.to_numeric(non_full["terminos_con_signo_coincidente"], errors="coerce").sum()
+            / pd.to_numeric(non_full["terminos_evaluados"], errors="coerce").sum()
+        )
+        recent_row = recent.iloc[0]
+        expected_recent_term_share = 100.0 * float(recent_row["terminos_con_signo_coincidente"]) / float(recent_row["terminos_evaluados"])
+        interpretation_row = interpretation_by_factor.loc[factor]
+        _assert_value_close(
+            interpretation_row["estabilidad_signo_factor_pct_submuestras"],
+            expected_factor_share,
+            f"Estabilidad de signo de {factor}",
+            atol=1e-10,
+        )
+        _assert_value_close(
+            interpretation_row["estabilidad_signos_terminos_pct_submuestras"],
+            expected_term_share,
+            f"Estabilidad por término de {factor}",
+            atol=1e-10,
+        )
+        _assert_value_close(
+            interpretation_row["estabilidad_signos_terminos_pct_2020_en_adelante"],
+            expected_recent_term_share,
+            f"Estabilidad reciente de {factor}",
+            atol=1e-10,
+        )
+        _assert_value_close(
+            interpretation_row["peso_entre_factores_pct_2020_en_adelante"],
+            recent_row["peso_entre_factores_pct"],
+            f"Peso reciente de {factor}",
+            atol=1e-10,
+        )
+
+    return interpretation, integrated_contributions
+
+
+def _table_bounds(ws, name: str, headers: list[str], data_rows: int) -> tuple[int, int, int, int]:
+    try:
+        table = ws.tables[name]
+    except KeyError as error:
+        raise AssertionError(f"No se encontró la tabla Excel {name}.") from error
+    if not hasattr(table, "ref"):
+        raise AssertionError(f"La tabla Excel {name} no tiene un rango válido.")
+    min_col, min_row, max_col, max_row = range_boundaries(table.ref)
+    actual_headers = [ws.cell(min_row, column).value for column in range(min_col, max_col + 1)]
+    if actual_headers != headers:
+        raise AssertionError(f"Los encabezados de {name} no concilian: {actual_headers!r}.")
+    if max_row != min_row + data_rows or max_col - min_col + 1 != len(headers):
+        raise AssertionError(f"El rango de {name} no concilia con sus filas/columnas esperadas.")
+    return min_col, min_row, max_col, max_row
+
+
+def _validate_factor_workbook(
+    workbook,
+    interpretation: pd.DataFrame,
+    factor_contributions: pd.DataFrame,
+) -> None:
+    summary = workbook["Resumen"]
+    marco = workbook["Marco_macro_integral"]
+    if "Ninguna tabla identifica efectos causales" not in str(summary["A3"].value):
+        raise AssertionError("Resumen no contiene la advertencia explícita de no causalidad.")
+    if "no son efectos causales" not in str(summary["A51"].value).lower():
+        raise AssertionError("La ficha del Resumen no contiene su advertencia no causal.")
+    if "no son efectos causales" not in str(marco["A2"].value).lower():
+        raise AssertionError("Marco_macro_integral no contiene su advertencia no causal.")
+    if "no causalidad" not in str(marco["A284"].value).lower():
+        raise AssertionError("La tabla de contribuciones no contiene su advertencia no causal.")
+
+    ficha_headers = [
+        "Factor",
+        "Grupo",
+        "Tipo de lectura",
+        "Coeficiente / signo",
+        "IC 95% HAC",
+        "Participación R² incremental",
+        "Contribución media Δln TRM",
+        "Lectura dinámica",
+    ]
+    min_col, min_row, _, _ = _table_bounds(
+        summary,
+        "FichaFactoresResumenTable",
+        ficha_headers,
+        len(interpretation),
+    )
+    interpretation_by_factor = interpretation.set_index("factor")
+    excel_factors: set[str] = set()
+    for offset in range(1, len(interpretation) + 1):
+        row_number = min_row + offset
+        factor = str(summary.cell(row_number, min_col).value)
+        if factor in excel_factors:
+            raise AssertionError(f"La ficha Excel repite el factor {factor}.")
+        excel_factors.add(factor)
+        if factor not in interpretation_by_factor.index:
+            raise AssertionError(f"La ficha Excel contiene un factor inesperado: {factor}.")
+        expected = interpretation_by_factor.loc[factor]
+        composite = _is_true(expected["es_compuesto"])
+        if str(summary.cell(row_number, min_col + 1).value) != str(expected["grupo"]):
+            raise AssertionError(f"El grupo Excel no concilia para {factor}.")
+        type_text = str(summary.cell(row_number, min_col + 2).value)
+        coefficient_text = summary.cell(row_number, min_col + 3).value
+        interval_text = summary.cell(row_number, min_col + 4).value
+        if composite:
+            if type_text != "Bloque compuesto" or coefficient_text != "Sin coeficiente único" or interval_text != "No aplica":
+                raise AssertionError(f"La ficha Excel asigna un coeficiente único al bloque {factor}.")
+        else:
+            if type_text != "Coeficiente único" or coefficient_text in {None, "", "Sin coeficiente único"}:
+                raise AssertionError(f"La ficha Excel no muestra el coeficiente simple de {factor}.")
+            assert_close(
+                coefficient_text,
+                float(expected["coeficiente"]),
+                f"Coeficiente Excel de {factor}",
+                atol=1e-5,
+            )
+        _assert_value_close(
+            summary.cell(row_number, min_col + 5).value,
+            float(expected["participacion_shapley_r2_pct"]) / 100,
+            f"Participación Excel de {factor}",
+            atol=1e-10,
+        )
+        _assert_value_close(
+            summary.cell(row_number, min_col + 6).value,
+            float(expected["contribucion_media_mensual_pct"]) / 100,
+            f"Contribución media Excel de {factor}",
+            atol=1e-10,
+        )
+        reading = str(summary.cell(row_number, min_col + 7).value)
+        if NO_CAUSAL_WARNING not in reading:
+            raise AssertionError(f"La lectura Excel de {factor} no conserva la advertencia no causal.")
+    if excel_factors != set(interpretation["factor"]):
+        raise AssertionError("Los factores de FichaFactoresResumenTable no concilian con el CSV.")
+
+    contribution_columns = [column for column in factor_contributions.columns if column != "fecha"]
+    contribution_headers = ["Mes", *contribution_columns]
+    min_col, min_row, _, _ = _table_bounds(
+        marco,
+        "ContribucionesFactoresMarcoMacroIntegralTable",
+        contribution_headers,
+        len(factor_contributions),
+    )
+    for offset, (_, record) in enumerate(factor_contributions.iterrows(), start=1):
+        row_number = min_row + offset
+        expected_date = pd.to_datetime(record["fecha"]).strftime("%Y-%m")
+        actual_date = pd.to_datetime(marco.cell(row_number, min_col).value, errors="coerce")
+        if pd.isna(actual_date) or actual_date.strftime("%Y-%m") != expected_date:
+            raise AssertionError(f"La fecha Excel de contribuciones no concilia en la fila {row_number}.")
+        for column_offset, column in enumerate(contribution_columns, start=1):
+            expected_value = record[column]
+            _assert_value_close(
+                marco.cell(row_number, min_col + column_offset).value,
+                expected_value,
+                f"Contribución Excel {column} fila {row_number}",
+                atol=1e-8,
+            )
 
 
 def main() -> None:
@@ -790,8 +1344,21 @@ def main() -> None:
                     f"{record['modelo']} — {label}",
                 )
 
+    interpretation, factor_contributions_integrated = _validate_factor_explanation_outputs(
+        weights,
+        bootstrap,
+        stability_detail,
+        stability_summary,
+    )
+    _validate_factor_workbook(
+        workbook,
+        interpretation,
+        factor_contributions_integrated,
+    )
+
     print(
-        "OK: robustez BEI, vintages, bootstrap Shapley, submuestras, pronóstico rezagado y archivo Excel sincronizado."
+        "OK: robustez BEI, vintages, bootstrap Shapley, submuestras por término, "
+        "explicación por factor, contribuciones mensuales y archivo Excel sincronizado."
     )
 
 

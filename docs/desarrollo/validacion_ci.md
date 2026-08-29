@@ -30,7 +30,7 @@ El workflow [`model-check.yml`](../../.github/workflows/model-check.yml) ejecuta
 - `trm-model validate`;
 - pytest;
 - `trm-model run-monthly`;
-- reconciliación de manifest, 26 inputs y 42 outputs;
+- reconciliación de manifest, 26 inputs y 45 outputs;
 - reconstrucción y check de gráficos;
 - fallback del workbook;
 - reproducibilidad y checks de outputs.

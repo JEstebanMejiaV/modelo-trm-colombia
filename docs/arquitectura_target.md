@@ -182,7 +182,7 @@ La migración target se considera cerrada únicamente cuando se cumplen todos lo
 ### B. Paridad econométrica
 
 - [ ] La muestra, número de observaciones, selección de rezagos, coeficientes y métricas coinciden con la baseline tolerada.
-- [ ] Los 42 outputs mensuales se producen con los mismos nombres y ownership.
+- [ ] Los 45 outputs mensuales se producen con los mismos nombres y ownership.
 - [ ] No cambian las reglas de faltantes: se falla explícitamente ante cobertura insuficiente.
 - [ ] El README, metadata y workbook se generan desde objetos de resultados, sin alterar el cálculo.
 

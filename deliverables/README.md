@@ -8,11 +8,11 @@
 
 ## Contenido de las 14 hojas
 
-1. **Resumen**: métricas de las especificaciones de controles externos y financieros y del marco macroeconómico integral, lectura económica, comparación descriptiva, pesos Shapley y cautelas de interpretación.
+1. **Resumen**: métricas de las especificaciones de controles externos y financieros y del marco macroeconómico integral, ficha integrada por factor, lectura económica, comparación descriptiva, pesos Shapley y cautelas de interpretación.
 2. **Datos_fuente**: niveles mensuales de todas las series activas. Incluye ISE total DANE, IPC Colombia, PEN por USD, términos de intercambio, EMBIG Colombia, curvas TES nominal y UVR a cinco años, compensación de inflación estadounidense y la base global FRED consolidada.
 3. **Transformaciones**: fórmulas enlazadas a `Datos_fuente` para logaritmos, primeras diferencias, rezagos auditables, transformaciones `asinh`, diferencial BEI, factores regionales y el bloque `Condiciones financieras, commodities y actividad internacional`.
 4. **Controles_externos**: coeficientes con errores HAC, métricas del ajuste y reconstrucción mensual por contribuciones. Las referencias a coeficientes se determinan por nombre del término, no por una posición fija.
-5. **Marco_macro_integral**: coeficientes y diagnósticos del marco macroeconómico integral, ajuste histórico, contribución mensual de cada término y control que reconcilia la suma de contribuciones con el cambio ajustado.
+5. **Marco_macro_integral**: coeficientes y diagnósticos del marco macroeconómico integral, ajuste histórico, contribución mensual de cada término y tabla de contribuciones agregadas por factor con cierre contable. Las asociaciones son parciales y no causales.
 6. **Pesos_explicativos**: descomposición Shapley/LMG del R² incremental, tabla completa, gráfico de columnas y controles de suma del R² y de las participaciones.
 7. **Robustez**: intervalos bootstrap de los pesos, estabilidad por submuestras y cobertura de vintages. Es completamente tabular y no añade gráficos al archivo Excel.
 8. **BEI_robustez**: comparación tabular de nivel, primera diferencia, tendencias, quiebres y agregación sobre promedios separados o fechas comunes. No añade gráficos al archivo Excel.
@@ -42,9 +42,10 @@
 
 ## Cómo interpretar los pesos
 
-El peso Shapley responde cuánto aporta cada factor a la explicación incremental dentro de la muestra, promediando todos los órdenes de entrada de las variables. Esto distribuye la información compartida entre factores correlacionados.
+El peso Shapley responde cuánto aporta cada factor a la explicación incremental dentro de la muestra, promediando todos los órdenes de entrada de las variables. La contribución mensual responde otra pregunta: cuánto suma cada bloque, con signo, a la variación ajustada de ese mes. La asociación estandarizada resume un coeficiente HAC para un movimiento típico del regresor. Ninguna de las tres medidas es un efecto causal.
 
-No equivale al tamaño del coeficiente, a su p-valor ni a un porcentaje causal del precio del dólar. Los pesos pueden cambiar con la muestra, las transformaciones, los rezagos y la agrupación de variables.
+Los bloques compuestos se reportan como suma de términos en la contabilidad mensual. No se les asigna un coeficiente o signo único, porque hacerlo ocultaría la heterogeneidad interna del bloque. Los pesos pueden cambiar con la muestra, las transformaciones, los rezagos y la agrupación de variables.
+
 
 ## Cautelas principales
 

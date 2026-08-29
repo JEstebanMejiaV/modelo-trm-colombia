@@ -12,7 +12,7 @@ Esta carpeta contiene el pipeline de estimación, validación y documentación d
 |---|---|
 | `estimate_model.py` | Orquestador principal. Importa del paquete `model/`, estima las especificaciones de controles externos y financieros, el marco macroeconómico integral y el pronóstico, calcula Shapley, Diebold-Mariano, modelos parsimoniosos y actualiza `data/`, `results/` y `README.md`. |
 | `archive_vintage.py` | Crea snapshots inmutables por fecha de origen. Descarga vintages FRED via API (`FRED_API_KEY`) y genera la matriz de cobertura. |
-| `build_charts.py` | Construye cinco gráficos PNG desde los CSV de `results/` y los guarda en `graficos/`. |
+| `build_charts.py` | Construye seis gráficos PNG desde los CSV de `results/` y los guarda en `graficos/`. |
 | `build_workbook.mjs` | Construye el archivo Excel de 14 hojas y actualiza `deliverables/modelo_trm_colombia.xlsx` cuando está disponible `@oai/artifact-tool`. |
 | `sync_workbook_openpyxl.py` | Fallback reproducible: sincroniza el workbook versionado con los CSV actuales usando `openpyxl`, incluido el bloque global, tablas de robustez, coeficientes y pronóstico. |
 | `check_outputs.py` | Comprueba integridad: conciliación Shapley, sincronización CSV-Excel, cobertura de vintages. |
@@ -151,7 +151,7 @@ Por defecto, las vistas previas y el reporte de inspección quedan en `outputs/m
 
 1. Ejecutar la estimación.
 2. Reconstruir el archivo Excel cuando cambien resultados o documentación interna.
-3. Reconstruir y revisar los cinco PNG de `graficos/`.
+3. Reconstruir y revisar los seis PNG de `graficos/`.
 4. Ejecutar `python src/check_charts.py` para verificar su sincronización.
 5. Revisar las 14 vistas previas en `outputs/modelo_trm_colombia/previews/`.
 6. Ejecutar `python src/check_outputs.py`.

@@ -40,6 +40,9 @@ SOURCE_FILES = [
     RESULTS / "explicacion/comparacion_factor_regional.csv",
     RESULTS / "explicacion/coeficientes_marco_macro_integral.csv",
     RESULTS / "explicacion/contribuciones_marco_macro_integral.csv",
+    RESULTS / "explicacion/contribuciones_factores_controles_externos.csv",
+    RESULTS / "explicacion/contribuciones_factores_marco_macro_integral.csv",
+    RESULTS / "explicacion/interpretacion_factores_marco_macro_integral.csv",
     RESULTS / "robustez/coeficientes_corto_plazo_ecm.csv",
     RESULTS / "robustez/coeficientes_largo_plazo_ecm.csv",
     RESULTS / "robustez/bounds_resumen.csv",
@@ -49,8 +52,9 @@ IMAGE_FILES = [
     "01_pesos_explicativos.png",
     "02_desempeno_modelos.png",
     "03_validacion_trm.png",
-    "04_efectos_tipicos.png",
+    "04_asociaciones_estandarizadas.png",
     "05_ecm_elasticidades.png",
+    "06_contribuciones_mensuales.png",
 ]
 
 BACKGROUND = "#FFFFFF"
@@ -486,7 +490,7 @@ def chart_validation(
     save(fig, "03_validacion_trm.png")
 
 
-def chart_standardized_effects(
+def chart_standardized_associations(
     weights: pd.DataFrame,
     coefficients: pd.DataFrame,
     contributions: pd.DataFrame,
@@ -495,6 +499,10 @@ def chart_standardized_effects(
     rows: list[dict[str, object]] = []
     for weight in weights.itertuples(index=False):
         terms = [term.strip() for term in str(weight.terminos).split(",")]
+        if len(terms) > 1:
+            # Los bloques compuestos se muestran en el gráfico de contribuciones;
+            # no se inventa una asociación estandarizada única para ellos.
+            continue
         missing_terms = [
             term
             for term in terms
@@ -528,9 +536,7 @@ def chart_standardized_effects(
             lower_effects.append(float(coef["ic_95_inferior"]) * scale * 100)
             upper_effects.append(float(coef["ic_95_superior"]) * scale * 100)
 
-        # A grouped factor has no single regression coefficient. Aggregate the
-        # signed standardized term effects and retain the summed contribution
-        # series so the grouping is explicit and auditable.
+        # Cada punto es la asociación estandarizada del único término del factor.
         rows.append(
             {
                 "factor": weight.factor,
@@ -570,15 +576,15 @@ def chart_standardized_effects(
     ax.axvline(0, color=FOREGROUND, linewidth=1.1)
     ax.set_yticks(y, data["etiqueta"])
     ax.invert_yaxis()
-    ax.set_xlabel("Cambio aproximado en la TRM ante +1 desviación estándar del factor (%)")
+    ax.set_xlabel("Asociación parcial estandarizada ante +1 desviación estándar del regresor (%)")
     ax.tick_params(axis="y", length=0)
     clean_axis(ax)
     limit = max(abs(data["inferior"].min()), abs(data["superior"].max())) * 1.14
     ax.set_xlim(-limit, limit)
 
     legend = [
-        Patch(facecolor=POSITIVE, label="TRM mayor · depreciación"),
-        Patch(facecolor=NEGATIVE, label="TRM menor · apreciación"),
+        Patch(facecolor=POSITIVE, label="Asociación positiva con Δln TRM"),
+        Patch(facecolor=NEGATIVE, label="Asociación negativa con Δln TRM"),
         Line2D(
             [0],
             [0],
@@ -606,7 +612,7 @@ def chart_standardized_effects(
         frameon=False,
     )
     fig.suptitle(
-        "Dirección y magnitud típica de las asociaciones",
+        "Asociaciones parciales estandarizadas, no efectos causales",
         x=0.04,
         y=0.975,
         ha="left",
@@ -616,19 +622,173 @@ def chart_standardized_effects(
     fig.text(
         0.04,
         0.925,
-        "El punto es el efecto estimado de un movimiento típico; la línea muestra el intervalo de confianza HAC del 95%.",
+        "Cada punto combina el coeficiente HAC con la desviación estándar del regresor; los bloques compuestos se leen en la contabilidad mensual, no como un coeficiente único.",
         color=MUTED,
         fontsize=12,
     )
     fig.text(
         0.04,
         0.018,
-        "Los efectos están estandarizados para hacer comparables escalas distintas. Son asociaciones parciales del modelo, no efectos causales.",
+        "Las asociaciones están estandarizadas para comparar escalas distintas. Son asociaciones parciales históricas del modelo, no efectos causales ni escenarios contrafactuales.",
         color=MUTED,
         fontsize=9.5,
     )
     fig.subplots_adjust(left=0.28, right=0.97, top=0.86, bottom=0.19)
-    save(fig, "04_efectos_tipicos.png")
+    save(fig, "04_asociaciones_estandarizadas.png")
+
+
+def chart_monthly_contributions(factor_contributions: pd.DataFrame) -> None:
+    """Dibuja un waterfall del último mes y una vista apilada de los 24 meses."""
+    data = factor_contributions.copy()
+    if "fecha" not in data.columns:
+        raise KeyError("La contabilidad por factor debe contener la columna fecha.")
+    data["fecha"] = pd.to_datetime(data["fecha"])
+    data = data.sort_values("fecha").reset_index(drop=True)
+    reserved = {"fecha", "suma_factores", "ajuste_total", "cierre_contable"}
+    factor_columns = [
+        column for column in data.columns if column not in reserved | {"otros_componentes"}
+    ]
+    if not factor_columns or "otros_componentes" not in data.columns:
+        raise KeyError("Faltan columnas de factores u otros_componentes en la contabilidad.")
+
+    latest = data.iloc[-1]
+    entries = [(factor, float(latest[factor])) for factor in factor_columns]
+    entries.append(("otros_componentes", float(latest["otros_componentes"])))
+    entries.sort(key=lambda item: abs(item[1]), reverse=True)
+    labels = [LABELS.get(name, "Otros componentes" if name == "otros_componentes" else name) for name, _ in entries]
+    values = [value for _, value in entries]
+
+    fig, axes = plt.subplots(
+        2,
+        1,
+        figsize=(12.8, 7.2),
+        gridspec_kw={"height_ratios": [1.15, 0.85]},
+    )
+    ax = axes[0]
+    cumulative = 0.0
+    for position, value in enumerate(values):
+        next_value = cumulative + value
+        bottom = min(cumulative, next_value)
+        height = abs(value)
+        color = POSITIVE if value >= 0 else NEGATIVE
+        ax.bar(position, height, bottom=bottom, color=color, width=0.68)
+        ax.text(
+            position,
+            next_value + (0.002 if next_value >= 0 else -0.002),
+            f"{value * 100:.2f}%".replace(".", ","),
+            ha="center",
+            va="bottom" if next_value >= 0 else "top",
+            fontsize=8,
+            rotation=90,
+        )
+        cumulative = next_value
+    total = float(latest["ajuste_total"])
+    total_position = len(values)
+    ax.bar(
+        total_position,
+        abs(total),
+        bottom=min(0.0, total),
+        color=FOREGROUND,
+        width=0.68,
+    )
+    ax.text(
+        total_position,
+        total + (0.002 if total >= 0 else -0.002),
+        f"{total * 100:.2f}%".replace(".", ","),
+        ha="center",
+        va="bottom" if total >= 0 else "top",
+        fontsize=8,
+        fontweight="bold",
+        rotation=90,
+    )
+    ax.axhline(0, color=FOREGROUND, linewidth=0.9)
+    ax.set_xticks([*range(len(values)), total_position], [*labels, "Ajuste total"])
+    ax.tick_params(axis="x", rotation=45, labelsize=8, length=0)
+    ax.set_ylabel("Contribución a Δln TRM (%)")
+    ax.set_title("Waterfall del último mes disponible", loc="left", fontweight="bold", pad=10)
+    clean_axis(ax, grid_axis="y")
+
+    history = data.tail(24).copy()
+    top_factors = (
+        history[factor_columns]
+        .abs()
+        .mean()
+        .sort_values(ascending=False)
+        .head(5)
+        .index.tolist()
+    )
+    history["resto"] = history["ajuste_total"] - history[top_factors].sum(axis=1)
+    stack_names = [*top_factors, "resto"]
+    stack_labels = [LABELS.get(name, name) if name != "resto" else "Resto de factores y otros" for name in stack_names]
+    positive_bottom = np.zeros(len(history))
+    negative_bottom = np.zeros(len(history))
+    palette = plt.get_cmap("tab10").colors
+    for position, name in enumerate(stack_names):
+        values_history = history[name].to_numpy(dtype=float) * 100.0
+        positive = np.where(values_history > 0, values_history, 0.0)
+        negative = np.where(values_history < 0, values_history, 0.0)
+        color = MUTED if name == "resto" else palette[position % len(palette)]
+        axes[1].bar(
+            history["fecha"],
+            positive,
+            bottom=positive_bottom,
+            width=20,
+            color=color,
+            alpha=0.82,
+            label=stack_labels[position],
+        )
+        axes[1].bar(
+            history["fecha"],
+            negative,
+            bottom=negative_bottom,
+            width=20,
+            color=color,
+            alpha=0.82,
+        )
+        positive_bottom += positive
+        negative_bottom += negative
+    axes[1].plot(
+        history["fecha"],
+        history["ajuste_total"] * 100.0,
+        color=FOREGROUND,
+        linewidth=1.3,
+        marker=".",
+        label="Ajuste total",
+    )
+    axes[1].axhline(0, color=FOREGROUND, linewidth=0.9)
+    axes[1].set_ylabel("Δln TRM (%)")
+    axes[1].set_xlabel("Mes")
+    axes[1].set_title("Contribuciones firmadas en los últimos 24 meses", loc="left", fontweight="bold", pad=10)
+    axes[1].xaxis.set_major_locator(mdates.MonthLocator(interval=3))
+    axes[1].xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m"))
+    axes[1].tick_params(axis="x", rotation=35, length=0)
+    axes[1].legend(loc="upper left", bbox_to_anchor=(1.005, 1.0), frameon=False, fontsize=8)
+    clean_axis(axes[1], grid_axis="y")
+
+    fig.suptitle(
+        "Contribuciones mensuales por factor: contabilidad, no causalidad",
+        x=0.04,
+        y=0.985,
+        ha="left",
+        fontsize=20,
+        fontweight="bold",
+    )
+    fig.text(
+        0.04,
+        0.945,
+        f"Último mes: {latest['fecha'].strftime('%Y-%m')}. El ajuste total fue {total * 100:.2f}% de Δln TRM; cada barra es coeficiente × regresor.",
+        color=MUTED,
+        fontsize=11,
+    )
+    fig.text(
+        0.04,
+        0.012,
+        "La suma de factores y otros componentes cierra contra el ajuste mensual. La contabilidad describe la ecuación histórica y no identifica efectos causales.",
+        color=MUTED,
+        fontsize=9.2,
+    )
+    fig.subplots_adjust(left=0.08, right=0.80, top=0.88, bottom=0.17, hspace=0.50)
+    save(fig, "06_contribuciones_mensuales.png")
 
 
 def ecm_record(
@@ -922,6 +1082,9 @@ def main() -> None:
     regional_comparison = pd.read_csv(RESULTS / "explicacion/comparacion_factor_regional.csv")
     coefficients = pd.read_csv(RESULTS / "explicacion/coeficientes_marco_macro_integral.csv")
     contributions = pd.read_csv(RESULTS / "explicacion/contribuciones_marco_macro_integral.csv")
+    factor_contributions = pd.read_csv(
+        RESULTS / "explicacion/contribuciones_factores_marco_macro_integral.csv"
+    )
     ecm_short = pd.read_csv(RESULTS / "robustez/coeficientes_corto_plazo_ecm.csv")
     ecm_long = pd.read_csv(RESULTS / "robustez/coeficientes_largo_plazo_ecm.csv")
     bounds = pd.read_csv(RESULTS / "robustez/bounds_resumen.csv")
@@ -930,10 +1093,11 @@ def main() -> None:
     chart_weights(weights, shapley_intervals)
     chart_performance(comparison, validation, forecast_validation, regional_comparison)
     chart_validation(base_predictions, integrated_predictions, forecast_predictions)
-    chart_standardized_effects(weights, coefficients, contributions)
+    chart_standardized_associations(weights, coefficients, contributions)
+    chart_monthly_contributions(factor_contributions)
     chart_ecm(ecm_short, ecm_long, bounds)
     write_metadata()
-    print(f"OK: 5 gráficos creados en {CHARTS}")
+    print(f"OK: 6 gráficos creados en {CHARTS}")
 
 
 if __name__ == "__main__":

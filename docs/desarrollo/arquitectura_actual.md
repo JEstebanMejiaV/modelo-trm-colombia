@@ -27,7 +27,7 @@ La separación target ya tiene módulos en `src/trm_model/`, pero la ruta mensua
 - `trm-model run-research --module`: wrapper de investigación.
 - `trm-model vintage-status`: estado PIT.
 - `src/estimate_model.py`: compatibilidad, delega al core mensual.
-- `pipelines/monthly.py`: wrapper compatible y consulta de los 42 outputs.
+- `pipelines/monthly.py`: wrapper compatible y consulta de los 45 outputs.
 
 ## Provenance
 

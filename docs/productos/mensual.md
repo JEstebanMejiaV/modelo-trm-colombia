@@ -31,6 +31,14 @@ La explicación puede usar términos contemporáneos como términos de intercamb
 
 La especificación integral conserva el factor `Actividad y precios domésticos` (ISE total DANE e IPC Colombia) y un jugador agrupado de `Condiciones financieras, commodities y actividad internacional` con 17 términos. La documentación económica detallada está en [`metodologia/modelo_mensual.md`](../metodologia/modelo_mensual.md) y [`../mecanismo_transmision.md`](../mecanismo_transmision.md).
 
+La lectura operativa combina tres salidas que no deben confundirse:
+
+- `interpretacion_factores_marco_macro_integral.csv`: ficha por factor con descripción económica, términos, rezagos, coeficiente HAC cuando existe, IC 95%, estabilidad, contribución media y narrativa dinámica.
+- `contribuciones_factores_marco_macro_integral.csv`: contabilidad mensual firmada agregada por factor; incluye `otros_componentes`, `ajuste_total` y `cierre_contable`.
+- `pesos_explicativos_marco_macro_integral.csv`: participación Shapley en el R² incremental, no una contribución mensual ni un efecto causal.
+
+Los bloques compuestos no se fuerzan a tener un coeficiente único. La narrativa usa “se asocia con” y distingue si el IC cruza cero; ninguna de estas salidas construye escenarios `do()` o contrafactuales.
+
 ## Pronóstico mensual
 
 El pronóstico usa un calendario conservador de disponibilidad. Los factores económicos no entran contemporáneamente al mes objetivo; los rezagos efectivos están en [`results/pronostico/calendario_disponibilidad_pronostico.csv`](../../results/pronostico/calendario_disponibilidad_pronostico.csv). La composición regional seleccionada es BRL, CLP y MXN; PEN se conserva en la comparación histórica.
@@ -50,7 +58,7 @@ La separación conceptual está en [`metodologia/estimacion_inferencia.md`](../m
 
 ## Outputs
 
-El contrato de outputs generado por la ruta mensual está en [`src/trm_model/output_contract.py`](../../src/trm_model/output_contract.py): 42 archivos, distribuidos como 24 de explicación, 8 de pronóstico y 10 de robustez. Los manifests declarativos y el catálogo general pueden contener outputs heredados o diagnósticos adicionales; la corrida efectiva se determina por `artifacts/runs/<run_id>/manifest.json`.
+El contrato de outputs generado por la ruta mensual está en [`src/trm_model/output_contract.py`](../../src/trm_model/output_contract.py): 45 archivos, distribuidos como 27 de explicación, 8 de pronóstico y 10 de robustez. Los manifests declarativos y el catálogo general pueden contener outputs heredados o diagnósticos adicionales; la corrida efectiva se determina por `artifacts/runs/<run_id>/manifest.json`.
 
 Consulte [`operacion/salidas.md`](../operacion/salidas.md) para la diferencia entre contrato declarado, outputs generados y catálogo histórico.
 
@@ -59,4 +67,6 @@ Consulte [`operacion/salidas.md`](../operacion/salidas.md) para la diferencia en
 - No compare MAPE histórico condicional con MAPE ex ante sin declarar el conjunto de información.
 - No interprete Shapley como porcentaje causal.
 - No use los coeficientes de la explicación para reclamar superioridad predictiva.
+- La contabilidad mensual agregada por factor reconcilia `suma_factores + otros_componentes` con `ajuste_total`; el cierre contable debe ser cero.
+- La ficha distingue bloques compuestos sin coeficiente único y reporta los términos que forman cada bloque.
 - No complete faltantes ni trate un snapshot parcial como backtest completo.

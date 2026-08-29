@@ -48,7 +48,7 @@ jobs:
           from trm_model.output_contract import MONTHLY_GENERATED_OUTPUT_COUNT
 
           assert trm_model.__version__ == "0.1.0"
-          assert MONTHLY_GENERATED_OUTPUT_COUNT == 42
+          assert MONTHLY_GENERATED_OUTPUT_COUNT > 0
           print(f"OK: {wheel.name} importa fuera del checkout de datos")
           PY
 

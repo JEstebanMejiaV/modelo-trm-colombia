@@ -86,6 +86,11 @@ from model.bei import (
     bei_model_specification_comparison,
 )
 from model.readme_sync import update_readme_fragments
+from trm_model.monthly.explanation import (
+    NO_CAUSAL_WARNING,
+    aggregate_factor_contributions,
+    build_factor_interpretation_table,
+)
 
 
 def estimate_explanation(
@@ -154,6 +159,24 @@ def estimate_explanation(
         coefficients_integrated,
     )
 
+    # ── Ficha por factor y contabilidad mensual no causal ───────────────────
+    factor_contributions_diff = aggregate_factor_contributions(
+        contributions_diff, REFERENCE_FACTOR_SPECS
+    )
+    factor_contributions_integrated = aggregate_factor_contributions(
+        contributions_integrated, INTEGRATED_FACTOR_SPECS_4
+    )
+    factor_interpretation_integrated = build_factor_interpretation_table(
+        INTEGRATED_FACTOR_SPECS_4,
+        coefficients_integrated,
+        model_id=INTEGRATED_MODEL_ID,
+        model_label=INTEGRATED_MODEL_LABEL,
+        shapley=shapley_integrated,
+        bootstrap=shapley_bootstrap,
+        stability_detail=stability_detail,
+        factor_contributions=factor_contributions_integrated,
+    )
+
     # ── Contraste ARDL–ECM exploratorio ──────────────────────────────────────
     y = model_data["ln_trm"]
     exog = model_data[ECM_LEVEL_VARIABLES]
@@ -194,6 +217,7 @@ def estimate_explanation(
         "validation": validation,
         "fitted_diff": fitted_diff,
         "contributions_diff": contributions_diff,
+        "factor_contributions_diff": factor_contributions_diff,
         "selected_integrated_3": selected_integrated_3,
         "coefficients_integrated_3": coefficients_integrated_3,
         "predictions_integrated_3": predictions_integrated_3,
@@ -206,6 +230,8 @@ def estimate_explanation(
         "validation_integrated": validation_integrated,
         "fitted_integrated": fitted_integrated,
         "contributions_integrated": contributions_integrated,
+        "factor_contributions_integrated": factor_contributions_integrated,
+        "factor_interpretation_integrated": factor_interpretation_integrated,
         "shapley_integrated": shapley_integrated,
         "shapley_bootstrap": shapley_bootstrap,
         "stability_detail": stability_detail,
@@ -361,6 +387,7 @@ def main() -> None:
     validation = explanation["validation"]
     fitted_diff = explanation["fitted_diff"]
     contributions_diff = explanation["contributions_diff"]
+    factor_contributions_diff = explanation["factor_contributions_diff"]
     selected_integrated_3 = explanation["selected_integrated_3"]
     coefficients_integrated_3 = explanation["coefficients_integrated_3"]
     predictions_integrated_3 = explanation["predictions_integrated_3"]
@@ -373,6 +400,8 @@ def main() -> None:
     validation_integrated = explanation["validation_integrated"]
     fitted_integrated = explanation["fitted_integrated"]
     contributions_integrated = explanation["contributions_integrated"]
+    factor_contributions_integrated = explanation["factor_contributions_integrated"]
+    factor_interpretation_integrated = explanation["factor_interpretation_integrated"]
     shapley_integrated = explanation["shapley_integrated"]
     shapley_bootstrap = explanation["shapley_bootstrap"]
     stability_detail = explanation["stability_detail"]
@@ -615,6 +644,10 @@ def main() -> None:
     contributions_diff.to_csv(
         RESULTS / "explicacion/contribuciones_controles_externos.csv", encoding="utf-8-sig"
     )
+    factor_contributions_diff.to_csv(
+        RESULTS / "explicacion/contribuciones_factores_controles_externos.csv",
+        encoding="utf-8-sig",
+    )
     lag_grid_integrated.to_csv(
         RESULTS / "explicacion/seleccion_rezagos_marco_macro_integral.csv",
         index=False,
@@ -631,6 +664,15 @@ def main() -> None:
     )
     contributions_integrated.to_csv(
         RESULTS / "explicacion/contribuciones_marco_macro_integral.csv", encoding="utf-8-sig"
+    )
+    factor_contributions_integrated.to_csv(
+        RESULTS / "explicacion/contribuciones_factores_marco_macro_integral.csv",
+        encoding="utf-8-sig",
+    )
+    factor_interpretation_integrated.to_csv(
+        RESULTS / "explicacion/interpretacion_factores_marco_macro_integral.csv",
+        index=False,
+        encoding="utf-8-sig",
     )
     shapley_integrated.to_csv(
         RESULTS / "explicacion/pesos_explicativos_marco_macro_integral.csv",
@@ -806,6 +848,12 @@ def main() -> None:
         ),
         "marco_macro_integral_temporizacion": "Términos de intercambio, dólar amplio, VIX, EMBIG Colombia, monedas regionales y condiciones financieras, commodities y actividad internacional contemporáneos; cambios de remesas, tasas, déficit, reservas, balanza, flujos de capital y diferencial BEI rezagados un mes",
         "pesos_metodo": "Shapley/LMG exacto del incremento del R2 sobre intercepto, dinamica de TRM y dummy de pandemia",
+        "interpretacion_factores_metodo": "Ficha por factor que separa asociación parcial HAC, contabilidad mensual firmada y participación Shapley en R²; sin identificación causal",
+        "interpretacion_factores_advertencia": NO_CAUSAL_WARNING,
+        "interpretacion_factores_conteo": int(len(factor_interpretation_integrated)),
+        "contribuciones_factores_cierre_max_abs": float(
+            factor_contributions_integrated["cierre_contable"].abs().max()
+        ),
         "pesos_suma_pct": float(shapley_integrated["peso_entre_factores_pct"].sum()),
         "shapley_r2_base": float(shapley_integrated["r2_base"].iloc[0]),
         "shapley_r2_completo": float(shapley_integrated["r2_completo"].iloc[0]),
@@ -941,6 +989,7 @@ def main() -> None:
         validation_integrated=validation_integrated,
         validation_forecast=validation_forecast,
         predictions_forecast=predictions_forecast,
+        factor_interpretation=factor_interpretation_integrated,
     )
 
     print(json.dumps(metadata, indent=2, ensure_ascii=False))
@@ -1178,7 +1227,7 @@ def _replace_auto_block(text: str, tag: str, new_content: str) -> str:
     return text[:start + len(open_marker)] + new_content + "\n" + text[end:]
 
 
-def update_readme_fragments(
+def _legacy_update_readme_fragments(
     coefficients_diff: pd.DataFrame,
     coefficients_integrated: pd.DataFrame,
     comparison: pd.DataFrame,

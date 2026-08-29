@@ -12,7 +12,7 @@ Ejecute los comandos desde la raíz del checkout, salvo que `TRM_MODEL_ROOT` est
 | Investigación | `trm-model run-research --module <nombre>` | módulo research | extras del módulo |
 | Wrapper mensual | `trm-monthly` | compatibilidad con runner mensual | runtime base |
 | Wrapper legacy | `python .\src\estimate_model.py` | estimación histórica compatible | runtime base |
-| Gráficos | `python .\src\build_charts.py` | cinco PNGs | matplotlib/Pillow |
+| Gráficos | `python .\src\build_charts.py` | seis PNGs | matplotlib/Pillow |
 | Workbook fallback | `python .\src\sync_workbook_openpyxl.py` | Excel versionado | openpyxl |
 | Checks gráficos | `python .\src\check_charts.py` | hashes y sincronización | runtime base |
 | Checks outputs | `python .\src\check_outputs.py` | CSV/Excel/coverage | runtime base |

@@ -2,7 +2,7 @@
 
 ``results/output_catalog.json`` clasifica todo el legado versionado, incluidos
 archivos producidos por investigaciones anteriores. Este módulo distingue ese
-catálogo completo de los 42 archivos que ``estimate_model.main`` escribe en
+catálogo completo de los 45 archivos que ``estimate_model.main`` escribe en
 una corrida mensual actual.
 """
 
@@ -22,12 +22,15 @@ MONTHLY_GENERATED_OUTPUTS: dict[str, tuple[str, ...]] = {
         "results/explicacion/comparacion_especificaciones.csv",
         "results/explicacion/comparacion_factor_regional.csv",
         "results/explicacion/contribuciones_controles_externos.csv",
+        "results/explicacion/contribuciones_factores_controles_externos.csv",
+        "results/explicacion/contribuciones_factores_marco_macro_integral.csv",
         "results/explicacion/contribuciones_marco_macro_integral.csv",
         "results/explicacion/diagnosticos_controles_externos.csv",
         "results/explicacion/diagnosticos_marco_macro_integral.csv",
         "results/explicacion/estabilidad_submuestras_marco_macro_integral.csv",
         "results/explicacion/estabilidad_submuestras_resumen.csv",
         "results/explicacion/intervalos_bootstrap_pesos_shapley.csv",
+        "results/explicacion/interpretacion_factores_marco_macro_integral.csv",
         "results/explicacion/pesos_explicativos_marco_macro_integral.csv",
         "results/explicacion/pruebas_integracion.csv",
         "results/explicacion/seleccion_rezagos_adl_diferencias.csv",
@@ -68,9 +71,9 @@ MONTHLY_GENERATED_PRODUCT_IDS = tuple(MONTHLY_GENERATED_OUTPUTS)
 MONTHLY_GENERATED_OUTPUT_COUNT = sum(
     len(output_paths) for output_paths in MONTHLY_GENERATED_OUTPUTS.values()
 )
-if MONTHLY_GENERATED_OUTPUT_COUNT != 42:  # pragma: no cover - contrato estático
+if MONTHLY_GENERATED_OUTPUT_COUNT != 45:  # pragma: no cover - contrato estático
     raise RuntimeError(
-        "El contrato mensual debe contener exactamente 42 outputs generados; "
+        "El contrato mensual debe contener exactamente 45 outputs generados; "
         f"encontrados {MONTHLY_GENERATED_OUTPUT_COUNT}."
     )
 
@@ -78,7 +81,7 @@ if MONTHLY_GENERATED_OUTPUT_COUNT != 42:  # pragma: no cover - contrato estátic
 def monthly_generated_output_ownership(
     paths: ProjectPaths | None = None,
 ) -> dict[str, list[str]]:
-    """Devuelve el ownership relativo de los 42 outputs de una corrida mensual."""
+    """Devuelve el ownership relativo de los 45 outputs de una corrida mensual."""
     del paths  # El contrato usa rutas relativas; se acepta para una API uniforme.
     ownership = {
         product_id: list(output_paths)

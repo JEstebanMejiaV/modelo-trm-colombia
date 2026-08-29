@@ -147,6 +147,7 @@ def update_readme_fragments(
     validation_integrated: pd.DataFrame,
     validation_forecast: pd.DataFrame,
     predictions_forecast: pd.DataFrame,
+    factor_interpretation: pd.DataFrame | None = None,
 ) -> None:
     """Sobreescribe los bloques AUTO del README raíz con los valores actuales."""
     readme_path = ROOT / "README.md"
@@ -292,6 +293,32 @@ def update_readme_fragments(
         "y, con esta información, el benchmark simple sigue siendo superior.",
     ]
     text = _replace_auto_block(text, "metricas_pronostico", "\n".join(lines_fc))
+
+    # ── 8. Ficha dinámica por factor ────────────────────────────────────────
+    if factor_interpretation is None or factor_interpretation.empty:
+        factor_lines = [
+            "La ficha se genera desde `results/explicacion/interpretacion_factores_marco_macro_integral.csv`.",
+            "La lectura es de asociación histórica y contabilidad mensual; no es causal.",
+        ]
+    else:
+        def _table_pct(value: object) -> str:
+            number = float(value)
+            return "—" if np.isnan(number) else _pct_str(number)
+
+        factor_lines = [
+            "La tabla distingue asociación parcial HAC, contribución mensual firmada y participación Shapley en el R² incremental. "
+            "Los factores compuestos no tienen coeficiente ni signo único; todas las lecturas son no causales.",
+            "| Factor | Grupo | Términos y rezagos | Participación en R² incremental | Contribución media mensual | Lectura dinámica |",
+            "|---|---|---|---:|---:|---|",
+        ]
+        for _, row in factor_interpretation.iterrows():
+            factor_lines.append(
+                f"| {row['factor']} | {row['grupo']} | {row['terminos_legibles']} | "
+                f"{_table_pct(row['participacion_shapley_r2_pct'])} | "
+                f"{_table_pct(row['contribucion_media_mensual_pct'])} | "
+                f"{row['lectura_dinamica']} |"
+            )
+    text = _replace_auto_block(text, "interpretacion_factores", "\n".join(factor_lines))
 
     readme_path.write_text(text, encoding="utf-8")
     print("README.md actualizado con los valores del modelo.")

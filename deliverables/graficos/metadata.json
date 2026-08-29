@@ -1,7 +1,7 @@
 {
   "generator": {
     "path": "src/build_charts.py",
-    "sha256": "f3a567152d427eaf452729eb564737b0e6523cbc4e93b54338d43862c1ceda15"
+    "sha256": "2b09aae117e9df92a2e7d6829f43084eb78adc20a8ff796cc0c15195d82da7d7"
   },
   "hash_method": "CSV canónico con 6 cifras significativas",
   "images": {
@@ -17,11 +17,15 @@
       "height": 1080,
       "width": 1920
     },
-    "04_efectos_tipicos.png": {
+    "04_asociaciones_estandarizadas.png": {
       "height": 1080,
       "width": 1920
     },
     "05_ecm_elasticidades.png": {
+      "height": 1080,
+      "width": 1920
+    },
+    "06_contribuciones_mensuales.png": {
       "height": 1080,
       "width": 1920
     }
@@ -30,8 +34,11 @@
     "results/explicacion/coeficientes_marco_macro_integral.csv": "fddb99b7d7e33b27830ffc0cfe9cfa0e17bc9c83bd33eedaabc23487b9fd9007",
     "results/explicacion/comparacion_especificaciones.csv": "30e180818aeb27834c0d2ba10f359602b6736bdf90edcca590587918e9e8653c",
     "results/explicacion/comparacion_factor_regional.csv": "461b58a8463cd57d4c5d375a864b3374c145ee18c1230fe22da86bb2616a3de4",
+    "results/explicacion/contribuciones_factores_controles_externos.csv": "41cad21ac50ad96f7a4c32cd32a699fd89b599151d3216278e52e97fb8987e27",
+    "results/explicacion/contribuciones_factores_marco_macro_integral.csv": "569375500c6583b9a503a48fef8799d8e32ea7a4569a725d22068df3f0674677",
     "results/explicacion/contribuciones_marco_macro_integral.csv": "51a9e54e7e0714b5df48216e265406af165ff998d56c36d6abb91a10f4f08eea",
-    "results/explicacion/estabilidad_submuestras_resumen.csv": "bf5ac1c11d46ad75e34b3859e631da6b1c96c356833aae904a3298fd414b5c43",
+    "results/explicacion/estabilidad_submuestras_resumen.csv": "5669279aaa64fa9cfd62b41a895b0253768c5986de18d8d137e7b474ef4301ea",
+    "results/explicacion/interpretacion_factores_marco_macro_integral.csv": "93d71c545227ba51f313827489a303f21239e637ec0c6a8661d903b8f0bc9d40",
     "results/explicacion/intervalos_bootstrap_pesos_shapley.csv": "7913e81d00587d6ef2bcbbedf35dffbbeefc343414b2dfbc9a52090f4f786344",
     "results/explicacion/pesos_explicativos_marco_macro_integral.csv": "34641d3391aa083d9ec56482c68ac43d0df777ca9bd352bf55a981ca7c0c28b4",
     "results/explicacion/validacion_metricas_marco_macro_integral.csv": "e24e3aff5e6328a26883defef0765ff859a808af847c2c5c9cf8bcbce86e7695",
