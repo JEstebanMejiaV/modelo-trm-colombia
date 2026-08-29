@@ -39,13 +39,87 @@ def tracked_outputs() -> list[Path]:
     return [ROOT / path for path in paths]
 
 
+def _parse_serialized_numeric(value: Any) -> tuple[tuple[str, float], ...] | None:
+    if value is None or (not isinstance(value, str) and pd.isna(value)):
+        return None
+    text = str(value).strip()
+    if not text or text.lower() == "nan":
+        return None
+    pairs: list[tuple[str, float]] = []
+    for item in text.split(";"):
+        token = item.strip()
+        if not token:
+            continue
+        if "=" not in token:
+            return None
+        name, raw_value = token.rsplit("=", 1)
+        try:
+            pairs.append((name.strip(), float(raw_value)))
+        except ValueError:
+            return None
+    return tuple(pairs)
+
+
+def _compare_serialized_numeric_column(
+    actual: pd.Series,
+    expected: pd.Series,
+    *,
+    path: Path,
+    column: str,
+) -> None:
+    if len(actual) != len(expected):
+        raise AssertionError(f"Longitud distinta en {path.relative_to(ROOT)}: {column}.")
+    for index, (actual_value, expected_value) in enumerate(zip(actual, expected)):
+        actual_pairs = _parse_serialized_numeric(actual_value)
+        expected_pairs = _parse_serialized_numeric(expected_value)
+        if actual_pairs is None or expected_pairs is None:
+            if actual_value != expected_value:
+                raise AssertionError(
+                    f"Valor distinto en {path.relative_to(ROOT)}[{index}].{column}: "
+                    f"actual={actual_value!r}, esperado={expected_value!r}."
+                )
+            continue
+        if tuple(name for name, _value in actual_pairs) != tuple(
+            name for name, _value in expected_pairs
+        ):
+            raise AssertionError(
+                f"Términos distintos en {path.relative_to(ROOT)}[{index}].{column}."
+            )
+        actual_numbers = np.asarray([value for _name, value in actual_pairs], dtype=float)
+        expected_numbers = np.asarray([value for _name, value in expected_pairs], dtype=float)
+        if not np.allclose(
+            actual_numbers,
+            expected_numbers,
+            rtol=NUMERIC_RTOL,
+            atol=1e-10,
+            equal_nan=True,
+        ):
+            raise AssertionError(
+                f"Valores numéricos distintos en {path.relative_to(ROOT)}[{index}].{column}."
+            )
+
+
 def compare_csv(path: Path, committed: bytes) -> None:
     expected = pd.read_csv(BytesIO(committed))
     actual = pd.read_csv(path)
+    serialized_columns = [
+        column
+        for column in ("coeficientes_terminos", "p_valores_terminos")
+        if column in actual.columns and column in expected.columns
+    ]
+    for column in serialized_columns:
+        _compare_serialized_numeric_column(
+            actual[column],
+            expected[column],
+            path=path,
+            column=column,
+        )
+    actual_for_comparison = actual.drop(columns=serialized_columns)
+    expected_for_comparison = expected.drop(columns=serialized_columns)
     try:
         pd.testing.assert_frame_equal(
-            actual,
-            expected,
+            actual_for_comparison,
+            expected_for_comparison,
             check_dtype=False,
             check_exact=False,
             rtol=NUMERIC_RTOL,
