@@ -14,7 +14,10 @@ from typing import Any
 
 import pandas as pd
 
-from forecast_longterm.wavelet_optimization.config import REQUIRED_SPLITS
+# Mantener este módulo temporalmente neutral evita un ciclo de importación con
+# el entry point de la variante wavelet. La secuencia contractual es estable y
+# se comparte con la configuración de investigación.
+REQUIRED_SPLITS = ("full", "2008_2019", "2020_2022", "2023_2026")
 
 _SPLIT_WINDOWS: dict[str, tuple[pd.Period | None, pd.Period | None]] = {
     "full": (None, None),
