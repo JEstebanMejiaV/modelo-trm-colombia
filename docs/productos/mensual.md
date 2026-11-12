@@ -36,6 +36,12 @@ La lectura operativa combina tres salidas que no deben confundirse:
 - `interpretacion_factores_marco_macro_integral.csv`: ficha por factor con descripción económica, términos, rezagos, coeficiente HAC cuando existe, IC 95%, estabilidad, contribución media y narrativa dinámica.
 - `contribuciones_factores_marco_macro_integral.csv`: contabilidad mensual firmada agregada por factor; incluye `otros_componentes`, `ajuste_total` y `cierre_contable`.
 - `pesos_explicativos_marco_macro_integral.csv`: participación Shapley en el R² incremental, no una contribución mensual ni un efecto causal.
+- `mediacion_dinamica_coeficientes_etapas.csv`: coeficientes HAC de las ecuaciones de cada etapa del grafo fiscal–tasas–prima–flujos–TRM.
+- `mediacion_dinamica_rutas.csv`: productos de coeficientes por ruta, rezago acumulado y signo descriptivo; incluye la ruta `déficit → tasas → TRM`.
+- `mediacion_dinamica_bootstrap.csv`: intervalos conjuntos de los productos de ruta con bloques mensuales, no intervalos HAC multiplicados.
+- `mediacion_dinamica_contribuciones.csv`: valores ajustados de mediadores, contribuciones de rutas y cierre de la ecuación final vigente.
+
+El diagnóstico de mediación mantiene una muestra común y declara cada rezago en el grafo. Un producto de ruta se lee como asociación dinámica compatible con esa secuencia; no identifica un shock exógeno, un efecto causal ni un escenario contrafactual. Las contribuciones de rutas son diagnósticas y no se suman a la contabilidad final: el cierre publicado corresponde a todos los términos de la ecuación integral vigente.
 
 Los bloques compuestos no se fuerzan a tener un coeficiente único. La narrativa usa “se asocia con” y distingue si el IC cruza cero; ninguna de estas salidas construye escenarios `do()` o contrafactuales.
 
@@ -58,7 +64,7 @@ La separación conceptual está en [`metodologia/estimacion_inferencia.md`](../m
 
 ## Outputs
 
-El contrato de outputs generado por la ruta mensual está en [`src/trm_model/output_contract.py`](../../src/trm_model/output_contract.py): 45 archivos, distribuidos como 27 de explicación, 8 de pronóstico y 10 de robustez. Los manifests declarativos y el catálogo general pueden contener outputs heredados o diagnósticos adicionales; la corrida efectiva se determina por `artifacts/runs/<run_id>/manifest.json`.
+El contrato de outputs generado por la ruta mensual está en [`src/trm_model/output_contract.py`](../../src/trm_model/output_contract.py): 49 archivos, distribuidos como 31 de explicación, 8 de pronóstico y 10 de robustez. Los manifests declarativos y el catálogo general pueden contener outputs heredados o diagnósticos adicionales; la corrida efectiva se determina por `artifacts/runs/<run_id>/manifest.json`.
 
 Consulte [`operacion/salidas.md`](../operacion/salidas.md) para la diferencia entre contrato declarado, outputs generados y catálogo histórico.
 
@@ -68,5 +74,6 @@ Consulte [`operacion/salidas.md`](../operacion/salidas.md) para la diferencia en
 - No interprete Shapley como porcentaje causal.
 - No use los coeficientes de la explicación para reclamar superioridad predictiva.
 - La contabilidad mensual agregada por factor reconcilia `suma_factores + otros_componentes` con `ajuste_total`; el cierre contable debe ser cero.
+- La mediación dinámica reporta productos de coeficientes y rezagos acumulados; no los interprete como multiplicadores causales.
 - La ficha distingue bloques compuestos sin coeficiente único y reporta los términos que forman cada bloque.
 - No complete faltantes ni trate un snapshot parcial como backtest completo.

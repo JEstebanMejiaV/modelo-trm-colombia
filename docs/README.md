@@ -51,7 +51,8 @@ Esta es la entrada canónica de documentación. El repositorio separa la narrati
 ## Estado que debe permanecer visible
 
 - `monthly_bundle` es el bundle mensual principal; los outputs se distribuyen entre explicación, pronóstico y robustez.
-- El contrato ejecutable mensual contiene 45 outputs generados: 27 de `monthly_explanation`, 8 de `monthly_forecast` y 10 de `robustness`.
+- El contrato ejecutable mensual contiene 49 outputs generados: 31 de `monthly_explanation`, 8 de `monthly_forecast` y 10 de `robustness`.
+- La explicación incluye un diagnóstico de mediación dinámica con rutas observacionales, rezagos explícitos y bootstrap conjunto; no es identificación causal.
 - El catálogo general incluye outputs de productos diarios e investigación; su lista completa está en [`results/output_catalog.json`](../results/output_catalog.json).
 - El forecast mensual es pseudo-tiempo-real hasta completar snapshots históricos por factor.
 - El baseline de vintages existente es válido como baseline, pero no habilita un backtest genuino completo.

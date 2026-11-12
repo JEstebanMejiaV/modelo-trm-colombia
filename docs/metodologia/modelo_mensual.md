@@ -54,6 +54,12 @@ La selección dinámica evalúa de cero a tres rezagos de `Δln(TRM)` y usa BIC.
 
 La matriz de estimación debe estar balanceada. Si falta una observación de una variable activa, el pipeline falla explícitamente en lugar de crear una observación sintética.
 
+## Mediación dinámica exploratoria
+
+La capa `trm_model.monthly.mediation` registra un grafo acíclico de asociación: `déficit fiscal → diferencial de tasas`, `déficit/tasas → EMBIG`, `tasas/EMBIG → BEI o flujos` y esos mediadores → `Δln(TRM)`. Cada arista declara un rezago no negativo. Las ecuaciones de etapa se estiman sobre la intersección de fechas completas; el diseño de la ecuación final reutiliza el marco macroeconómico integral vigente, por lo que no reemplaza su selección ni sus 14 jugadores.
+
+Para una ruta `A → M → TRM`, el diagnóstico publica `β(M←A) × β(TRM←M)` y el rezago acumulado. La incertidumbre del producto se obtiene reestimando todas las ecuaciones con los mismos bloques mensuales remuestreados. No se multiplican límites HAC de etapas independientes. La secuencia temporal y el signo del producto son evidencia descriptiva compatible con una ruta observacional: no constituyen identificación causal, instrumento, shock exógeno ni contrafactual. Las contribuciones de rutas se publican aparte; el cierre contable corresponde sólo a la ecuación final completa.
+
 ## Shapley/LMG
 
 La descomposición calcula el aporte marginal promedio de cada jugador sobre el R² incremental frente a la base. Con 14 jugadores se evalúan `2^14 = 16.384` subconjuntos. Los intervalos se estiman con 200 réplicas de bootstrap circular de bloques de 12 meses y 64 permutaciones antitéticas, con semilla `20260823`.
