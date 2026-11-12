@@ -91,6 +91,7 @@ from trm_model.monthly.explanation import (
     aggregate_factor_contributions,
     build_factor_interpretation_table,
 )
+from trm_model.monthly.mediation import estimate_dynamic_mediation
 
 
 def estimate_explanation(
@@ -177,6 +178,14 @@ def estimate_explanation(
         factor_contributions=factor_contributions_integrated,
     )
 
+    # ── Canales dinámicos mediados: diagnóstico observacional separado ───────
+    dynamic_mediation = estimate_dynamic_mediation(
+        components,
+        common_index=common_index,
+        outcome_y=selected_integrated.y,
+        outcome_design=selected_integrated.x,
+    )
+
     # ── Contraste ARDL–ECM exploratorio ──────────────────────────────────────
     y = model_data["ln_trm"]
     exog = model_data[ECM_LEVEL_VARIABLES]
@@ -232,6 +241,7 @@ def estimate_explanation(
         "contributions_integrated": contributions_integrated,
         "factor_contributions_integrated": factor_contributions_integrated,
         "factor_interpretation_integrated": factor_interpretation_integrated,
+        "dynamic_mediation": dynamic_mediation,
         "shapley_integrated": shapley_integrated,
         "shapley_bootstrap": shapley_bootstrap,
         "stability_detail": stability_detail,
@@ -402,6 +412,7 @@ def main() -> None:
     contributions_integrated = explanation["contributions_integrated"]
     factor_contributions_integrated = explanation["factor_contributions_integrated"]
     factor_interpretation_integrated = explanation["factor_interpretation_integrated"]
+    dynamic_mediation = explanation["dynamic_mediation"]
     shapley_integrated = explanation["shapley_integrated"]
     shapley_bootstrap = explanation["shapley_bootstrap"]
     stability_detail = explanation["stability_detail"]
@@ -418,7 +429,12 @@ def main() -> None:
     tests = explanation["tests"]
 
     bei_model_comparison = bei_model_specification_comparison(
-        model_data, selected_integrated, bei_break_date
+        model_data,
+        selected_integrated,
+        bei_break_date,
+        active_coefficients=coefficients_integrated,
+        active_predictions=predictions_integrated,
+        active_validation=validation_integrated,
     )
 
     # ── Pronóstico con rezagos de publicación ────────────────────────────────
@@ -674,6 +690,26 @@ def main() -> None:
         index=False,
         encoding="utf-8-sig",
     )
+    dynamic_mediation.coefficients.to_csv(
+        RESULTS / "explicacion/mediacion_dinamica_coeficientes_etapas.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
+    dynamic_mediation.paths.to_csv(
+        RESULTS / "explicacion/mediacion_dinamica_rutas.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
+    dynamic_mediation.bootstrap.to_csv(
+        RESULTS / "explicacion/mediacion_dinamica_bootstrap.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
+    dynamic_mediation.contributions.to_csv(
+        RESULTS / "explicacion/mediacion_dinamica_contribuciones.csv",
+        index=False,
+        encoding="utf-8-sig",
+    )
     shapley_integrated.to_csv(
         RESULTS / "explicacion/pesos_explicativos_marco_macro_integral.csv",
         index=False,
@@ -851,6 +887,26 @@ def main() -> None:
         "interpretacion_factores_metodo": "Ficha por factor que separa asociación parcial HAC, contabilidad mensual firmada y participación Shapley en R²; sin identificación causal",
         "interpretacion_factores_advertencia": NO_CAUSAL_WARNING,
         "interpretacion_factores_conteo": int(len(factor_interpretation_integrated)),
+        "mediacion_dinamica_metodo": dynamic_mediation.metadata["metodo"],
+        "mediacion_dinamica_advertencia": dynamic_mediation.metadata["advertencia"],
+        "mediacion_dinamica_muestra_inicio": dynamic_mediation.metadata["muestra_inicio"],
+        "mediacion_dinamica_muestra_fin": dynamic_mediation.metadata["muestra_fin"],
+        "mediacion_dinamica_observaciones": dynamic_mediation.metadata["observaciones"],
+        "mediacion_dinamica_nodos": dynamic_mediation.metadata["nodos"],
+        "mediacion_dinamica_aristas": dynamic_mediation.metadata["aristas"],
+        "mediacion_dinamica_rutas": dynamic_mediation.metadata["rutas"],
+        "mediacion_dinamica_bootstrap_replicas": dynamic_mediation.metadata["bootstrap_replicas"],
+        "mediacion_dinamica_bootstrap_bloque_meses": dynamic_mediation.metadata["bootstrap_bloque_meses"],
+        "mediacion_dinamica_bootstrap_semilla": dynamic_mediation.metadata["bootstrap_semilla"],
+        "mediacion_dinamica_cierre_max_abs": float(
+            dynamic_mediation.contributions["cierre_contable"].abs().max()
+        ),
+        "mediacion_dinamica_ecuacion_final_reutiliza_diseno_integrado": dynamic_mediation.metadata[
+            "ecuacion_final_reutiliza_diseno_integrado"
+        ],
+        "mediacion_dinamica_orden_topologico": dynamic_mediation.metadata[
+            "orden_topologico"
+        ],
         "contribuciones_factores_cierre_max_abs": float(
             factor_contributions_integrated["cierre_contable"].abs().max()
         ),

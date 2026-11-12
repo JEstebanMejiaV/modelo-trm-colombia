@@ -95,6 +95,26 @@
       "status": "versioned"
     },
     {
+      "path": "results/explicacion/mediacion_dinamica_bootstrap.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/mediacion_dinamica_contribuciones.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/mediacion_dinamica_coeficientes_etapas.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
+      "path": "results/explicacion/mediacion_dinamica_rutas.csv",
+      "kind": "diagnostic",
+      "status": "versioned"
+    },
+    {
       "path": "results/explicacion/pesos_explicativos_marco_macro_integral.csv",
       "kind": "primary",
       "status": "versioned"
@@ -144,6 +164,9 @@
     "La información contemporánea describe ex post/nowcast y no identifica efectos causales.",
     "La ruta sigue usando la econometría mensual validada en src/model.",
     "La ficha por factor separa asociación HAC, contabilidad mensual firmada y participación Shapley; los factores compuestos no tienen coeficiente único.",
-    "El ownership del manifest cubre todos los outputs históricos clasificados en el catálogo; la corrida actual registra por separado sus 27 outputs generados."
+    "La mediación dinámica publica rutas observacionales preespecificadas, con rezagos y productos de coeficientes; no es identificación causal ni contrafactual.",
+    "El bootstrap de mediación remuestrea conjuntamente las ecuaciones por bloques mensuales; no multiplica intervalos HAC independientes.",
+    "La ecuación final de mediación reutiliza el diseño integral vigente y su cierre contable no equivale a sumar rutas indirectas.",
+    "El ownership del manifest cubre todos los outputs históricos clasificados en el catálogo; la corrida actual registra por separado sus 31 outputs generados."
   ]
 }
