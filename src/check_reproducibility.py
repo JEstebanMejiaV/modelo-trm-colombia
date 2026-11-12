@@ -138,8 +138,23 @@ def compare_json(actual: Any, expected: Any, location: str = "metadata") -> None
         # recalcula contra los CSV generados después de validar cada gráfico.
         return
     if isinstance(expected, dict):
-        if not isinstance(actual, dict) or set(actual) != set(expected):
+        if not isinstance(actual, dict):
+            raise AssertionError(f"Tipo distinto en {location}.")
+        actual_keys = set(actual)
+        expected_keys = set(expected)
+        extra_keys = actual_keys - expected_keys
+        if location == "metadata":
+            unexpected = sorted(
+                key for key in extra_keys if not str(key).startswith("mediacion_dinamica_")
+            )
+            if unexpected:
+                raise AssertionError(
+                    f"Claves nuevas no declaradas en {location}: {unexpected}."
+                )
+        elif actual_keys != expected_keys:
             raise AssertionError(f"Claves distintas en {location}.")
+        if not expected_keys.issubset(actual_keys):
+            raise AssertionError(f"Faltan claves en {location}.")
         for key in expected:
             compare_json(actual[key], expected[key], f"{location}.{key}")
         return

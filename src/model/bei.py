@@ -195,8 +195,16 @@ def bei_model_specification_comparison(
     model_data: pd.DataFrame,
     selected_integrated: SelectedDifferenceModel,
     break_date: pd.Timestamp,
+    active_coefficients: pd.DataFrame | None = None,
+    active_predictions: pd.DataFrame | None = None,
+    active_validation: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
-    """Compara transformaciones y calendarios BEI sobre una muestra idéntica."""
+    """Compara transformaciones y calendarios BEI sobre una muestra idéntica.
+
+    La especificación vigente puede reutilizar los objetos ya estimados por el
+    modelo integral. Las variantes de robustez siguen ajustándose de forma
+    independiente.
+    """
     from .transforms import difference_components
 
     components = difference_components(model_data)
@@ -251,35 +259,55 @@ def bei_model_specification_comparison(
         index=model_data.index,
         name="tendencia_anual",
     )
+    active_specification = "Primera diferencia — medias separadas (vigente)"
+    can_reuse_active_validation = (
+        active_predictions is not None and active_validation is not None
+    )
     for name, aggregation, transformation, component, extension in variants:
-        specs = bei_factor_specs(component)
-        y, x = make_timed_difference_design(
-            components,
-            p=selected_integrated.p,
-            factor_specs=specs,
-            index=common_index,
-        )
+        is_active = name == active_specification
         bei_term = design_term_name(component, 1)
-        if extension == "tendencia":
-            x["tendencia_anual"] = full_trend.reindex(x.index)
-        elif extension == "quiebre_coeficiente":
-            x["post_quiebre_za"] = (x.index >= break_date).astype(float)
-            x[f"{bei_term}_x_post_quiebre"] = x[bei_term] * x["post_quiebre_za"]
-
-        result = sm.OLS(y, x).fit()
-        robust, coefficients = tidy_robust_ols(result, maxlags=6)
-        lookup = coefficients.set_index("termino")
-        predictions, metrics = difference_validation(
-            model_data,
-            SelectedDifferenceModel(
+        if is_active:
+            y = selected_integrated.y
+            x = selected_integrated.x
+            result = selected_integrated.result
+            if active_coefficients is None:
+                robust, coefficients = tidy_robust_ols(result, maxlags=6)
+            else:
+                robust = None
+                coefficients = active_coefficients
+        else:
+            specs = bei_factor_specs(component)
+            y, x = make_timed_difference_design(
+                components,
                 p=selected_integrated.p,
-                q=0,
-                result=result,
-                y=y,
-                x=x,
-            ),
-            holdout=48,
-        )
+                factor_specs=specs,
+                index=common_index,
+            )
+            if extension == "tendencia":
+                x["tendencia_anual"] = full_trend.reindex(x.index)
+            elif extension == "quiebre_coeficiente":
+                x["post_quiebre_za"] = (x.index >= break_date).astype(float)
+                x[f"{bei_term}_x_post_quiebre"] = x[bei_term] * x["post_quiebre_za"]
+
+            result = sm.OLS(y, x).fit()
+            robust, coefficients = tidy_robust_ols(result, maxlags=6)
+
+        lookup = coefficients.set_index("termino")
+        if is_active and can_reuse_active_validation:
+            predictions = active_predictions
+            metrics = active_validation
+        else:
+            predictions, metrics = difference_validation(
+                model_data,
+                SelectedDifferenceModel(
+                    p=selected_integrated.p,
+                    q=0,
+                    result=result,
+                    y=y,
+                    x=x,
+                ),
+                holdout=48,
+            )
         metric = metrics.loc[~metrics["modelo"].str.contains("Caminata")].iloc[0]
         model_error = (
             predictions["ln_trm_modelo_condicional"]

@@ -46,6 +46,21 @@ def test_source_registry_and_product_manifests_are_valid() -> None:
         validate_product_manifest(manifest, paths=paths)
 
 
+def test_dynamic_mediation_schema_matches_declared_outputs() -> None:
+    paths = project_paths()
+    schema = json.loads(
+        paths.schema("monthly_dynamic_mediation.json").read_text(encoding="utf-8")
+    )
+    assert schema["causal_identification"] is False
+    declared = {table["path"] for table in schema["tables"]}
+    assert declared == {
+        "results/explicacion/mediacion_dinamica_coeficientes_etapas.csv",
+        "results/explicacion/mediacion_dinamica_rutas.csv",
+        "results/explicacion/mediacion_dinamica_bootstrap.csv",
+        "results/explicacion/mediacion_dinamica_contribuciones.csv",
+    }
+
+
 def test_run_manifest_can_be_built_and_validated_without_writing() -> None:
     paths = project_paths()
     manifest = build_run_manifest(

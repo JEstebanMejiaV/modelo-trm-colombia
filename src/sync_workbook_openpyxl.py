@@ -9,6 +9,7 @@ pueda reconstruirse en entornos que solo tienen Python y openpyxl.
 """
 
 from copy import copy
+from functools import lru_cache
 from pathlib import Path
 from typing import Iterable, Sequence
 
@@ -84,8 +85,20 @@ TERM_LABELS = {
 }
 
 
-def csv(relative_path: str) -> pd.DataFrame:
+@lru_cache(maxsize=None)
+def _read_csv_cached(relative_path: str) -> pd.DataFrame:
+    """Read each source CSV once during a workbook synchronization run."""
     return pd.read_csv(RESULTS / relative_path)
+
+
+def csv(relative_path: str) -> pd.DataFrame:
+    """Return an isolated frame so callers can transform it safely."""
+    return _read_csv_cached(relative_path).copy(deep=True)
+
+
+def clear_csv_cache() -> None:
+    """Discard cached frames before starting a new synchronization run."""
+    _read_csv_cached.cache_clear()
 
 
 def value(value: object) -> object:
@@ -951,6 +964,7 @@ def _rename_model_sheets(wb) -> None:
 
 
 def main() -> None:
+    clear_csv_cache()
     if not WORKBOOK_PATH.exists():
         raise FileNotFoundError(f"No existe el workbook base: {WORKBOOK_PATH}")
     metadata = pd.read_json(RESULTS / "metadata.json", typ="series").to_dict()

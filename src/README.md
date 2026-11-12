@@ -53,6 +53,7 @@ Toda la lógica de estimación está modularizada en `src/model/`:
 | `shapley.py` | Descomposición Shapley exacta + bootstrap |
 | `bei.py` | Estacionariedad, tendencias y robustez del BEI |
 | `readme_sync.py` | Actualización automática de bloques del README |
+| `trm_model/monthly/mediation.py` | Grafo observacional de etapas, rutas con rezagos y bootstrap conjunto; no causal |
 
 ## Flujo del proyecto
 

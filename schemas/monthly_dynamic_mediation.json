@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "product_id": "monthly_explanation",
+  "diagnostic_id": "dynamic_mediation",
+  "label": "Diagnóstico de canales dinámicos mediados",
+  "frequency": "monthly",
+  "information_set": "ex_post",
+  "vintage_policy": "latest_available",
+  "causal_identification": false,
+  "warning": "Asociación dinámica compatible con una ruta de transmisión bajo la especificación observacional; no es un efecto causal, identificación estructural ni escenario contrafactual.",
+  "method": "Ecuaciones de etapa OLS-HAC con nodos, aristas y rezagos preespecificados; productos de coeficientes y bootstrap circular conjunto por bloques mensuales.",
+  "graph": {
+    "nodes": [
+      {"key": "deficit", "component": "D.deficit_fiscal_12m_pct_pib", "role": "source"},
+      {"key": "rates", "component": "D.diferencial_tasas_pp", "role": "mediator"},
+      {"key": "embig", "component": "D.embig_colombia_pp", "role": "mediator"},
+      {"key": "bei", "component": "D.diferencial_bei_5y_pp", "role": "mediator"},
+      {"key": "flows", "component": "D.asinh_flujos_capital", "role": "mediator"},
+      {"key": "trm", "component": "D.ln_trm", "role": "outcome"}
+    ],
+    "edges": [
+      {"edge_id": "deficit_to_rates", "source": "deficit", "target": "rates", "lag": 1},
+      {"edge_id": "deficit_to_embig", "source": "deficit", "target": "embig", "lag": 1},
+      {"edge_id": "rates_to_embig", "source": "rates", "target": "embig", "lag": 1},
+      {"edge_id": "rates_to_bei", "source": "rates", "target": "bei", "lag": 1},
+      {"edge_id": "embig_to_bei", "source": "embig", "target": "bei", "lag": 1},
+      {"edge_id": "rates_to_flows", "source": "rates", "target": "flows", "lag": 1},
+      {"edge_id": "embig_to_flows", "source": "embig", "target": "flows", "lag": 1},
+      {"edge_id": "deficit_to_trm", "source": "deficit", "target": "trm", "lag": 1},
+      {"edge_id": "rates_to_trm", "source": "rates", "target": "trm", "lag": 1},
+      {"edge_id": "embig_to_trm", "source": "embig", "target": "trm", "lag": 0},
+      {"edge_id": "bei_to_trm", "source": "bei", "target": "trm", "lag": 1},
+      {"edge_id": "flows_to_trm", "source": "flows", "target": "trm", "lag": 1}
+    ]
+  },
+  "tables": [
+    {
+      "id": "stage_coefficients",
+      "path": "results/explicacion/mediacion_dinamica_coeficientes_etapas.csv",
+      "required_columns": ["ecuacion_id", "edge_id", "termino", "rezago_meses", "coeficiente", "p_valor_hac", "ic_95_inferior", "ic_95_superior", "advertencia_interpretacion"]
+    },
+    {
+      "id": "paths",
+      "path": "results/explicacion/mediacion_dinamica_rutas.csv",
+      "required_columns": ["ruta_id", "nodos", "aristas", "tipo_ruta", "rezago_total_meses", "producto_coeficientes", "signo_ruta", "advertencia_interpretacion"]
+    },
+    {
+      "id": "joint_block_bootstrap",
+      "path": "results/explicacion/mediacion_dinamica_bootstrap.csv",
+      "required_columns": ["ruta_id", "producto_puntual", "producto_bootstrap_mediana", "ic_95_inferior", "ic_95_superior", "replicas_validas", "bloque_meses", "semilla", "advertencia_interpretacion"]
+    },
+    {
+      "id": "monthly_contributions",
+      "path": "results/explicacion/mediacion_dinamica_contribuciones.csv",
+      "required_columns": ["fecha", "D.ln_trm_observada", "ajuste_total", "suma_ecuacion_final", "cierre_contable", "suma_rutas_diagnosticas"]
+    }
+  ]
+}

@@ -20,6 +20,15 @@ factor_contribution_outputs = [
   "results/explicacion/contribuciones_factores_controles_externos.csv",
   "results/explicacion/contribuciones_factores_marco_macro_integral.csv",
 ]
+dynamic_mediation = true
+dynamic_mediation_method = "observational_dynamic_path_diagnostic"
+dynamic_mediation_schema = "schemas/monthly_dynamic_mediation.json"
+dynamic_mediation_outputs = [
+  "results/explicacion/mediacion_dinamica_coeficientes_etapas.csv",
+  "results/explicacion/mediacion_dinamica_rutas.csv",
+  "results/explicacion/mediacion_dinamica_bootstrap.csv",
+  "results/explicacion/mediacion_dinamica_contribuciones.csv",
+]
 
 [validation]
 holdout_months = 48

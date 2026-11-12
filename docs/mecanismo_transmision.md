@@ -57,6 +57,12 @@ Condiciones financieras, expectativas y actividad internacional
 
 Un episodio de aversión al riesgo puede fortalecer el dólar, depreciar las monedas regionales y elevar el EMBIG al mismo tiempo. Shapley distribuye la señal compartida entre esos factores; no demuestra que uno de ellos cause los demás.
 
+## Diagnóstico de mediación dinámica
+
+La ruta que motivó la ampliación se representa explícitamente como `déficit fiscal → diferencial de tasas → Δln(TRM)`. También se registran rutas alternativas por EMBIG, diferencial BEI y flujos netos de capital. Para cada etapa se estima una ecuación separada con el rezago declarado; una ruta de dos etapas se resume con el producto de sus coeficientes y la suma de sus rezagos. Por ejemplo, el signo descriptivo de `β_tasas←déficit × β_TRM←tasas` indica si la asociación compuesta queda positiva o negativa bajo la especificación observacional.
+
+Los resultados se encuentran en `mediacion_dinamica_coeficientes_etapas.csv`, `mediacion_dinamica_rutas.csv`, `mediacion_dinamica_bootstrap.csv` y `mediacion_dinamica_contribuciones.csv`. El bootstrap remuestrea conjuntamente las ecuaciones por bloques de 12 meses. La última tabla conserva los valores ajustados de los mediadores y un cierre de la ecuación final; las rutas no se agregan a ese cierre porque pueden compartir términos y no son una descomposición causal. En particular, un signo negativo no significa que una intervención fiscal produzca una apreciación del peso: sólo describe la asociación compuesta estimada en esta muestra.
+
 ## Explicación histórica frente a pronóstico
 
 La explicación histórica usa algunos valores contemporáneos realizados: términos de intercambio, dólar amplio, VIX, EMBIG, monedas regionales y los términos del bloque global. Por eso sirve para responder qué variables se movieron junto con la TRM *ex post* o como nowcast condicional.

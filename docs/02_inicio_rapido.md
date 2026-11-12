@@ -37,7 +37,7 @@ python -m pytest -q
 trm-model run-monthly
 ```
 
-La corrida llama el core mensual target, produce los 45 outputs generados del bundle y escribe un manifest bajo `artifacts/runs/<run_id>/manifest.json`. Para conservar el entry point histórico también existe:
+La corrida llama el core mensual target, produce los 49 outputs generados del bundle —incluido el diagnóstico de mediación dinámica— y escribe un manifest bajo `artifacts/runs/<run_id>/manifest.json`. Para conservar el entry point histórico también existe:
 
 ```powershell
 python .\src\estimate_model.py

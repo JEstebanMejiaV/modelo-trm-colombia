@@ -23,7 +23,7 @@ Esto no equivale por sí solo a un backtest point-in-time: una corrida puede ser
 
 ## Determinismo
 
-La configuración común fija, entre otros, HAC de seis meses, holdout de 48 meses, 14 jugadores Shapley, 200 réplicas, bloques de 12 meses, 64 permutaciones y semilla `20260823`. Productos diarios o de ML pueden tener parámetros de determinismo adicionales declarados en sus módulos y manifests.
+La configuración común fija, entre otros, HAC de seis meses, holdout de 48 meses, 14 jugadores Shapley, 200 réplicas, bloques de 12 meses, 64 permutaciones y semilla `20260823`. La mediación dinámica usa la misma semilla, 200 réplicas y bloques circulares conjuntos de 12 meses para los productos de rutas. Productos diarios o de ML pueden tener parámetros de determinismo adicionales declarados en sus módulos y manifests.
 
 ## Evidencia
 

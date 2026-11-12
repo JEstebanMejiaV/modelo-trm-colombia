@@ -44,6 +44,10 @@ Modelos que usan realizaciones contemporáneas de algunos factores. Sirven para 
 | `contribuciones_marco_macro_integral.csv` | Igual para el marco macroeconómico integral |
 | `contribuciones_factores_marco_macro_integral.csv` | Contabilidad mensual agregada por factor, otros componentes, ajuste total y cierre |
 | `interpretacion_factores_marco_macro_integral.csv` | Ficha económica y estadística por factor, narrativa dinámica y advertencia no causal |
+| `mediacion_dinamica_coeficientes_etapas.csv` | Coeficientes HAC por etapa del grafo de mediación y rezago declarado |
+| `mediacion_dinamica_rutas.csv` | Productos de coeficientes, signos descriptivos y rezagos acumulados por ruta |
+| `mediacion_dinamica_bootstrap.csv` | Intervalos conjuntos de productos de ruta con bootstrap circular por bloques |
+| `mediacion_dinamica_contribuciones.csv` | Valores ajustados de mediadores, contribuciones de rutas y cierre de la ecuación final |
 | `validacion_metricas_controles_externos.csv` | MAPE, acierto y MAE en validación expansiva de 48 meses |
 | `validacion_metricas_marco_macro_integral.csv` | Igual para el marco macroeconómico integral |
 | `validacion_predicciones_controles_externos.csv` | Predicciones mensuales de la validación |

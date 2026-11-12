@@ -13,6 +13,7 @@ from openpyxl.utils.cell import range_boundaries
 from trm_model.data.registry import load_source_registry
 from trm_model.features.monthly_transforms import design_term_name
 from trm_model.monthly.explanation import NO_CAUSAL_WARNING
+from trm_model.monthly.mediation import validate_dynamic_mediation_outputs
 from trm_model.monthly.specifications import (
     INTEGRATED_FACTOR_SPECS_4,
     REFERENCE_FACTOR_SPECS,
@@ -1355,10 +1356,11 @@ def main() -> None:
         interpretation,
         factor_contributions_integrated,
     )
+    validate_dynamic_mediation_outputs(RESULTS)
 
     print(
         "OK: robustez BEI, vintages, bootstrap Shapley, submuestras por término, "
-        "explicación por factor, contribuciones mensuales y archivo Excel sincronizado."
+        "explicación por factor, mediación dinámica, contribuciones mensuales y archivo Excel sincronizado."
     )
 
 
